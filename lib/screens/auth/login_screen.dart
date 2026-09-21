@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../app_styles.dart';
-import '../nasabah/nasabah_dashboard.dart';
+
+import 'package:bank_sampah_flutter/screens/nasabah/nasabah_dashboard.dart';
+
 import 'lupa_password_screen.dart';
 import 'register_screen.dart';
 
@@ -13,201 +15,268 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final usernameController = TextEditingController();
+  final passwordController = TextEditingController();
 
-  bool _obscurePassword = true;
+  bool obscurePassword = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    usernameController.dispose();
+    passwordController.dispose();
     super.dispose();
   }
 
-  void _login() {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+  void login() {
+    final username = usernameController.text.trim();
+    final password = passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
+    if (username.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email dan password wajib diisi.')),
+        const SnackBar(content: Text('Username dan password wajib diisi')),
       );
       return;
     }
 
-    // Sementara login dummy.
-    // Nanti bagian ini kita sambungkan ke Laravel API.
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const NasabahDashboard()),
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Login berhasil — sementara menggunakan dummy'),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Logo
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.recycling,
-                    size: 50,
-                    color: Colors.white,
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                const Text(
-                  'Bank Sampah Griya Ayu',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                const Text(
-                  'Silakan masuk ke akun Anda',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.subtitle,
-                ),
-
-                const SizedBox(height: 32),
-
-                // Email
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: AppDecorations.inputDecoration(
-                    'Email',
-                    icon: Icons.email_outlined,
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Password
-                TextField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration:
-                      AppDecorations.inputDecoration(
-                        'Password',
-                        icon: Icons.lock_outline,
-                      ).copyWith(
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            color: AppColors.textSecondary,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                      ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // Lupa Password
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LupaPasswordScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      'Lupa Password?',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Tombol Login
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Masuk',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Register
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // =========================
+              // HEADER / GAMBAR
+              // =========================
+              Container(
+                height: 230,
+                width: double.infinity,
+                clipBehavior: Clip.hardEdge,
+                decoration: const BoxDecoration(color: Color(0xFF164A43)),
+                child: Stack(
                   children: [
-                    const Text(
-                      'Belum punya akun?',
-                      style: AppTextStyles.subtitle,
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        'Daftar',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
+                    //=========================
+                    // BACKGROUND IMAGE
+                    //=========================
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: 0.90,
+                        child: Image.asset(
+                          'assets/images/sampahtumbuhan.jpg',
+                          fit: BoxFit.cover,
                         ),
+                      ),
+                    ),
+
+                    //=========================
+                    // GREEN OVERLAY
+                    //=========================
+                    Positioned.fill(
+                      child: Container(
+                        color: const Color(0xFF164A43).withOpacity(0.55),
+                      ),
+                    ),
+
+                    //=========================
+                    // CONTENT
+                    //=========================
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 75,
+                            height: 75,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(
+                              Icons.recycling,
+                              size: 45,
+                              color: Colors.white,
+                            ),
+                          ),
+
+                          const SizedBox(height: 15),
+
+                          const Text(
+                            'Bank Sampah',
+                            style: TextStyle(color: Colors.white, fontSize: 15),
+                          ),
+
+                          const Text(
+                            'Griya Ayu',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 25,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+
+              // =========================
+              // FORM LOGIN
+              // =========================
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 30),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Selamat Datang!',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF172033),
+                      ),
+                    ),
+
+                    const SizedBox(height: 7),
+
+                    const Text(
+                      'Silahkan masuk untuk melanjutkan.',
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    const Text(
+                      'Username / Nomor Anggota',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    TextField(
+                      controller: usernameController,
+                      decoration: const InputDecoration(
+                        hintText: 'Masukkan username atau nomor anggota',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    const Text(
+                      'Password',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    TextField(
+                      controller: passwordController,
+                      obscureText: obscurePassword,
+                      decoration: InputDecoration(
+                        hintText: 'Masukkan password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              obscurePassword = !obscurePassword;
+                            });
+                          },
+                          icon: Icon(
+                            obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NasabahDashboard(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Masuk',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const LupaPasswordScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Lupa Password?',
+                            style: TextStyle(color: Color(0xFF159447)),
+                          ),
+                        ),
+
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const RegisterScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Sign Up',
+                            style: TextStyle(
+                              color: Color(0xFF159447),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    const Center(
+                      child: Text(
+                        'Bank Sampah Griya Ayu',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

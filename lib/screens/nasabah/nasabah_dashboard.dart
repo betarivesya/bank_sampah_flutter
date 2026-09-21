@@ -1,34 +1,113 @@
 import 'package:flutter/material.dart';
 
 import '../../app_styles.dart';
+import 'riwayat_transaksi_screen.dart';
+import 'penarikan_screen.dart';
+import 'profil_screen.dart';
 
-class NasabahDashboard extends StatelessWidget {
+class NasabahDashboard extends StatefulWidget {
   const NasabahDashboard({super.key});
+
+  @override
+  State<NasabahDashboard> createState() => _NasabahDashboardState();
+}
+
+class _NasabahDashboardState extends State<NasabahDashboard> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _pages = const [
+    _BerandaScreen(),
+    RiwayatTransaksiScreen(),
+    PenarikanScreen(),
+    ProfilScreen(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(index: _selectedIndex, children: _pages),
+
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
+
+        backgroundColor: Colors.white,
+        indicatorColor: AppColors.secondary.withValues(alpha: 0.35),
+
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Beranda',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long),
+            label: 'Riwayat',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            selectedIcon: Icon(Icons.account_balance_wallet),
+            label: 'Penarikan',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profil',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ======================================================
+// HALAMAN BERANDA
+// ======================================================
+
+class _BerandaScreen extends StatelessWidget {
+  const _BerandaScreen();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Bank Sampah Griya Ayu'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         elevation: 0,
+        title: const Text(
+          'Bank Sampah Griya Ayu',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Halo, Nasabah! 👋',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              'Halo, Nasabah 👋',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
 
-            Text(
-              'Selamat datang di Bank Sampah Griya Ayu',
+            const Text(
+              'Selamat datang kembali!',
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
             ),
 
@@ -37,10 +116,10 @@ class NasabahDashboard extends StatelessWidget {
             // Kartu saldo
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
                 color: AppColors.primary,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
               ),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,10 +130,10 @@ class NasabahDashboard extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Rp0',
+                    'Rp150.000',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 30,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -62,59 +141,52 @@ class NasabahDashboard extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
 
             const Text(
               'Menu',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             Row(
               children: [
                 Expanded(
                   child: _MenuCard(
-                    icon: Icons.recycling,
-                    title: 'Jenis Sampah',
-                    onTap: () {
-                      // Nanti diarahkan ke halaman jenis sampah
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _MenuCard(
-                    icon: Icons.history,
+                    icon: Icons.receipt_long_outlined,
                     title: 'Riwayat',
+                    subtitle: 'Transaksi',
                     onTap: () {
-                      // Nanti kita buat
+                      // Bottom navigation index Riwayat
+                      final dashboardState = context
+                          .findAncestorStateOfType<_NasabahDashboardState>();
+
+                      dashboardState?.setState(() {
+                        dashboardState._selectedIndex = 1;
+                      });
                     },
                   ),
                 ),
-              ],
-            ),
 
-            const SizedBox(height: 12),
+                const SizedBox(width: 14),
 
-            Row(
-              children: [
                 Expanded(
                   child: _MenuCard(
-                    icon: Icons.account_balance_wallet,
+                    icon: Icons.account_balance_wallet_outlined,
                     title: 'Penarikan',
+                    subtitle: 'Saldo',
                     onTap: () {
-                      // Nanti kita buat
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _MenuCard(
-                    icon: Icons.person,
-                    title: 'Profil',
-                    onTap: () {
-                      // Nanti kita buat
+                      final dashboardState = context
+                          .findAncestorStateOfType<_NasabahDashboardState>();
+
+                      dashboardState?.setState(() {
+                        dashboardState._selectedIndex = 2;
+                      });
                     },
                   ),
                 ),
@@ -127,14 +199,20 @@ class NasabahDashboard extends StatelessWidget {
   }
 }
 
+// ======================================================
+// MENU CARD
+// ======================================================
+
 class _MenuCard extends StatelessWidget {
   final IconData icon;
   final String title;
+  final String subtitle;
   final VoidCallback onTap;
 
   const _MenuCard({
     required this.icon,
     required this.title,
+    required this.subtitle,
     required this.onTap,
   });
 
@@ -142,28 +220,45 @@ class _MenuCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 12),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 36, color: AppColors.primary),
-            const SizedBox(height: 10),
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.arrow_forward, color: AppColors.primary),
+            ),
+
+            const SizedBox(height: 16),
+
             Text(
               title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+
+            const SizedBox(height: 3),
+
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),
