@@ -2,11 +2,58 @@ import 'package:flutter/material.dart';
 
 import '../../app_styles.dart';
 
-class RiwayatTransaksiScreen extends StatelessWidget {
+class RiwayatTransaksiScreen extends StatefulWidget {
   const RiwayatTransaksiScreen({super.key});
 
   @override
+  State<RiwayatTransaksiScreen> createState() => _RiwayatTransaksiScreenState();
+}
+
+class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
+  final List<_TransactionItem> _transactions = const [
+    _TransactionItem(
+      icon: Icons.recycling,
+      title: 'Setoran Sampah',
+      date: '20 September 2026',
+      amount: '+ Rp20.000',
+      status: 'Selesai',
+      isIncome: true,
+      type: 'Setoran',
+    ),
+    _TransactionItem(
+      icon: Icons.payments_outlined,
+      title: 'Penarikan Saldo',
+      date: '18 September 2026',
+      amount: '- Rp10.000',
+      status: 'Terverifikasi',
+      isIncome: false,
+      type: 'Penarikan',
+    ),
+    _TransactionItem(
+      icon: Icons.recycling,
+      title: 'Setoran Sampah',
+      date: '15 September 2026',
+      amount: '+ Rp15.000',
+      status: 'Selesai',
+      isIncome: true,
+      type: 'Setoran',
+    ),
+  ];
+
+  String _selectedFilter = 'Semua';
+
+  List<_TransactionItem> get _filteredTransactions {
+    if (_selectedFilter == 'Semua') {
+      return _transactions;
+    }
+
+    return _transactions.where((item) => item.type == _selectedFilter).toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final filteredTransactions = _filteredTransactions;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -22,56 +69,95 @@ class RiwayatTransaksiScreen extends StatelessWidget {
             'Riwayat Transaksi',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 6),
-
           Text(
             'Daftar transaksi yang dilakukan',
             style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
-
-          const SizedBox(height: 24),
-
-          // =========================
-          // CONTOH TRANSAKSI SETORAN
-          // =========================
-          _TransactionCard(
-            icon: Icons.recycling,
-            title: 'Setoran Sampah',
-            date: '20 September 2026',
-            amount: '+ Rp20.000',
-            status: 'Selesai',
-            isIncome: true,
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedFilter,
+                isExpanded: true,
+                icon: const Icon(
+                  Icons.filter_alt_outlined,
+                  color: AppColors.primary,
+                ),
+                items: const ['Semua', 'Setoran', 'Penarikan']
+                    .map(
+                      (value) => DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedFilter = value;
+                    });
+                  }
+                },
+              ),
+            ),
           ),
-
-          const SizedBox(height: 12),
-
-          // =========================
-          // CONTOH TRANSAKSI PENARIKAN
-          // =========================
-          _TransactionCard(
-            icon: Icons.payments_outlined,
-            title: 'Penarikan Saldo',
-            date: '18 September 2026',
-            amount: '- Rp10.000',
-            status: 'Terverifikasi',
-            isIncome: false,
-          ),
-
-          const SizedBox(height: 12),
-
-          _TransactionCard(
-            icon: Icons.recycling,
-            title: 'Setoran Sampah',
-            date: '15 September 2026',
-            amount: '+ Rp15.000',
-            status: 'Selesai',
-            isIncome: true,
-          ),
+          const SizedBox(height: 18),
+          if (filteredTransactions.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Center(
+                child: Text('Tidak ada transaksi pada filter ini.'),
+              ),
+            )
+          else
+            ...filteredTransactions.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _TransactionCard(
+                  icon: item.icon,
+                  title: item.title,
+                  date: item.date,
+                  amount: item.amount,
+                  status: item.status,
+                  isIncome: item.isIncome,
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
+}
+
+class _TransactionItem {
+  final IconData icon;
+  final String title;
+  final String date;
+  final String amount;
+  final String status;
+  final bool isIncome;
+  final String type;
+
+  const _TransactionItem({
+    required this.icon,
+    required this.title,
+    required this.date,
+    required this.amount,
+    required this.status,
+    required this.isIncome,
+    required this.type,
+  });
 }
 
 class _TransactionCard extends StatelessWidget {

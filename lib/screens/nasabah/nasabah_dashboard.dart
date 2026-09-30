@@ -109,7 +109,7 @@ class _BerandaScreen extends StatelessWidget {
             const Text(
               'Selamat datang kembali!',
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            ),
+            ), 
 
             const SizedBox(height: 24),
 
@@ -118,8 +118,23 @@ class _BerandaScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF2E7D32),
+                    Color(0xFF4CAF50),
+                    Color(0xFF81C784),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.28),
+                    blurRadius: 12,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

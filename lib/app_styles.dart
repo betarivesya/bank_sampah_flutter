@@ -70,3 +70,33 @@ class AppDecorations {
     ],
   );
 }
+
+String rupiah(num value) {
+  final tanda = value < 0 ? '-' : '';
+  final angka = value.abs().toStringAsFixed(0);
+  final hasil = angka.replaceAllMapped(
+    RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+    (Match match) => '${match[1]}.',
+  );
+
+  return '${tanda}Rp$hasil';
+}
+
+String tanggalIndonesia(DateTime date) {
+  const bulan = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
+
+  return '${date.day} ${bulan[date.month - 1]} ${date.year}';
+}

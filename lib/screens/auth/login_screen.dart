@@ -17,13 +17,47 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
+  final PageController _bannerController = PageController();
 
+  int _currentBanner = 0;
   bool obscurePassword = true;
+
+  final List<_BannerItem> _bannerItems = const [
+    _BannerItem(
+      title: 'Bank Sampah',
+      subtitle: 'Kelola sampah jadi nilai ekonomis',
+      asset: 'assets/images/sampahtumbuhan.jpg',
+    ),
+    _BannerItem(
+      title: 'Transaksi Cepat',
+      subtitle: 'Pantau setoran dan penarikan saldo dengan mudah',
+      asset: 'assets/images/sampahtumbuhan.jpg',
+    ),
+    _BannerItem(
+      title: 'Lingkungan Lebih Baik',
+      subtitle: 'Setiap sampah yang dipilah memberi manfaat besar',
+      asset: 'assets/images/sampahtumbuhan.jpg',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _bannerController.addListener(() {
+      final currentPage = (_bannerController.page ?? 0).round();
+      if (currentPage != _currentBanner) {
+        setState(() {
+          _currentBanner = currentPage;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
     usernameController.dispose();
     passwordController.dispose();
+    _bannerController.dispose();
     super.dispose();
   }
 
@@ -55,72 +89,109 @@ class _LoginScreenState extends State<LoginScreen> {
               // =========================
               // HEADER / GAMBAR
               // =========================
-              Container(
+              SizedBox(
                 height: 230,
                 width: double.infinity,
-                clipBehavior: Clip.hardEdge,
-                decoration: const BoxDecoration(color: Color(0xFF164A43)),
                 child: Stack(
+                  
                   children: [
-                    //=========================
-                    // BACKGROUND IMAGE
-                    //=========================
                     Positioned.fill(
-                      child: Opacity(
-                        opacity: 0.90,
-                        child: Image.asset(
-                          'assets/images/sampahtumbuhan.jpg',
-                          fit: BoxFit.cover,
-                        ),
+                      child: PageView.builder(
+                        controller: _bannerController,
+                        itemCount: _bannerItems.length,
+                        itemBuilder: (context, index) {
+                          final banner = _bannerItems[index];
+
+                          return Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Positioned.fill(
+                                child: Image.asset(
+                                  banner.asset,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              Positioned.fill(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        const Color(0xFF164A43)
+                                            .withValues(alpha: 0.25),
+                                        const Color(0xFF164A43)
+                                            .withValues(alpha: 0.8),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 75,
+                                      height: 75,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.15,
+                                        ),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: const Icon(
+                                        Icons.recycling,
+                                        size: 45,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 15),
+                                    Text(
+                                      banner.title,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    Text(
+                                      banner.subtitle,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
-
-                    //=========================
-                    // GREEN OVERLAY
-                    //=========================
-                    Positioned.fill(
-                      child: Container(
-                        color: const Color(0xFF164A43).withOpacity(0.55),
-                      ),
-                    ),
-
-                    //=========================
-                    // CONTENT
-                    //=========================
-                    Center(
-                      child: Column(
+                    Positioned(
+                      bottom: 14,
+                      left: 0,
+                      right: 0,
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 75,
-                            height: 75,
+                        children: List.generate(
+                          _bannerItems.length,
+                          (index) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            width: _currentBanner == index ? 18 : 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Icon(
-                              Icons.recycling,
-                              size: 45,
-                              color: Colors.white,
+                              color: _currentBanner == index
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(999),
                             ),
                           ),
-
-                          const SizedBox(height: 15),
-
-                          const Text(
-                            'Bank Sampah',
-                            style: TextStyle(color: Colors.white, fontSize: 15),
-                          ),
-
-                          const Text(
-                            'Griya Ayu',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 25,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ],
@@ -282,4 +353,16 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+}
+
+class _BannerItem {
+  final String title;
+  final String subtitle;
+  final String asset;
+
+  const _BannerItem({
+    required this.title,
+    required this.subtitle,
+    required this.asset,
+  });
 }
