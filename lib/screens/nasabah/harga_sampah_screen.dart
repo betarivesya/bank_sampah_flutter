@@ -4,13 +4,13 @@ class HargaSampahScreen extends StatelessWidget {
   const HargaSampahScreen({super.key});
 
   final List<Map<String, dynamic>> hargaSampah = const [
-    {'nama': 'Plastik', 'harga': 4000, 'icon': Icons.recycling},
-    {'nama': 'Kardus', 'harga': 3000, 'icon': Icons.inventory_2_outlined},
     {
       'nama': 'Botol Plastik',
-      'harga': 5000,
+      'harga': 2000,
       'icon': Icons.local_drink_outlined,
     },
+    {'nama': 'Plastik', 'harga': 4000, 'icon': Icons.recycling_outlined},
+    {'nama': 'Kardus', 'harga': 3000, 'icon': Icons.inventory_2_outlined},
     {'nama': 'Kertas', 'harga': 2500, 'icon': Icons.description_outlined},
   ];
 
@@ -23,6 +23,10 @@ class HargaSampahScreen extends StatelessWidget {
     return SafeArea(
       child: Column(
         children: [
+          // ==========================================
+          // HEADER
+          // ==========================================
+
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
             child: Row(
@@ -39,28 +43,36 @@ class HargaSampahScreen extends StatelessWidget {
                     color: Color(0xFF167A63),
                   ),
                 ),
+
                 const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Harga Sampah',
-                      style: TextStyle(
-                        fontSize: 21,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF172033),
+
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Harga Sampah',
+                        style: TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF172033),
+                        ),
                       ),
-                    ),
-                    Text(
-                      'Harga sampah yang berlaku',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
+                      SizedBox(height: 2),
+                      Text(
+                        'Harga pembelian sampah yang berlaku saat ini',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
 
+          // ==========================================
+          // DAFTAR HARGA
+          // ==========================================
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -73,11 +85,19 @@ class HargaSampahScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: const Color(0xFFE8ECEA)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
+                      // ICON
                       Container(
                         width: 46,
                         height: 46,
@@ -88,21 +108,40 @@ class HargaSampahScreen extends StatelessWidget {
                         child: Icon(
                           item['icon'],
                           color: const Color(0xFF167A63),
+                          size: 23,
                         ),
                       ),
 
                       const SizedBox(width: 14),
 
+                      // NAMA
                       Expanded(
-                        child: Text(
-                          item['nama'],
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item['nama'],
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF172033),
+                              ),
+                            ),
+
+                            const SizedBox(height: 3),
+
+                            const Text(
+                              'Harga per kilogram',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
 
+                      // HARGA
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
@@ -114,9 +153,11 @@ class HargaSampahScreen extends StatelessWidget {
                               color: Color(0xFF167A63),
                             ),
                           ),
+
                           const SizedBox(height: 2),
+
                           const Text(
-                            'per kg',
+                            '/ kg',
                             style: TextStyle(fontSize: 10, color: Colors.grey),
                           ),
                         ],
@@ -125,6 +166,41 @@ class HargaSampahScreen extends StatelessWidget {
                   ),
                 );
               },
+            ),
+          ),
+
+          // ==========================================
+          // INFORMASI HARGA
+          // ==========================================
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(13),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAF7F1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, color: Color(0xFF167A63), size: 18),
+
+                  SizedBox(width: 9),
+
+                  Expanded(
+                    child: Text(
+                      'Harga sampah dapat berubah sesuai '
+                      'kebijakan Bank Sampah Griya Ayu.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF477267),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

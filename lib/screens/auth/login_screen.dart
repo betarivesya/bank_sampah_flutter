@@ -6,6 +6,7 @@ import 'package:bank_sampah_flutter/screens/nasabah/nasabah_dashboard.dart';
 
 import 'lupa_password_screen.dart';
 import 'register_screen.dart';
+import '../admin/admin_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -93,7 +94,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 230,
                 width: double.infinity,
                 child: Stack(
-                  
                   children: [
                     Positioned.fill(
                       child: PageView.builder(
@@ -282,7 +282,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const NasabahDashboard(),
+                            builder: (context) => const AdminDashboard(),
                           ),
                         );
                       },
