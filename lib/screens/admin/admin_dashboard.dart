@@ -1,228 +1,120 @@
 import 'package:flutter/material.dart';
 
-import '../../app_styles.dart';
-import 'admin_drawer.dart';
-
-class AdminDashboard extends StatefulWidget {
+class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
 
-  @override
-  State<AdminDashboard> createState() => _AdminDashboardState();
-}
+  static const Color darkGreen = Color(0xFF075B4F);
+  static const Color primaryGreen = Color(0xFF2E8B72);
+  static const Color background = Color(0xFFF5F7F8);
+  static const Color textDark = Color(0xFF24413D);
+  static const Color textGrey = Color(0xFF7B8A89);
 
-class _AdminDashboardState extends State<AdminDashboard> {
-  String _selectedMenu = 'dashboard';
+  String formatRupiah(int value) {
+    final text = value.toString();
+    final buffer = StringBuffer();
 
-  void _selectMenu(String menu) {
-    setState(() {
-      _selectedMenu = menu;
-    });
-
-    if (menu != 'dashboard') {
-      String message;
-
-      switch (menu) {
-        case 'sampah':
-          message = 'Menu Kelola Sampah akan segera dibuat.';
-          break;
-
-        case 'pengguna':
-          message = 'Menu Manajemen Pengguna akan segera dibuat.';
-          break;
-
-        case 'laporan':
-          message = 'Menu Laporan akan segera dibuat.';
-          break;
-
-        default:
-          message = 'Menu belum tersedia.';
+    for (int i = 0; i < text.length; i++) {
+      if (i > 0 && (text.length - i) % 3 == 0) {
+        buffer.write('.');
       }
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
-
-      setState(() {
-        _selectedMenu = 'dashboard';
-      });
+      buffer.write(text[i]);
     }
+
+    return 'Rp${buffer.toString()}';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-
-      // ==========================================
-      // DRAWER / SIDEBAR
-      // ==========================================
-      drawer: AdminDrawer(
-        selectedMenu: _selectedMenu,
-        onMenuSelected: _selectMenu,
-      ),
-
-      // ==========================================
-      // APP BAR
-      // ==========================================
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.textPrimary,
-        elevation: 0,
-        centerTitle: false,
-
-        leading: Builder(
-          builder: (context) {
-            return IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () {
-                Scaffold.of(context).openDrawer();
-              },
-            );
-          },
-        ),
-
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Dashboard Admin',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'Bank Sampah Griya Ayu',
-              style: TextStyle(
-                fontSize: 10,
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-
-        actions: [
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Belum ada notifikasi baru.')),
-              );
-            },
-            icon: Stack(
-              children: [
-                const Icon(Icons.notifications_outlined, size: 24),
-
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 4),
-        ],
-      ),
-
-      // ==========================================
-      // BODY
-      // ==========================================
-      body: RefreshIndicator(
+    return Container(
+      color: background,
+      child: RefreshIndicator(
         onRefresh: () async {
           await Future.delayed(const Duration(milliseconds: 500));
-
-          if (!mounted) return;
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data dashboard diperbarui.')),
-          );
         },
-
-        child: ListView(
+        child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          children: [
-            _buildAttentionCard(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildWelcomeCard(),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-            _buildStatistics(),
+              _buildSectionTitle('Ringkasan'),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
-            _buildChartSection(),
+              _buildStatistics(),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 22),
 
-            _buildLatestTransactions(),
-          ],
+              _buildChartSection(),
+
+              const SizedBox(height: 22),
+
+              _buildLatestTransactions(),
+
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ==========================================
-  // PERLU PERHATIAN
-  // ==========================================
+  // ==========================================================
+  // HERO / WELCOME CARD
+  // ==========================================================
 
-  Widget _buildAttentionCard() {
+  Widget _buildWelcomeCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF8E8),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFFD166)),
+        gradient: const LinearGradient(colors: [darkGreen, primaryGreen]),
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 58,
+            height: 58,
             decoration: BoxDecoration(
-              color: const Color(0xFFFFE8B3),
-              borderRadius: BorderRadius.circular(11),
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(18),
             ),
             child: const Icon(
-              Icons.warning_amber_rounded,
-              color: Color(0xFFE09B00),
-              size: 21,
+              Icons.manage_accounts_outlined,
+              color: Colors.white,
+              size: 31,
             ),
           ),
 
-          const SizedBox(width: 12),
+          const SizedBox(width: 15),
 
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Perlu Perhatian',
+                  'Halo, Admin 👋',
                   style: TextStyle(
-                    fontSize: 14,
+                    color: Colors.white,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF8A5A00),
                   ),
                 ),
 
                 SizedBox(height: 6),
 
                 Text(
-                  '3 transaksi menunggu validasi',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF7A6848)),
-                ),
-
-                SizedBox(height: 3),
-
-                Text(
-                  '3 penarikan menunggu diproses',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF7A6848)),
+                  'Siap mengelola aktivitas Bank Sampah hari ini?',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
@@ -232,109 +124,88 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  // ==========================================
-  // STATISTIK
-  // ==========================================
+  // ==========================================================
+  // SECTION TITLE
+  // ==========================================================
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        color: textDark,
+        fontSize: 17,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  // ==========================================================
+  // STATISTICS
+  // ==========================================================
 
   Widget _buildStatistics() {
-    return Column(
+    return GridView.count(
+      crossAxisCount: 2,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: 1.55,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatisticCard(
-                icon: Icons.people_outline,
-                title: 'Nasabah Aktif',
-                value: '6',
-                subtitle: 'nasabah terdaftar',
-              ),
-            ),
-
-            const SizedBox(width: 10),
-
-            Expanded(
-              child: _buildStatisticCard(
-                icon: Icons.payments_outlined,
-                title: 'Nilai Setoran',
-                value: 'Rp143.500',
-                subtitle: 'total nilai transaksi',
-              ),
-            ),
-          ],
+        _statisticCard(
+          title: 'Nasabah Aktif',
+          value: '6',
+          icon: Icons.people_outline_rounded,
         ),
 
-        const SizedBox(height: 10),
-
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatisticCard(
-                icon: Icons.account_balance_wallet_outlined,
-                title: 'Saldo Nasabah',
-                value: 'Rp1.848.000',
-                subtitle: 'saldo tersimpan',
-              ),
-            ),
-
-            const SizedBox(width: 10),
-
-            Expanded(
-              child: _buildStatisticCard(
-                icon: Icons.pending_actions_outlined,
-                title: 'Menunggu Validasi',
-                value: '3',
-                subtitle: 'perlu divalidasi',
-              ),
-            ),
-          ],
+        _statisticCard(
+          title: 'Nilai Setoran',
+          value: 'Rp143.500',
+          icon: Icons.payments_outlined,
         ),
 
-        const SizedBox(height: 10),
+        _statisticCard(
+          title: 'Saldo Nasabah',
+          value: 'Rp1.848.000',
+          icon: Icons.account_balance_wallet_outlined,
+        ),
 
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatisticCard(
-                icon: Icons.arrow_downward_rounded,
-                title: 'Penarikan Pending',
-                value: '3',
-                subtitle: 'perlu diproses',
-              ),
-            ),
+        _statisticCard(
+          title: 'Menunggu Validasi',
+          value: '3',
+          icon: Icons.pending_actions_outlined,
+        ),
 
-            const SizedBox(width: 10),
+        _statisticCard(
+          title: 'Penarikan Pending',
+          value: '3',
+          icon: Icons.money_outlined,
+        ),
 
-            Expanded(
-              child: _buildStatisticCard(
-                icon: Icons.check_circle_outline,
-                title: 'Transaksi Disetujui',
-                value: '2',
-                subtitle: 'sudah divalidasi',
-              ),
-            ),
-          ],
+        _statisticCard(
+          title: 'Transaksi Disetujui',
+          value: '2',
+          icon: Icons.check_circle_outline_rounded,
         ),
       ],
     );
   }
 
-  Widget _buildStatisticCard({
-    required IconData icon,
+  Widget _statisticCard({
     required String title,
     required String value,
-    required String subtitle,
+    required IconData icon,
   }) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 126),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(17),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 7,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -343,420 +214,305 @@ class _AdminDashboardState extends State<AdminDashboard> {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppColors.textSecondary,
-                  ),
+              Container(
+                width: 35,
+                height: 35,
+                decoration: BoxDecoration(
+                  color: primaryGreen.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: Icon(icon, color: primaryGreen, size: 19),
               ),
 
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Icon(icon, size: 16, color: AppColors.primary),
+              const Spacer(),
+
+              const Icon(
+                Icons.more_horiz_rounded,
+                color: Colors.grey,
+                size: 18,
               ),
             ],
           ),
 
-          const SizedBox(height: 12),
+          const Spacer(),
 
           Text(
             value,
             style: const TextStyle(
+              color: textDark,
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
             ),
           ),
 
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
 
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 9, color: AppColors.textSecondary),
+          Text(title, style: const TextStyle(color: textGrey, fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================================
+  // CHART
+  // ==========================================================
+
+  Widget _buildChartSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Statistik Setoran 2026',
+                  style: TextStyle(
+                    color: textDark,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+              Text('2026', style: TextStyle(color: textGrey, fontSize: 12)),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          SizedBox(
+            height: 180,
+            child: CustomPaint(
+              painter: _LineChartPainter(),
+              child: const SizedBox.expand(),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ==========================================
-  // GRAFIK
-  // ==========================================
-
-  Widget _buildChartSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Statistik Setoran',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-
-        const SizedBox(height: 10),
-
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Nilai Setoran per Bulan',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-
-              const SizedBox(height: 20),
-
-              SizedBox(
-                height: 150,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildBar('Apr', 0.55),
-                    _buildBar('Mei', 0.72),
-                    _buildBar('Jun', 0.42),
-                    _buildBar('Jul', 0.88),
-                    _buildBar('Agu', 0.78),
-                    _buildBar('Sep', 0.60),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Jumlah Transaksi per Bulan',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-
-              const SizedBox(height: 18),
-
-              SizedBox(
-                height: 100,
-                child: CustomPaint(
-                  painter: _LineChartPainter(),
-                  child: const SizedBox(
-                    width: double.infinity,
-                    height: double.infinity,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  Text(
-                    'Mei',
-                    style: TextStyle(fontSize: 9, color: Colors.grey),
-                  ),
-                  Text(
-                    'Jun',
-                    style: TextStyle(fontSize: 9, color: Colors.grey),
-                  ),
-                  Text(
-                    'Jul',
-                    style: TextStyle(fontSize: 9, color: Colors.grey),
-                  ),
-                  Text(
-                    'Agu',
-                    style: TextStyle(fontSize: 9, color: Colors.grey),
-                  ),
-                  Text(
-                    'Sep',
-                    style: TextStyle(fontSize: 9, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBar(String month, double heightFactor) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Container(
-          width: 22,
-          height: 105 * heightFactor,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.75),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-          ),
-        ),
-
-        const SizedBox(height: 6),
-
-        Text(month, style: const TextStyle(fontSize: 9, color: Colors.grey)),
-      ],
-    );
-  }
-
-  // ==========================================
+  // ==========================================================
   // TRANSAKSI TERBARU
-  // ==========================================
+  // ==========================================================
 
   Widget _buildLatestTransactions() {
     final transactions = [
       {
-        'nomor': 'TRX-20240901-001',
-        'nasabah': 'Sri Rahayu',
+        'kode': 'TRX-20240901-001',
+        'nama': 'Sri Rahayu',
         'tanggal': '01 Sep 2026',
-        'nilai': 'Rp19.750',
+        'nominal': 19750,
         'status': 'Menunggu',
       },
       {
-        'nomor': 'TRX-20240905-002',
-        'nasabah': 'Sri Rahayu',
+        'kode': 'TRX-20240905-002',
+        'nama': 'Sri Rahayu',
         'tanggal': '05 Sep 2026',
-        'nilai': 'Rp22.000',
+        'nominal': 22000,
         'status': 'Menunggu',
       },
       {
-        'nomor': 'TRX-20240908-003',
-        'nasabah': 'Budi Santoso',
+        'kode': 'TRX-20240908-003',
+        'nama': 'Budi Santoso',
         'tanggal': '08 Sep 2026',
-        'nilai': 'Rp15.500',
+        'nominal': 15500,
         'status': 'Selesai',
       },
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'Transaksi Terbaru',
-                style: TextStyle(
-                  fontSize: 17,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Transaksi Terbaru',
+            style: TextStyle(
+              color: textDark,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          ...transactions.map((item) => _transactionItem(item)),
+        ],
+      ),
+    );
+  }
+
+  Widget _transactionItem(Map<String, dynamic> item) {
+    final bool selesai = item['status'] == 'Selesai';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAF9),
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: primaryGreen.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: const Icon(
+              Icons.recycling_outlined,
+              color: primaryGreen,
+              size: 21,
+            ),
+          ),
+
+          const SizedBox(width: 11),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item['nama'],
+                  style: const TextStyle(
+                    color: textDark,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 3),
+
+                Text(
+                  item['kode'],
+                  style: const TextStyle(color: textGrey, fontSize: 10),
+                ),
+
+                const SizedBox(height: 3),
+
+                Text(
+                  item['tanggal'],
+                  style: const TextStyle(color: textGrey, fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                formatRupiah(item['nominal']),
+                style: const TextStyle(
+                  color: textDark,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
                 ),
               ),
-            ),
 
-            TextButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Halaman transaksi akan dibuat nanti.'),
-                  ),
-                );
-              },
-              child: const Text(
-                'Lihat semua',
-                style: TextStyle(fontSize: 11, color: AppColors.primary),
-              ),
-            ),
-          ],
-        ),
+              const SizedBox(height: 5),
 
-        const SizedBox(height: 4),
-
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: transactions.map((transaction) {
-              final bool isWaiting = transaction['status'] == 'Menunggu';
-
-              return Container(
-                padding: const EdgeInsets.all(14),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey.shade100),
+                  color: selesai
+                      ? Colors.green.withValues(alpha: 0.10)
+                      : Colors.orange.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  item['status'],
+                  style: TextStyle(
+                    color: selesai
+                        ? Colors.green.shade700
+                        : Colors.orange.shade700,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                      child: const Icon(
-                        Icons.recycling_outlined,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                    ),
-
-                    const SizedBox(width: 10),
-
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            transaction['nomor']!,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-
-                          const SizedBox(height: 3),
-
-                          Text(
-                            transaction['nasabah']!,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-
-                          const SizedBox(height: 3),
-
-                          Text(
-                            transaction['tanggal']!,
-                            style: const TextStyle(
-                              fontSize: 9,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          transaction['nilai']!,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-
-                        const SizedBox(height: 5),
-
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isWaiting
-                                ? const Color(0xFFFFF0DC)
-                                : const Color(0xFFE8F6EF),
-                            borderRadius: BorderRadius.circular(7),
-                          ),
-                          child: Text(
-                            transaction['status']!,
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              color: isWaiting
-                                  ? const Color(0xFFC47A00)
-                                  : AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+              ),
+            ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-// ==========================================
+// ============================================================
 // LINE CHART PAINTER
-// ==========================================
+// ============================================================
 
 class _LineChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.primary
-      ..strokeWidth = 2
+    final paintLine = Paint()
+      ..color = const Color(0xFF2E8B72)
+      ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
 
-    final pointPaint = Paint()
-      ..color = AppColors.primary
+    final paintPoint = Paint()
+      ..color = const Color(0xFF2E8B72)
       ..style = PaintingStyle.fill;
 
-    final points = [
-      Offset(size.width * 0.08, size.height * 0.70),
-      Offset(size.width * 0.28, size.height * 0.55),
-      Offset(size.width * 0.48, size.height * 0.42),
-      Offset(size.width * 0.68, size.height * 0.25),
-      Offset(size.width * 0.88, size.height * 0.38),
-    ];
-
-    // Grid
-    final gridPaint = Paint()
-      ..color = Colors.grey.withValues(alpha: 0.15)
+    final paintGrid = Paint()
+      ..color = Colors.grey.withValues(alpha: 0.12)
       ..strokeWidth = 1;
 
-    for (int i = 1; i <= 4; i++) {
-      final y = size.height * i / 5;
+    const values = [0.35, 0.50, 0.42, 0.68, 0.58, 0.78, 0.65];
 
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    for (int i = 0; i < 4; i++) {
+      final y = (size.height / 4) * i;
+
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paintGrid);
     }
 
-    // Line
     final path = Path();
 
-    path.moveTo(points.first.dx, points.first.dy);
+    for (int i = 0; i < values.length; i++) {
+      final x = (size.width / (values.length - 1)) * i;
 
-    for (int i = 1; i < points.length; i++) {
-      path.lineTo(points[i].dx, points[i].dy);
+      final y = size.height - (values[i] * size.height);
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+
+      canvas.drawCircle(Offset(x, y), 4, paintPoint);
     }
 
-    canvas.drawPath(path, paint);
-
-    // Points
-    for (final point in points) {
-      canvas.drawCircle(point, 3.5, pointPaint);
-    }
+    canvas.drawPath(path, paintLine);
   }
 
   @override

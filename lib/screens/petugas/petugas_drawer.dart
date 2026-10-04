@@ -1,22 +1,35 @@
 import 'package:flutter/material.dart';
 
-class AdminDrawer extends StatelessWidget {
-  final String selectedMenu;
-  final Function(String) onMenuSelected;
-  final VoidCallback onLogout;
+import '../../data/petugas_dummy_data.dart';
+import 'nasabah_screen.dart';
+import 'setoran_screen.dart';
+import 'penarikan_screen.dart';
 
-  const AdminDrawer({
-    super.key,
-    required this.selectedMenu,
-    required this.onMenuSelected,
-    required this.onLogout,
-  });
-
+class PetugasDrawer extends StatelessWidget {
   static const Color darkGreen = Color(0xFF075B4F);
   static const Color primaryGreen = Color(0xFF2E8B72);
 
+  final VoidCallback onRiwayat;
+  final VoidCallback onLogout;
+
+  const PetugasDrawer({
+    super.key,
+    required this.onRiwayat,
+    required this.onLogout,
+  });
+
+  void bukaHalaman(BuildContext context, Widget halaman) {
+    Navigator.pop(context);
+
+    Navigator.push(context, MaterialPageRoute(builder: (context) => halaman));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final totalPending = PetugasDummyData.penarikan
+        .where((item) => item.status == 'Menunggu')
+        .length;
+
     return Drawer(
       backgroundColor: darkGreen,
       child: SafeArea(
@@ -100,40 +113,67 @@ class AdminDrawer extends StatelessWidget {
             const SizedBox(height: 9),
 
             // ==================================================
-            // MENU ADMIN
+            // DASHBOARD
             // ==================================================
             _drawerMenu(
-              context: context,
               icon: Icons.home_rounded,
               title: 'Dashboard',
-              menuKey: 'dashboard',
+              active: true,
+              onTap: () {
+                Navigator.pop(context);
+              },
             ),
 
+            // ==================================================
+            // DATA NASABAH
+            // ==================================================
             _drawerMenu(
-              context: context,
-              icon: Icons.recycling_outlined,
-              title: 'Kelola Sampah',
-              menuKey: 'sampah',
-            ),
-
-            _drawerMenu(
-              context: context,
               icon: Icons.people_outline_rounded,
-              title: 'Manajemen Pengguna',
-              menuKey: 'pengguna',
+              title: 'Data Nasabah',
+              onTap: () {
+                bukaHalaman(context, const NasabahScreen());
+              },
             ),
 
+            // ==================================================
+            // SETOR SAMPAH
+            // ==================================================
             _drawerMenu(
-              context: context,
-              icon: Icons.bar_chart_outlined,
-              title: 'Laporan',
-              menuKey: 'laporan',
+              icon: Icons.recycling_outlined,
+              title: 'Setor Sampah',
+              onTap: () {
+                bukaHalaman(context, const SetoranScreen());
+              },
+            ),
+
+            // ==================================================
+            // RIWAYAT
+            // ==================================================
+            _drawerMenu(
+              icon: Icons.receipt_long_outlined,
+              title: 'Riwayat Transaksi',
+              onTap: () {
+                Navigator.pop(context);
+                onRiwayat();
+              },
+            ),
+
+            // ==================================================
+            // PENARIKAN
+            // ==================================================
+            _drawerMenu(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'Penarikan Saldo',
+              badge: totalPending > 0 ? '$totalPending' : null,
+              onTap: () {
+                bukaHalaman(context, const PenarikanScreen());
+              },
             ),
 
             const Spacer(),
 
             // ==================================================
-            // PROFILE ADMIN
+            // PROFILE PETUGAS
             // ==================================================
             Container(
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -154,7 +194,7 @@ class AdminDrawer extends StatelessWidget {
                     ),
                     child: const Center(
                       child: Text(
-                        'A',
+                        'P',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 19,
@@ -166,13 +206,13 @@ class AdminDrawer extends StatelessWidget {
 
                   const SizedBox(width: 11),
 
-                  // NAMA ADMIN
+                  // NAMA
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Admin',
+                          'Petugas',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 14,
@@ -181,7 +221,7 @@ class AdminDrawer extends StatelessWidget {
                         ),
                         SizedBox(height: 3),
                         Text(
-                          'Administrator',
+                          'Petugas Pelayanan',
                           style: TextStyle(color: Colors.white60, fontSize: 10),
                         ),
                       ],
@@ -191,10 +231,7 @@ class AdminDrawer extends StatelessWidget {
                   // LOGOUT
                   InkWell(
                     borderRadius: BorderRadius.circular(11),
-                    onTap: () {
-                      Navigator.pop(context);
-                      onLogout();
-                    },
+                    onTap: onLogout,
                     child: Container(
                       padding: const EdgeInsets.all(9),
                       decoration: BoxDecoration(
@@ -220,17 +257,16 @@ class AdminDrawer extends StatelessWidget {
   }
 
   // ==========================================================
-  // ITEM MENU
+  // ITEM HAMBURGER
   // ==========================================================
 
   Widget _drawerMenu({
-    required BuildContext context,
     required IconData icon,
     required String title,
-    required String menuKey,
+    required VoidCallback onTap,
+    bool active = false,
+    String? badge,
   }) {
-    final bool active = selectedMenu == menuKey;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: Material(
@@ -238,10 +274,7 @@ class AdminDrawer extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            Navigator.pop(context);
-            onMenuSelected(menuKey);
-          },
+          onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
             child: Row(
@@ -264,6 +297,26 @@ class AdminDrawer extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                if (badge != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF716B),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      badge,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

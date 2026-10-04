@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../app_styles.dart';
-
-import 'package:bank_sampah_flutter/screens/nasabah/nasabah_dashboard.dart';
-
 import 'lupa_password_screen.dart';
 import 'register_screen.dart';
-import '../admin/admin_dashboard.dart';
+import '../admin/admin_layout.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -44,8 +40,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+
     _bannerController.addListener(() {
       final currentPage = (_bannerController.page ?? 0).round();
+
       if (currentPage != _currentBanner) {
         setState(() {
           _currentBanner = currentPage;
@@ -62,24 +60,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void login() {
-    final username = usernameController.text.trim();
-    final password = passwordController.text.trim();
-
-    if (username.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Username dan password wajib diisi')),
-      );
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Login berhasil — sementara menggunakan dummy'),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             children: [
               // =========================
-              // HEADER / GAMBAR
+              // HEADER / BANNER
               // =========================
               SizedBox(
                 height: 230,
@@ -111,6 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   fit: BoxFit.cover,
                                 ),
                               ),
+
                               Positioned.fill(
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
@@ -127,6 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
+
                               Center(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -146,7 +128,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                         color: Colors.white,
                                       ),
                                     ),
+
                                     const SizedBox(height: 15),
+
                                     Text(
                                       banner.title,
                                       style: const TextStyle(
@@ -154,6 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         fontSize: 15,
                                       ),
                                     ),
+
                                     Text(
                                       banner.subtitle,
                                       textAlign: TextAlign.center,
@@ -171,6 +156,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                     ),
+
+                    // =========================
+                    // INDICATOR
+                    // =========================
                     Positioned(
                       bottom: 14,
                       left: 0,
@@ -277,20 +266,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 28),
 
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AdminDashboard(),
+                    // =========================
+                    // TOMBOL MASUK
+                    // =========================
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AdminLayout(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Masuk',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
                           ),
-                        );
-                      },
-                      child: const Text(
-                        'Masuk',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
