@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:bank_sampah_flutter/app_styles.dart';
-import 'package:bank_sampah_flutter/data/petugas_dummy_data.dart';
-import 'package:bank_sampah_flutter/models/petugas_model.dart';
+
+import '../../app_styles.dart';
+import '../../models/jenis_sampah_model.dart';
+import '../../services/api_service.dart';
 
 class TambahSetoranScreen extends StatefulWidget {
   const TambahSetoranScreen({super.key});
@@ -11,340 +12,403 @@ class TambahSetoranScreen extends StatefulWidget {
 }
 
 class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
-  DummyNasabah? _nasabahTerpilih;
-  DummyJenisSampah? _jenisTerpilih;
+  List<Map<String, dynamic>> _nasabah = [];
+  List<JenisSampah> _jenisSampah = [];
+
+  Map<String, dynamic>? _nasabahTerpilih;
+  JenisSampah? _jenisTerpilih;
+
   final TextEditingController _beratController = TextEditingController();
+
+  bool _loading = true;
+  bool _saving = false;
+
+  // ============================================================
+  // ID PETUGAS
+  // ============================================================
+
+  final int _idPetugas = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  @override
+  void dispose() {
+    _beratController.dispose();
+    super.dispose();
+  }
+
+  // ============================================================
+  // LOAD DATA
+  // ============================================================
+
+  Future<void> _loadData() async {
+    try {
+      final nasabah = await ApiService.getNasabah();
+      final jenisSampah = await ApiService.getJenisSampah();
+
+      if (!mounted) return;
+
+      setState(() {
+        _nasabah = nasabah;
+        _jenisSampah = jenisSampah;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengambil data: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // ============================================================
+  // HITUNG TOTAL
+  // ============================================================
 
   double get _berat {
     return double.tryParse(_beratController.text.replaceAll(',', '.')) ?? 0;
   }
 
+  double get _hargaPerKg {
+    if (_jenisTerpilih == null) return 0;
+
+    return _jenisTerpilih!.hargaPerKg;
+  }
+
   double get _total {
-    if (_jenisTerpilih == null || _berat <= 0) {
-      return 0;
-    }
-
-    return _berat * _jenisTerpilih!.hargaPerKg;
+    return _berat * _hargaPerKg;
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _beratController.addListener(_refreshTotal);
-  }
-
-  void _refreshTotal() => setState(() {});
-
-  @override
-  void dispose() {
-    _beratController
-      ..removeListener(_refreshTotal)
-      ..dispose();
-    super.dispose();
-  }
+  // ============================================================
+  // SIMPAN
+  // ============================================================
 
   Future<void> _simpan() async {
     if (_nasabahTerpilih == null) {
-      _showError('Pilih nasabah terlebih dahulu.');
+      _showError('Silakan pilih nasabah.');
       return;
     }
 
     if (_jenisTerpilih == null) {
-      _showError('Pilih jenis sampah terlebih dahulu.');
+      _showError('Silakan pilih jenis sampah.');
       return;
     }
 
     if (_berat <= 0) {
-      _showError('Berat sampah harus lebih dari 0 Kg.');
+      _showError('Berat sampah harus lebih dari 0 kg.');
       return;
     }
 
-    if (_total <= 0) {
-      _showError('Total setoran tidak valid.');
-      return;
+    setState(() {
+      _saving = true;
+    });
+
+    try {
+      await ApiService.tambahSetoran(
+        idNasabah: int.parse(_nasabahTerpilih!['id_nasabah'].toString()),
+        idPetugas: _idPetugas,
+        idJenisSampah: _jenisTerpilih!.idJenisSampah,
+        totalBerat: _berat,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Setoran berhasil disimpan.'),
+          backgroundColor: Color(0xFF075B4F),
+        ),
+      );
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _saving = false;
+      });
+
+      _showError(e.toString().replaceFirst('Exception: ', ''));
     }
-
-    final nasabah = _nasabahTerpilih!;
-    final jenis = _jenisTerpilih!;
-
-    PetugasDummyData.setoran.add(
-      DummySetoran(
-        idSetoran: PetugasDummyData.nextSetoranId,
-        idNasabah: nasabah.idNasabah,
-        idJenisSampah: jenis.idJenisSampah,
-        namaNasabah: nasabah.nama,
-        namaSampah: jenis.namaSampah,
-        beratKg: _berat,
-        hargaPerKg: jenis.hargaPerKg,
-        total: _total,
-        tanggal: DateTime.now(),
-      ),
-    );
-
-    // Dummy: saldo nasabah langsung bertambah.
-    nasabah.saldo += _total;
-
-    if (!mounted) return;
-    Navigator.pop(context, true);
   }
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red.shade700),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF6F8F7),
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: const Color(0xFF075B4F),
         foregroundColor: Colors.white,
-        title: const Text(
-          'Setoran Baru',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Tambah Setoran'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const _SectionTitle(
-            title: '1. Pilih Nasabah',
-            subtitle: 'Pastikan data nasabah sesuai dengan yang datang.',
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<DummyNasabah>(
-            value: _nasabahTerpilih,
-            decoration: AppDecorations.inputDecoration(
-              'Nasabah',
-              icon: Icons.person_outline,
-            ),
-            items: PetugasDummyData.nasabah
-                .map(
-                  (item) => DropdownMenuItem<DummyNasabah>(
-                    value: item,
-                    child: Text(item.nama),
-                  ),
-                )
-                .toList(),
-            onChanged: (value) {
-              setState(() {
-                _nasabahTerpilih = value;
-              });
-            },
-          ),
-          if (_nasabahTerpilih != null) ...[
-            const SizedBox(height: 10),
-            _SelectedNasabahCard(nasabah: _nasabahTerpilih!),
-          ],
-          const SizedBox(height: 24),
-          const _SectionTitle(
-            title: '2. Pilih Jenis Sampah',
-            subtitle: 'Harga mengikuti data harga yang tersedia.',
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<DummyJenisSampah>(
-            value: _jenisTerpilih,
-            decoration: AppDecorations.inputDecoration(
-              'Jenis Sampah',
-              icon: Icons.recycling_outlined,
-            ),
-            items: PetugasDummyData.jenisSampah
-                .map(
-                  (item) => DropdownMenuItem<DummyJenisSampah>(
-                    value: item,
-                    child: Text(item.namaSampah),
-                  ),
-                )
-                .toList(),
-            onChanged: (value) {
-              setState(() {
-                _jenisTerpilih = value;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          if (_jenisTerpilih != null)
-            _PriceCard(harga: _jenisTerpilih!.hargaPerKg),
-          const SizedBox(height: 24),
-          const _SectionTitle(
-            title: '3. Timbang Sampah',
-            subtitle: 'Masukkan berat dalam satuan kilogram.',
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _beratController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: AppDecorations.inputDecoration(
-              'Berat Sampah (Kg)',
-              icon: Icons.scale_outlined,
-            ),
-          ),
-          const SizedBox(height: 24),
-          _TotalCard(total: _total),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 52,
-            child: ElevatedButton.icon(
-              onPressed: _simpan,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              icon: const Icon(Icons.save_outlined),
-              label: const Text(
-                'Simpan Setoran',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const _SectionTitle({required this.title, required this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: AppTextStyles.title),
-        const SizedBox(height: 4),
-        Text(subtitle, style: AppTextStyles.subtitle),
-      ],
-    );
-  }
-}
-
-class _SelectedNasabahCard extends StatelessWidget {
-  final DummyNasabah nasabah;
-
-  const _SelectedNasabahCard({required this.nasabah});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.secondary.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.secondary),
-      ),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            backgroundColor: Colors.white,
-            child: Icon(Icons.person, color: AppColors.primary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: _loading
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF075B4F)),
+            )
+          : ListView(
+              padding: const EdgeInsets.all(20),
               children: [
-                Text(
-                  nasabah.nama,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                _SectionTitle(number: '1', title: 'Pilih Nasabah'),
+                const SizedBox(height: 10),
+
+                _buildNasabahDropdown(),
+
+                const SizedBox(height: 24),
+
+                _SectionTitle(number: '2', title: 'Pilih Jenis Sampah'),
+                const SizedBox(height: 10),
+
+                _buildJenisSampahDropdown(),
+
+                const SizedBox(height: 24),
+
+                _SectionTitle(number: '3', title: 'Masukkan Berat Sampah'),
+                const SizedBox(height: 10),
+
+                TextField(
+                  controller: _beratController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (_) {
+                    setState(() {});
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Contoh: 2.5',
+                    suffixText: 'kg',
+                    prefixIcon: const Icon(Icons.scale),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 3),
-                Text(nasabah.noHp, style: AppTextStyles.subtitle),
-                const SizedBox(height: 3),
-                Text(
-                  'Saldo saat ini: ${rupiah(nasabah.saldo)}',
-                  style: AppTextStyles.price,
+
+                const SizedBox(height: 24),
+
+                _buildTotalCard(),
+
+                const SizedBox(height: 30),
+
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: _saving ? null : _simpan,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF075B4F),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Simpan Setoran',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                  ),
                 ),
+
+                const SizedBox(height: 30),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
-}
 
-class _PriceCard extends StatelessWidget {
-  final double harga;
+  // ============================================================
+  // NASABAH
+  // ============================================================
 
-  const _PriceCard({required this.harga});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.orange.shade200),
+  Widget _buildNasabahDropdown() {
+    return DropdownButtonFormField<Map<String, dynamic>>(
+      value: _nasabahTerpilih,
+      isExpanded: true,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF075B4F)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.sell_outlined, color: Colors.orange),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'Harga per Kg',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          Text(
-            rupiah(harga),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.orange,
-            ),
-          ),
-        ],
-      ),
+      hint: const Text('Pilih nasabah'),
+      items: _nasabah.map((item) {
+        return DropdownMenuItem<Map<String, dynamic>>(
+          value: item,
+          child: Text(item['nama']?.toString() ?? '-'),
+        );
+      }).toList(),
+      onChanged: (value) {
+        setState(() {
+          _nasabahTerpilih = value;
+        });
+      },
     );
   }
-}
 
-class _TotalCard extends StatelessWidget {
-  final double total;
+  // ============================================================
+  // JENIS SAMPAH
+  // ============================================================
 
-  const _TotalCard({required this.total});
+  Widget _buildJenisSampahDropdown() {
+    return DropdownButtonFormField<JenisSampah>(
+      value: _jenisTerpilih,
+      isExpanded: true,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        prefixIcon: const Icon(Icons.recycling, color: Color(0xFF075B4F)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      hint: const Text('Pilih jenis sampah'),
+      items: _jenisSampah.map((item) {
+        return DropdownMenuItem<JenisSampah>(
+          value: item,
+          child: Text(item.namaSampah),
+        );
+      }).toList(),
+      onChanged: (value) {
+        setState(() {
+          _jenisTerpilih = value;
+        });
+      },
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
+  // ============================================================
+  // TOTAL
+  // ============================================================
+
+  Widget _buildTotalCard() {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(18),
+        color: const Color(0xFFE8F5F1),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Total Nilai Setoran',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(
+              color: Color(0xFF075B4F),
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 8),
           Text(
-            rupiah(total),
+            rupiah(_total),
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
+              color: Color(0xFF075B4F),
+              fontSize: 26,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 7),
-          const Text(
-            'Total dihitung otomatis dari harga/kg × berat.',
-            style: TextStyle(color: Colors.white70, fontSize: 12),
+          const SizedBox(height: 14),
+          const Divider(),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Berat'),
+              Text(
+                '${_berat.toStringAsFixed(2)} kg',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Harga/kg'),
+              Text(
+                rupiah(_hargaPerKg),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+// ============================================================
+// SECTION TITLE
+// ============================================================
+
+class _SectionTitle extends StatelessWidget {
+  final String number;
+  final String title;
+
+  const _SectionTitle({required this.number, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: Color(0xFF075B4F),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            number,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ],
     );
   }
 }

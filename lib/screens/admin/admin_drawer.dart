@@ -43,9 +43,7 @@ class AdminDrawer extends StatelessWidget {
                       size: 29,
                     ),
                   ),
-
                   const SizedBox(width: 13),
-
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,67 +74,76 @@ class AdminDrawer extends StatelessWidget {
 
             Container(height: 1, color: Colors.white24),
 
-            const SizedBox(height: 18),
+            // ==================================================
+            // DAFTAR MENU YANG BISA DI-SCROLL
+            // ==================================================
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 18),
 
-            // ==================================================
-            // LABEL MENU
-            // ==================================================
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'MENU',
-                  style: TextStyle(
-                    color: Colors.white60,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
+                    // LABEL MENU
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'MENU',
+                          style: TextStyle(
+                            color: Colors.white60,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 9),
+
+                    // MENU ADMIN
+                    _drawerMenu(
+                      context: context,
+                      icon: Icons.home_rounded,
+                      title: 'Dashboard',
+                      menuKey: 'dashboard',
+                    ),
+
+                    _drawerMenu(
+                      context: context,
+                      icon: Icons.recycling_outlined,
+                      title: 'Kelola Sampah',
+                      menuKey: 'sampah',
+                    ),
+
+                    _drawerMenu(
+                      context: context,
+                      icon: Icons.people_outline_rounded,
+                      title: 'Manajemen Pengguna',
+                      menuKey: 'pengguna',
+                    ),
+
+                    _drawerMenu(
+                      context: context,
+                      icon: Icons.bar_chart_outlined,
+                      title: 'Laporan',
+                      menuKey: 'laporan',
+                    ),
+                  ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 9),
-
             // ==================================================
-            // MENU ADMIN
-            // ==================================================
-            _drawerMenu(
-              context: context,
-              icon: Icons.home_rounded,
-              title: 'Dashboard',
-              menuKey: 'dashboard',
-            ),
-
-            _drawerMenu(
-              context: context,
-              icon: Icons.recycling_outlined,
-              title: 'Kelola Sampah',
-              menuKey: 'sampah',
-            ),
-
-            _drawerMenu(
-              context: context,
-              icon: Icons.people_outline_rounded,
-              title: 'Manajemen Pengguna',
-              menuKey: 'pengguna',
-            ),
-
-            _drawerMenu(
-              context: context,
-              icon: Icons.bar_chart_outlined,
-              title: 'Laporan',
-              menuKey: 'laporan',
-            ),
-
-            const Spacer(),
-
-            // ==================================================
-            // PROFILE ADMIN
+            // PROFILE ADMIN DAN LOGOUT
+            // TETAP DI BAGIAN BAWAH DRAWER
             // ==================================================
             Container(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               padding: const EdgeInsets.all(13),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.09),
@@ -211,8 +218,6 @@ class AdminDrawer extends StatelessWidget {
                 ],
               ),
             ),
-
-            const SizedBox(height: 10),
           ],
         ),
       ),
@@ -251,9 +256,7 @@ class AdminDrawer extends StatelessWidget {
                   color: active ? Colors.white : Colors.white70,
                   size: 21,
                 ),
-
                 const SizedBox(width: 13),
-
                 Expanded(
                   child: Text(
                     title,

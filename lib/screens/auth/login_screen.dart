@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../app_styles.dart';
+import '../../services/api_service.dart';
+
 import 'lupa_password_screen.dart';
 import 'register_screen.dart';
 import '../admin/admin_layout.dart';
+import '../petugas/petugas_layout.dart';
+import '../nasabah/nasabah_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -58,6 +63,115 @@ class _LoginScreenState extends State<LoginScreen> {
     passwordController.dispose();
     _bannerController.dispose();
     super.dispose();
+  }
+
+  Future<void> login() async {
+    final username = usernameController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email dan password harus diisi')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return const Center(child: CircularProgressIndicator());
+      },
+    );
+
+    final result = await ApiService.login(username, password);
+
+    if (!mounted) return;
+
+    Navigator.pop(context);
+
+    if (result['success'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Login gagal')),
+      );
+      return;
+    }
+
+    final user = result['user'];
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Data pengguna tidak ditemukan')),
+      );
+      return;
+    }
+
+    final role = user['role'].toString().toLowerCase();
+
+    // =========================
+    // ADMIN
+    // =========================
+    if (role == 'admin') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AdminLayout()),
+      );
+    }
+    // =========================
+    // PETUGAS
+    // =========================
+    else if (role == 'petugas') {
+      final idPetugas = int.tryParse(
+        (user['id'] ?? user['id_pengguna'] ?? user['id_petugas'] ?? '')
+            .toString(),
+      );
+
+      if (idPetugas == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ID petugas tidak ditemukan dari respons login'),
+          ),
+        );
+        return;
+      }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              PetugasLayout(idPetugas: int.parse(idPetugas.toString())),
+        ),
+      );
+    }
+    // =========================
+    // NASABAH
+    // =========================
+    else if (role == 'nasabah') {
+      final idNasabah = user['id_nasabah'];
+
+      if (idNasabah == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil nasabah tidak ditemukan')),
+        );
+        return;
+      }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              NasabahDashboard(idNasabah: int.parse(idNasabah.toString())),
+        ),
+      );
+    }
+    // =========================
+    // ROLE TIDAK DIKENALI
+    // =========================
+    else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Role pengguna tidak dikenali')),
+      );
+    }
   }
 
   @override
@@ -272,14 +386,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AdminLayout(),
-                            ),
-                          );
-                        },
+                        onPressed: login,
                         child: const Text(
                           'Masuk',
                           style: TextStyle(

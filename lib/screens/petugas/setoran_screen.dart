@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:bank_sampah_flutter/app_styles.dart';
-import 'package:bank_sampah_flutter/data/petugas_dummy_data.dart';
-import 'package:bank_sampah_flutter/models/petugas_model.dart';
-import 'package:bank_sampah_flutter/screens/petugas/tambah_setoran_screen.dart';
+
+import '../../app_styles.dart';
+import '../../models/setoran_model.dart';
+import '../../services/api_service.dart';
+import 'tambah_setoran_screen.dart';
 
 class SetoranScreen extends StatefulWidget {
   const SetoranScreen({super.key});
@@ -12,81 +13,142 @@ class SetoranScreen extends StatefulWidget {
 }
 
 class _SetoranScreenState extends State<SetoranScreen> {
-  Future<void> _tambahSetoran() async {
-    final tersimpan = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => const TambahSetoranScreen()),
-    );
+  List<SetoranModel> _setoran = [];
+  bool _loading = true;
 
-    if (tersimpan == true && mounted) {
-      setState(() {});
+  @override
+  void initState() {
+    super.initState();
+    _loadSetoran();
+  }
+
+  // ============================================================
+  // LOAD DATA
+  // ============================================================
+
+  Future<void> _loadSetoran() async {
+    setState(() {
+      _loading = true;
+    });
+
+    try {
+      final data = await ApiService.getSetoran();
+
+      if (!mounted) return;
+
+      setState(() {
+        _setoran = data;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Setoran berhasil ditambahkan.')),
+        SnackBar(
+          content: Text('Gagal mengambil data setoran: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
+  // ============================================================
+  // FORMAT TANGGAL
+  // ============================================================
+
+  String _formatTanggal(String tanggal) {
+    if (tanggal.isEmpty) return '-';
+
+    try {
+      final date = DateTime.parse(tanggal);
+
+      return tanggalIndonesia(date);
+    } catch (_) {
+      return tanggal;
+    }
+  }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
+
   @override
   Widget build(BuildContext context) {
-    final list = [...PetugasDummyData.setoran]
-      ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
-
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Setoran Sampah',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+      backgroundColor: const Color(0xFFF6F8F7),
+      body: RefreshIndicator(
+        onRefresh: _loadSetoran,
+        child: _loading
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFF075B4F)),
+              )
+            : _setoran.isEmpty
+            ? _buildEmpty()
+            : ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 20),
+                  ..._setoran.map(
+                    (item) => _SetoranCard(
+                      setoran: item,
+                      tanggal: _formatTanggal(item.tanggal),
+                    ),
+                  ),
+                  const SizedBox(height: 80),
+                ],
+              ),
       ),
-      body: list.isEmpty
-          ? const Center(child: Text('Belum ada data setoran.'))
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: list.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final item = list[index];
-                return _SetoranCard(item: item);
-              },
-            ),
+
+      // ============================================================
+      // TAMBAH SETORAN
+      // ============================================================
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primary,
+        backgroundColor: const Color(0xFF075B4F),
         foregroundColor: Colors.white,
-        onPressed: _tambahSetoran,
         icon: const Icon(Icons.add),
         label: const Text('Setoran Baru'),
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TambahSetoranScreen()),
+          );
+
+          if (result == true) {
+            _loadSetoran();
+          }
+        },
       ),
     );
   }
-}
 
-class _SetoranCard extends StatelessWidget {
-  final DummySetoran item;
+  // ============================================================
+  // HEADER
+  // ============================================================
 
-  const _SetoranCard({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: AppDecorations.cardBoxDecoration,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         children: [
           Container(
-            width: 50,
-            height: 50,
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.secondary.withOpacity(0.22),
-              borderRadius: BorderRadius.circular(14),
+              color: const Color(0xFFE8F5F1),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
-              Icons.recycling_outlined,
-              color: AppColors.primary,
-              size: 27,
+              Icons.recycling,
+              color: Color(0xFF075B4F),
+              size: 28,
             ),
           ),
           const SizedBox(width: 14),
@@ -94,29 +156,232 @@ class _SetoranCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.namaNasabah,
-                  style: const TextStyle(
-                    fontSize: 16,
+                const Text(
+                  'Kelola Setoran Sampah',
+                  style: TextStyle(
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: Color(0xFF172033),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${item.namaSampah} • ${item.beratKg.toStringAsFixed(1)} Kg',
-                  style: AppTextStyles.subtitle,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  tanggalIndonesia(item.tanggal),
-                  style: AppTextStyles.subtitle,
+                  '${_setoran.length} transaksi setoran',
+                  style: const TextStyle(color: Colors.grey),
                 ),
               ],
             ),
           ),
-          Text(rupiah(item.total), style: AppTextStyles.price),
         ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // EMPTY
+  // ============================================================
+
+  Widget _buildEmpty() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(20),
+      children: [
+        const SizedBox(height: 100),
+        const Icon(Icons.inbox_outlined, size: 70, color: Colors.grey),
+        const SizedBox(height: 16),
+        const Center(
+          child: Text(
+            'Belum ada data setoran',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Center(
+          child: Text(
+            'Tambahkan setoran baru untuk nasabah.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ============================================================
+// CARD SETORAN
+// ============================================================
+
+class _SetoranCard extends StatelessWidget {
+  final SetoranModel setoran;
+  final String tanggal;
+
+  const _SetoranCard({required this.setoran, required this.tanggal});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE4EAE7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5F1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.person, color: Color(0xFF075B4F)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      setoran.namaNasabah,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      tanggal,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              _StatusBadge(status: setoran.status),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          Row(
+            children: [
+              Expanded(
+                child: _InfoItem(
+                  label: 'Jenis Sampah',
+                  value: setoran.namaSampah,
+                  icon: Icons.recycling,
+                ),
+              ),
+              Expanded(
+                child: _InfoItem(
+                  label: 'Berat',
+                  value: '${setoran.totalBerat} kg',
+                  icon: Icons.scale,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              Expanded(
+                child: _InfoItem(
+                  label: 'Harga/kg',
+                  value: rupiah(setoran.hargaPerKg),
+                  icon: Icons.sell_outlined,
+                ),
+              ),
+              Expanded(
+                child: _InfoItem(
+                  label: 'Total',
+                  value: rupiah(setoran.totalNilai),
+                  icon: Icons.payments_outlined,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// INFO ITEM
+// ============================================================
+
+class _InfoItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _InfoItem({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: const Color(0xFF2E8B72)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ============================================================
+// STATUS
+// ============================================================
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5F1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        status,
+        style: const TextStyle(
+          color: Color(0xFF075B4F),
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

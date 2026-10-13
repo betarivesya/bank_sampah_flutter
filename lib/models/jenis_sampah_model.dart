@@ -1,30 +1,37 @@
-import 'harga_sampah_model.dart';
-
 class JenisSampah {
-  final int id;
+  final int idJenisSampah;
   final String namaSampah;
-  final List<HargaSampah> listHarga;
+  final double hargaPerKg;
+  final bool status;
+  final int? idHarga;
 
   JenisSampah({
-    required this.id,
+    required this.idJenisSampah,
     required this.namaSampah,
-    required this.listHarga,
+    required this.hargaPerKg,
+    required this.status,
+    this.idHarga,
   });
 
   factory JenisSampah.fromJson(Map<String, dynamic> json) {
-    var rawHarga = json['harga'] ?? json['harga_sampah'] ?? json['list_harga'];
-    List<HargaSampah> hargaList = [];
+    double harga = 0;
+    int? idHarga;
 
-    if (rawHarga != null && rawHarga is List) {
-      hargaList = rawHarga
-          .map((h) => HargaSampah.fromJson(h as Map<String, dynamic>))
-          .toList();
+    // Data harga dari relasi "harga"
+    if (json['harga'] is List && (json['harga'] as List).isNotEmpty) {
+      final hargaData = (json['harga'] as List).first;
+
+      harga = double.tryParse(hargaData['harga_per_kg'].toString()) ?? 0;
+
+      idHarga = int.tryParse(hargaData['id_harga'].toString());
     }
 
     return JenisSampah(
-      id: json['id_jenis_sampah'] ?? json['id'] ?? 0,
-      namaSampah: json['nama_sampah'] ?? json['nama_jenis'] ?? '',
-      listHarga: hargaList,
+      idJenisSampah: int.parse(json['id_jenis_sampah'].toString()),
+      namaSampah: json['nama_sampah'].toString(),
+      hargaPerKg: harga,
+      status: json['status'] == true || json['status'].toString() == '1',
+      idHarga: idHarga,
     );
   }
 }

@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../services/api_service.dart';
+
+// ============================================================
+// HALAMAN MANAJEMEN PENGGUNA
+// ============================================================
+
 class ManajemenPenggunaScreen extends StatefulWidget {
   const ManajemenPenggunaScreen({super.key});
 
@@ -9,9 +15,9 @@ class ManajemenPenggunaScreen extends StatefulWidget {
 }
 
 class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
-  // =========================================================
+  // ============================================================
   // WARNA
-  // =========================================================
+  // ============================================================
 
   static const Color darkGreen = Color(0xFF075B4F);
   static const Color primaryGreen = Color(0xFF2E8B72);
@@ -19,81 +25,30 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
   static const Color textDark = Color(0xFF172033);
   static const Color textGrey = Color(0xFF6B7280);
 
-  // =========================================================
-  // CONTROLLER
-  // =========================================================
+  // ============================================================
+  // CONTROLLER SEARCH
+  // ============================================================
 
   final TextEditingController searchController = TextEditingController();
 
-  // =========================================================
-  // DATA DUMMY
-  // =========================================================
-
-  List<Map<String, dynamic>> users = [
-    {
-      'id': 1,
-      'nama': 'Admin',
-      'email': 'admin@banksampah.com',
-      'telepon': '-',
-      'password': '11111111',
-      'role': 'Admin',
-      'status': 'Aktif',
-      'protected': true,
-    },
-    {
-      'id': 2,
-      'nama': 'Petugas',
-      'email': 'pecel@gmail.com',
-      'telepon': '-',
-      'password': '11111111',
-      'role': 'Petugas',
-      'status': 'Aktif',
-      'protected': false,
-    },
-    {
-      'id': 3,
-      'nama': 'Nasabah',
-      'email': 'nasi@gmail.com',
-      'telepon': '081234567890',
-      'password': '11111111',
-      'role': 'Nasabah',
-      'status': 'Aktif',
-      'protected': false,
-    },
-  ];
-
-  // =========================================================
+  // ============================================================
   // FILTER
-  // =========================================================
+  // ============================================================
 
-  List<Map<String, dynamic>> get filteredUsers {
-    final keyword = searchController.text.trim().toLowerCase();
+  String selectedRoleFilter = 'Semua';
+  String selectedStatusFilter = 'Semua';
 
-    if (keyword.isEmpty) {
-      return users;
-    }
+  // ============================================================
+  // DATA PENGGUNA
+  // ============================================================
 
-    return users.where((user) {
-      return user['nama'].toString().toLowerCase().contains(keyword) ||
-          user['email'].toString().toLowerCase().contains(keyword) ||
-          user['telepon'].toString().toLowerCase().contains(keyword) ||
-          user['role'].toString().toLowerCase().contains(keyword);
-    }).toList();
-  }
+  List<Map<String, dynamic>> users = [];
 
-  // =========================================================
-  // STATISTIK
-  // =========================================================
+  bool isLoading = true;
 
-  int get totalPengguna => users.length;
-
-  int get totalAdmin => users.where((user) => user['role'] == 'Admin').length;
-
-  int get totalPetugas =>
-      users.where((user) => user['role'] == 'Petugas').length;
-
-  int get totalNasabah =>
-      users.where((user) => user['role'] == 'Nasabah').length;
+  // ============================================================
+  // INIT STATE
+  // ============================================================
 
   @override
   void initState() {
@@ -102,7 +57,13 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
     searchController.addListener(() {
       setState(() {});
     });
+
+    _loadUsers();
   }
+
+  // ============================================================
+  // DISPOSE
+  // ============================================================
 
   @override
   void dispose() {
@@ -110,9 +71,110 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
     super.dispose();
   }
 
-  // =========================================================
+  // ============================================================
+  // MENGAMBIL DATA PENGGUNA DARI API
+  // ============================================================
+
+  Future<void> _loadUsers() async {
+    if (mounted) {
+      setState(() {
+        isLoading = true;
+      });
+    }
+
+    try {
+      final data = await ApiService.getPengguna();
+
+      if (!mounted) return;
+
+      setState(() {
+        users = data.map((user) {
+          return {
+            'id': user['id'],
+            'nama': user['nama'] ?? '',
+            'email': user['email'] ?? '',
+            'telepon': user['telepon'] ?? '-',
+            'role': user['role'] ?? '',
+            'status': user['status'] == true ? 'Aktif' : 'Nonaktif',
+            'protected': user['protected'] == true,
+          };
+        }).toList();
+
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengambil data pengguna: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // ============================================================
+  // FILTER PENCARIAN
+  // ============================================================
+
+  List<Map<String, dynamic>> get filteredUsers {
+    final keyword = searchController.text.trim().toLowerCase();
+
+    return users.where((user) {
+      final nama = user['nama']?.toString().toLowerCase() ?? '';
+      final email = user['email']?.toString().toLowerCase() ?? '';
+      final role = user['role']?.toString().toLowerCase() ?? '';
+      final status = user['status']?.toString() ?? '';
+
+      final cocokSearch =
+          keyword.isEmpty ||
+          nama.contains(keyword) ||
+          email.contains(keyword) ||
+          role.contains(keyword);
+
+      final cocokRole =
+          selectedRoleFilter == 'Semua' ||
+          role == selectedRoleFilter.toLowerCase();
+
+      final cocokStatus =
+          selectedStatusFilter == 'Semua' || status == selectedStatusFilter;
+
+      return cocokSearch && cocokRole && cocokStatus;
+    }).toList();
+  }
+
+  // ============================================================
+  // STATISTIK
+  // ============================================================
+
+  int get totalUsers => users.length;
+
+  int get totalAdmin {
+    return users
+        .where((user) => user['role'].toString().toLowerCase() == 'admin')
+        .length;
+  }
+
+  int get totalPetugas {
+    return users
+        .where((user) => user['role'].toString().toLowerCase() == 'petugas')
+        .length;
+  }
+
+  int get totalNasabah {
+    return users
+        .where((user) => user['role'].toString().toLowerCase() == 'nasabah')
+        .length;
+  }
+
+  // ============================================================
   // TAMBAH PENGGUNA
-  // =========================================================
+  // ============================================================
 
   void showAddUserDialog() {
     final namaController = TextEditingController();
@@ -120,259 +182,111 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
 
-    String selectedRole = 'Pilih Role';
+    String selectedRole = 'Nasabah';
+    String selectedStatus = 'Aktif';
+
     bool obscurePassword = true;
 
     showDialog(
       context: context,
       builder: (dialogContext) {
+        bool isSaving = false;
+
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
               title: const Text(
-                'Tambah Pengguna Baru',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: textDark,
-                ),
+                'Tambah Pengguna',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
               content: SingleChildScrollView(
-                child: SizedBox(
-                  width: 420,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _label('Nama Lengkap'),
-                      const SizedBox(height: 7),
-                      _textField(
-                        controller: namaController,
-                        hint: 'Masukkan nama lengkap',
-                        icon: Icons.person_outline,
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      _label('Nomor Telepon'),
-                      const SizedBox(height: 7),
-                      _textField(
-                        controller: teleponController,
-                        hint: 'Masukkan nomor telepon',
-                        icon: Icons.phone_outlined,
-                        keyboardType: TextInputType.phone,
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      _label('Email'),
-                      const SizedBox(height: 7),
-                      _textField(
-                        controller: emailController,
-                        hint: 'Masukkan email',
-                        icon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      _label('Password'),
-                      const SizedBox(height: 7),
-                      TextField(
-                        controller: passwordController,
-                        obscureText: obscurePassword,
-                        decoration:
-                            _inputDecoration(
-                              hint: 'Masukkan password',
-                              icon: Icons.lock_outline,
-                            ).copyWith(
-                              suffixIcon: IconButton(
-                                onPressed: () {
-                                  setDialogState(() {
-                                    obscurePassword = !obscurePassword;
-                                  });
-                                },
-                                icon: Icon(
-                                  obscurePassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
-                                ),
-                              ),
-                            ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      _label('Role'),
-                      const SizedBox(height: 7),
-
-                      DropdownButtonFormField<String>(
-                        value: selectedRole,
-                        decoration: _inputDecoration(
-                          hint: 'Pilih Role',
-                          icon: Icons.admin_panel_settings_outlined,
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'Pilih Role',
-                            child: Text('Pilih Role'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Admin',
-                            child: Text('Admin'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Petugas',
-                            child: Text('Petugas'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Nasabah',
-                            child: Text('Nasabah'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setDialogState(() {
-                            selectedRole = value ?? 'Pilih Role';
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text(
-                    'Batal',
-                    style: TextStyle(
-                      color: textGrey,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final nama = namaController.text.trim();
-                    final telepon = teleponController.text.trim();
-                    final email = emailController.text.trim();
-                    final password = passwordController.text.trim();
-
-                    if (nama.isEmpty ||
-                        telepon.isEmpty ||
-                        email.isEmpty ||
-                        password.isEmpty ||
-                        selectedRole == 'Pilih Role') {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Semua data pengguna wajib diisi.'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    setState(() {
-                      users.add({
-                        'id': DateTime.now().millisecondsSinceEpoch,
-                        'nama': nama,
-                        'email': email,
-                        'telepon': telepon,
-                        'password': password,
-                        'role': selectedRole,
-                        'status': 'Aktif',
-                        'protected': false,
-                      });
-                    });
-
-                    Navigator.pop(dialogContext);
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('$nama berhasil ditambahkan.')),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: darkGreen,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                  ),
-                  child: const Text(
-                    'Simpan',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // =========================================================
-  // EDIT PENGGUNA
-  // =========================================================
-
-  void showEditUserDialog(Map<String, dynamic> user) {
-    final namaController = TextEditingController(text: user['nama'].toString());
-
-    String selectedRole = user['role'].toString();
-    String selectedStatus = user['status'].toString();
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: const Text(
-                'Edit Pengguna',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: textDark,
-                ),
-              ),
-              content: SizedBox(
-                width: 420,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _label('Nama Lengkap'),
-                    const SizedBox(height: 7),
-                    _textField(
+                    // ==================================================
+                    // NAMA LENGKAP
+                    // ==================================================
+
+                    TextField(
                       controller: namaController,
-                      hint: 'Masukkan nama lengkap',
-                      icon: Icons.person_outline,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Lengkap',
+                        prefixIcon: Icon(Icons.person_outline),
+                        border: OutlineInputBorder(),
+                      ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
 
-                    _label('Role'),
-                    const SizedBox(height: 7),
+                    // ==================================================
+                    // NOMOR TELEPON
+                    // ==================================================
+                    TextField(
+                      controller: teleponController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Nomor Telepon',
+                        prefixIcon: Icon(Icons.phone_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
 
+                    const SizedBox(height: 12),
+
+                    // ==================================================
+                    // EMAIL
+                    // ==================================================
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icon(Icons.email_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // ==================================================
+                    // PASSWORD
+                    // ==================================================
+                    TextField(
+                      controller: passwordController,
+                      obscureText: obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          tooltip: obscurePassword
+                              ? 'Tampilkan password'
+                              : 'Sembunyikan password',
+                          icon: Icon(
+                            obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          onPressed: () {
+                            setDialogState(() {
+                              obscurePassword = !obscurePassword;
+                            });
+                          },
+                        ),
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // ==================================================
+                    // ROLE
+                    // ==================================================
                     DropdownButtonFormField<String>(
                       value: selectedRole,
-                      decoration: _inputDecoration(
-                        hint: 'Pilih Role',
-                        icon: Icons.admin_panel_settings_outlined,
+                      decoration: const InputDecoration(
+                        labelText: 'Kategori Pengguna',
+                        prefixIcon: Icon(Icons.badge_outlined),
+                        border: OutlineInputBorder(),
                       ),
                       items: const [
                         DropdownMenuItem(value: 'Admin', child: Text('Admin')),
@@ -385,23 +299,28 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                           child: Text('Nasabah'),
                         ),
                       ],
-                      onChanged: (value) {
-                        setDialogState(() {
-                          selectedRole = value ?? selectedRole;
-                        });
-                      },
+                      onChanged: isSaving
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                setDialogState(() {
+                                  selectedRole = value;
+                                });
+                              }
+                            },
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
 
-                    _label('Status'),
-                    const SizedBox(height: 7),
-
+                    // ==================================================
+                    // STATUS AKUN
+                    // ==================================================
                     DropdownButtonFormField<String>(
                       value: selectedStatus,
-                      decoration: _inputDecoration(
-                        hint: 'Pilih Status',
-                        icon: Icons.toggle_on_outlined,
+                      decoration: const InputDecoration(
+                        labelText: 'Status Akun',
+                        prefixIcon: Icon(Icons.toggle_on_outlined),
+                        border: OutlineInputBorder(),
                       ),
                       items: const [
                         DropdownMenuItem(value: 'Aktif', child: Text('Aktif')),
@@ -410,70 +329,120 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                           child: Text('Nonaktif'),
                         ),
                       ],
-                      onChanged: (value) {
-                        setDialogState(() {
-                          selectedStatus = value ?? selectedStatus;
-                        });
-                      },
+                      onChanged: isSaving
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                setDialogState(() {
+                                  selectedStatus = value;
+                                });
+                              }
+                            },
                     ),
                   ],
                 ),
               ),
-              actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
               actions: [
+                // ==================================================
+                // TOMBOL BATAL
+                // ==================================================
+
                 TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text(
-                    'Batal',
-                    style: TextStyle(
-                      color: textGrey,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  onPressed: isSaving
+                      ? null
+                      : () {
+                          Navigator.pop(dialogContext);
+                        },
+                  child: const Text('Batal'),
                 ),
+
+                // ==================================================
+                // TOMBOL SIMPAN
+                // ==================================================
                 ElevatedButton(
-                  onPressed: () {
-                    final nama = namaController.text.trim();
-
-                    if (nama.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Nama lengkap wajib diisi.'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    setState(() {
-                      user['nama'] = nama;
-                      user['role'] = selectedRole;
-                      user['status'] = selectedStatus;
-                    });
-
-                    Navigator.pop(dialogContext);
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('$nama berhasil diperbarui.')),
-                    );
-                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: darkGreen,
                     foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(9),
-                    ),
                   ),
-                  child: const Text(
-                    'Update',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          if (namaController.text.trim().isEmpty ||
+                              teleponController.text.trim().isEmpty ||
+                              emailController.text.trim().isEmpty ||
+                              passwordController.text.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Semua data harus diisi.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (passwordController.text.length < 6) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Password minimal 6 karakter.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() {
+                            isSaving = true;
+                          });
+
+                          try {
+                            await ApiService.tambahPengguna(
+                              nama: namaController.text.trim(),
+                              telepon: teleponController.text.trim(),
+                              email: emailController.text.trim(),
+                              password: passwordController.text,
+                              role: selectedRole,
+                              status: selectedStatus == 'Aktif',
+                            );
+
+                            if (!mounted) return;
+
+                            Navigator.pop(dialogContext);
+
+                            await _loadUsers();
+
+                            if (!mounted) return;
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Pengguna berhasil ditambahkan.'),
+                                backgroundColor: primaryGreen,
+                              ),
+                            );
+                          } catch (e) {
+                            setDialogState(() {
+                              isSaving = false;
+                            });
+
+                            if (!mounted) return;
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Gagal menambahkan pengguna: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Simpan'),
                 ),
               ],
             );
@@ -483,126 +452,291 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
     );
   }
 
-  // =========================================================
+  // ============================================================
+  // EDIT PENGGUNA
+  // ============================================================
+
+  void showEditUserDialog(Map<String, dynamic> user) {
+    final namaController = TextEditingController(
+      text: user['nama']?.toString() ?? '',
+    );
+
+    String selectedRole = user['role']?.toString() ?? 'Nasabah';
+    String selectedStatus = user['status']?.toString() ?? 'Aktif';
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        bool isSaving = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text(
+                'Edit Pengguna',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ==================================================
+                    // NAMA
+                    // ==================================================
+
+                    TextField(
+                      controller: namaController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Lengkap',
+                        prefixIcon: Icon(Icons.person_outline),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // ==================================================
+                    // ROLE
+                    // ==================================================
+                    DropdownButtonFormField<String>(
+                      value: selectedRole,
+                      decoration: const InputDecoration(
+                        labelText: 'Kategori Pengguna',
+                        prefixIcon: Icon(Icons.badge_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'Admin', child: Text('Admin')),
+                        DropdownMenuItem(
+                          value: 'Petugas',
+                          child: Text('Petugas'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Nasabah',
+                          child: Text('Nasabah'),
+                        ),
+                      ],
+                      onChanged: isSaving
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                setDialogState(() {
+                                  selectedRole = value;
+                                });
+                              }
+                            },
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // ==================================================
+                    // STATUS
+                    // ==================================================
+                    DropdownButtonFormField<String>(
+                      value: selectedStatus,
+                      decoration: const InputDecoration(
+                        labelText: 'Status Akun',
+                        prefixIcon: Icon(Icons.toggle_on_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'Aktif', child: Text('Aktif')),
+                        DropdownMenuItem(
+                          value: 'Nonaktif',
+                          child: Text('Nonaktif'),
+                        ),
+                      ],
+                      onChanged: isSaving
+                          ? null
+                          : (value) {
+                              if (value != null) {
+                                setDialogState(() {
+                                  selectedStatus = value;
+                                });
+                              }
+                            },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                // ==================================================
+                // TOMBOL BATAL
+                // ==================================================
+
+                TextButton(
+                  onPressed: isSaving
+                      ? null
+                      : () {
+                          Navigator.pop(dialogContext);
+                        },
+                  child: const Text('Batal'),
+                ),
+
+                // ==================================================
+                // TOMBOL SIMPAN
+                // ==================================================
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: darkGreen,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          if (namaController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Nama pengguna tidak boleh kosong.',
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() {
+                            isSaving = true;
+                          });
+
+                          try {
+                            await ApiService.updatePengguna(
+                              id: int.parse(user['id'].toString()),
+                              nama: namaController.text.trim(),
+                              role: selectedRole,
+                              status: selectedStatus == 'Aktif',
+                            );
+
+                            if (!mounted) return;
+
+                            Navigator.pop(dialogContext);
+
+                            await _loadUsers();
+
+                            if (!mounted) return;
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Data pengguna berhasil diperbarui.',
+                                ),
+                                backgroundColor: primaryGreen,
+                              ),
+                            );
+                          } catch (e) {
+                            setDialogState(() {
+                              isSaving = false;
+                            });
+
+                            if (!mounted) return;
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Gagal memperbarui pengguna: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Simpan Perubahan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ============================================================
   // HAPUS PENGGUNA
-  // =========================================================
+  // ============================================================
 
   void showDeleteUserDialog(Map<String, dynamic> user) {
     if (user['protected'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Admin utama tidak dapat dihapus.')),
+        const SnackBar(
+          content: Text('Admin utama tidak dapat dihapus.'),
+          backgroundColor: Colors.orange,
+        ),
       );
+
       return;
     }
-
-    final nama = user['nama'].toString();
-    final role = user['role'].toString();
 
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+          title: const Text(
+            'Hapus Pengguna',
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ICON PERINGATAN
-              Container(
-                width: 68,
-                height: 68,
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.10),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.red,
-                    size: 40,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              const Text(
-                'Hapus Pengguna',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: textDark,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              RichText(
-                textAlign: TextAlign.center,
-                text: TextSpan(
-                  style: const TextStyle(
-                    color: textGrey,
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
-                  children: [
-                    const TextSpan(text: 'Apakah Anda yakin ingin menghapus '),
-                    TextSpan(
-                      text: '$role ($nama)',
-                      style: const TextStyle(
-                        color: textDark,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const TextSpan(
-                      text: '? Tindakan ini tidak dapat dibatalkan.',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+          content: Text('Apakah kamu yakin ingin menghapus ${user['nama']}?'),
           actions: [
+            // ==================================================
+            // BATAL
+            // ==================================================
+
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text(
-                'Batal',
-                style: TextStyle(color: textGrey, fontWeight: FontWeight.w600),
-              ),
+              child: const Text('Batal'),
             ),
+
+            // ==================================================
+            // HAPUS
+            // ==================================================
             ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  users.remove(user);
-                });
-
-                Navigator.pop(dialogContext);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$nama berhasil dihapus.')),
-                );
-              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(9),
-                ),
               ),
-              child: const Text(
-                'Ya, Lanjutkan',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              onPressed: () async {
+                try {
+                  await ApiService.deletePengguna(
+                    int.parse(user['id'].toString()),
+                  );
+
+                  if (!mounted) return;
+
+                  Navigator.pop(dialogContext);
+
+                  await _loadUsers();
+
+                  if (!mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Pengguna berhasil dihapus.'),
+                      backgroundColor: primaryGreen,
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+
+                  Navigator.pop(dialogContext);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Gagal menghapus pengguna: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Hapus'),
             ),
           ],
         );
@@ -610,116 +744,151 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
     );
   }
 
-  // =========================================================
-  // INPUT
-  // =========================================================
+  // ============================================================
+  // BUILD
+  // ============================================================
 
-  Widget _label(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: textDark,
-      ),
-    );
-  }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: background,
 
-  Widget _textField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    TextInputType? keyboardType,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      decoration: _inputDecoration(hint: hint, icon: icon),
-    );
-  }
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _loadUsers,
+          color: primaryGreen,
 
-  InputDecoration _inputDecoration({
-    required String hint,
-    required IconData icon,
-  }) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
-      prefixIcon: Icon(icon, size: 20, color: const Color(0xFF6B7280)),
-      filled: true,
-      fillColor: const Color(0xFFF8FAFA),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFD9E1DF)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFD9E1DF)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: primaryGreen, width: 1.5),
-      ),
-    );
-  }
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
 
-  // =========================================================
-  // STAT CARD
-  // =========================================================
+            padding: const EdgeInsets.only(bottom: 100),
 
-  Widget _statCard({
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5EBE9)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE3F5EF),
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: const Icon(
-              Icons.people_outline_rounded,
-              color: primaryGreen,
-              size: 22,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ===== HEADER =====
+
+                _buildHeader(),
+
+                // ===== STATISTIK =====
+                _buildStatistics(),
+
+                // ===== SEARCH + FILTER =====
+                _buildSearchBar(),
+
+                // ===== DAFTAR PENGGUNA =====
+                _buildUserList(),
+              ],
             ),
           ),
+        ),
+      ),
 
-          const SizedBox(width: 11),
+      // ==========================================================
+      // TOMBOL TAMBAH
+      // ==========================================================
+      floatingActionButton: FloatingActionButton(
+        onPressed: showAddUserDialog,
+        backgroundColor: darkGreen,
+        child: const Icon(Icons.person_add, color: Colors.white),
+      ),
+    );
+  }
 
-          Expanded(
+  // ============================================================
+  // HEADER
+  // ============================================================
+
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      child: Row(
+        children: [
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
-                  style: const TextStyle(color: textGrey, fontSize: 10),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: textDark,
-                    fontSize: 20,
+                  'Manajemen Pengguna',
+                  style: TextStyle(
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
+                    color: textDark,
                   ),
                 ),
+
+                SizedBox(height: 4),
+
                 Text(
-                  subtitle,
-                  style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 9),
+                  'Kelola data admin, petugas, dan nasabah',
+                  style: TextStyle(fontSize: 13, color: textGrey),
                 ),
               ],
+            ),
+          ),
+
+          // ==================================================
+          // REFRESH
+          // ==================================================
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _loadUsers,
+            icon: const Icon(Icons.refresh, color: darkGreen),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // STATISTIK
+  // ============================================================
+
+  Widget _buildStatistics() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildStatCard(
+              title: 'Total',
+              value: totalUsers.toString(),
+              icon: Icons.people_outline,
+              color: darkGreen,
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          Expanded(
+            child: _buildStatCard(
+              title: 'Admin',
+              value: totalAdmin.toString(),
+              icon: Icons.admin_panel_settings_outlined,
+              color: Colors.blue,
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          Expanded(
+            child: _buildStatCard(
+              title: 'Petugas',
+              value: totalPetugas.toString(),
+              icon: Icons.badge_outlined,
+              color: Colors.orange,
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          Expanded(
+            child: _buildStatCard(
+              title: 'Nasabah',
+              value: totalNasabah.toString(),
+              icon: Icons.person_outline,
+              color: primaryGreen,
             ),
           ),
         ],
@@ -727,470 +896,457 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
     );
   }
 
-  // =========================================================
-  // ROLE BADGE
-  // =========================================================
+  // ============================================================
+  // KARTU STATISTIK
+  // ============================================================
 
-  Widget _roleBadge(String role) {
-    Color background;
-    Color foreground;
-
-    if (role == 'Admin') {
-      background = const Color(0xFFF0E2FF);
-      foreground = const Color(0xFF7C3AED);
-    } else if (role == 'Petugas') {
-      background = const Color(0xFFE0ECFF);
-      foreground = const Color(0xFF2563EB);
-    } else {
-      background = const Color(0xFFD7F7E9);
-      foreground = const Color(0xFF059669);
-    }
-
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        role,
-        style: TextStyle(
-          color: foreground,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  // =========================================================
-  // STATUS BADGE
-  // =========================================================
-
-  Widget _statusBadge(String status) {
-    final active = status == 'Aktif';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: active ? const Color(0xFFD7F7E9) : const Color(0xFFFEE2E2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        status,
-        style: TextStyle(
-          color: active ? const Color(0xFF059669) : const Color(0xFFDC2626),
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  // =========================================================
-  // USER CARD
-  // =========================================================
-
-  Widget _userCard(Map<String, dynamic> user) {
-    final nama = user['nama'].toString();
-    final email = user['email'].toString();
-    final telepon = user['telepon'].toString();
-    final role = user['role'].toString();
-    final status = user['status'].toString();
-    final protected = user['protected'] == true;
-
-    final initial = nama.isNotEmpty ? nama.substring(0, 1).toUpperCase() : '?';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFE5EBE9)),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          // =================================================
-          // BAGIAN ATAS
-          // =================================================
+          Icon(icon, color: color, size: 22),
 
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFD7F7E9),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    initial,
-                    style: const TextStyle(
-                      color: primaryGreen,
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
+          const SizedBox(height: 5),
 
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      nama,
-                      style: const TextStyle(
-                        color: textDark,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(height: 5),
-
-                    Text(
-                      email,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: textGrey, fontSize: 12),
-                    ),
-
-                    const SizedBox(height: 3),
-
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.phone_outlined,
-                          size: 13,
-                          color: Color(0xFF9CA3AF),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          telepon,
-                          style: const TextStyle(
-                            color: Color(0xFF6B7280),
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              _roleBadge(role),
-            ],
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 2),
 
-          const Divider(height: 1, color: Color(0xFFEDF1F0)),
-
-          const SizedBox(height: 12),
-
-          // =================================================
-          // BAGIAN BAWAH
-          // =================================================
-          Row(
-            children: [
-              const Text(
-                'Status',
-                style: TextStyle(color: textGrey, fontSize: 11),
-              ),
-
-              const SizedBox(width: 8),
-
-              _statusBadge(status),
-
-              const Spacer(),
-
-              // EDIT
-              InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () {
-                  showEditUserDialog(user);
-                },
-                child: Container(
-                  width: 38,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF4FF),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.edit_outlined,
-                    color: Color(0xFF2563EB),
-                    size: 18,
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 7),
-
-              // HAPUS / LOCK
-              InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () {
-                  if (protected) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Admin utama tidak dapat dihapus.'),
-                      ),
-                    );
-                  } else {
-                    showDeleteUserDialog(user);
-                  }
-                },
-                child: Container(
-                  width: 38,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: protected
-                        ? const Color(0xFFF3F4F6)
-                        : const Color(0xFFFFF0F0),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    protected ? Icons.lock_outline : Icons.delete_outline,
-                    color: protected ? const Color(0xFF9CA3AF) : Colors.red,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          Text(title, style: const TextStyle(fontSize: 10, color: textGrey)),
         ],
       ),
     );
   }
 
-  // =========================================================
-  // BUILD
-  // =========================================================
+  // ============================================================
+  // SEARCH + FILTER
+  // ============================================================
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: background,
-      child: RefreshIndicator(
-        color: primaryGreen,
-        onRefresh: () async {
-          await Future.delayed(const Duration(milliseconds: 500));
-          setState(() {});
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(
+        children: [
+          // ==================================================
+          // SEARCH
+          // ==================================================
+
+          TextField(
+            controller: searchController,
+            decoration: InputDecoration(
+              hintText: 'Cari nama, email, atau role...',
+              prefixIcon: const Icon(Icons.search, color: textGrey),
+              suffixIcon: searchController.text.isNotEmpty
+                  ? IconButton(
+                      onPressed: () {
+                        searchController.clear();
+                      },
+                      icon: const Icon(Icons.clear),
+                    )
+                  : null,
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // ==================================================
+          // FILTER
+          // ==================================================
+          Row(
             children: [
-              // =================================================
-              // HEADER
-              // =================================================
+              // ==================================================
+              // FILTER ROLE
+              // ==================================================
 
-              const Text(
-                'Kelola Pengguna',
-                style: TextStyle(
-                  color: textDark,
-                  fontSize: 23,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedRoleFilter,
+                  decoration: InputDecoration(
+                    labelText: 'Kategori',
+                    prefixIcon: const Icon(
+                      Icons.badge_outlined,
+                      size: 20,
+                      color: darkGreen,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Semua', child: Text('Semua')),
+                    DropdownMenuItem(value: 'Admin', child: Text('Admin')),
+                    DropdownMenuItem(value: 'Petugas', child: Text('Petugas')),
+                    DropdownMenuItem(value: 'Nasabah', child: Text('Nasabah')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+
+                    setState(() {
+                      selectedRoleFilter = value;
+                    });
+                  },
                 ),
               ),
 
-              const SizedBox(height: 4),
+              const SizedBox(width: 8),
 
-              const Text(
-                'Manajemen data pengguna sistem bank sampah',
-                style: TextStyle(color: textGrey, fontSize: 12),
-              ),
-
-              const SizedBox(height: 20),
-
-              // =================================================
-              // STATISTIK
-              // =================================================
-              Row(
-                children: [
-                  Expanded(
-                    child: _statCard(
-                      title: 'Total Pengguna',
-                      value: '$totalPengguna',
-                      subtitle: 'Semua role',
-                      icon: Icons.people_outline,
+              // ==================================================
+              // FILTER STATUS
+              // ==================================================
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedStatusFilter,
+                  decoration: InputDecoration(
+                    labelText: 'Status Akun',
+                    prefixIcon: const Icon(
+                      Icons.toggle_on_outlined,
+                      size: 20,
+                      color: darkGreen,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _statCard(
-                      title: 'Admin',
-                      value: '$totalAdmin',
-                      subtitle: 'Pengelola',
-                      icon: Icons.admin_panel_settings_outlined,
+                  items: const [
+                    DropdownMenuItem(value: 'Semua', child: Text('Semua')),
+                    DropdownMenuItem(value: 'Aktif', child: Text('Aktif')),
+                    DropdownMenuItem(
+                      value: 'Nonaktif',
+                      child: Text('Nonaktif'),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
 
-              const SizedBox(height: 10),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _statCard(
-                      title: 'Petugas',
-                      value: '$totalPetugas',
-                      subtitle: 'Lapangan',
-                      icon: Icons.badge_outlined,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _statCard(
-                      title: 'Nasabah',
-                      value: '$totalNasabah',
-                      subtitle: 'Terdaftar',
-                      icon: Icons.person_outline,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // =================================================
-              // TAMBAH PENGGUNA
-              // =================================================
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: showAddUserDialog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: darkGreen,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  icon: const Icon(Icons.add, size: 19),
-                  label: const Text(
-                    'Tambah Pengguna',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
+                    setState(() {
+                      selectedStatusFilter = value;
+                    });
+                  },
                 ),
               ),
+            ],
+          ),
 
-              const SizedBox(height: 18),
-
-              // =================================================
-              // SEARCH
-              // =================================================
-              TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  hintText: 'Cari pengguna...',
-                  hintStyle: const TextStyle(
-                    color: Color(0xFF9CA3AF),
-                    fontSize: 13,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: Color(0xFF7B8794),
-                    size: 20,
-                  ),
-                  suffixIcon: searchController.text.isNotEmpty
-                      ? IconButton(
-                          onPressed: () {
-                            searchController.clear();
-                          },
-                          icon: const Icon(Icons.close, size: 18),
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 13),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(11),
-                    borderSide: const BorderSide(color: Color(0xFFDDE5E2)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(11),
-                    borderSide: const BorderSide(color: Color(0xFFDDE5E2)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(11),
-                    borderSide: const BorderSide(
-                      color: primaryGreen,
-                      width: 1.5,
-                    ),
-                  ),
-                ),
+          // ==================================================
+          // RESET FILTER
+          // ==================================================
+          if (selectedRoleFilter != 'Semua' ||
+              selectedStatusFilter != 'Semua' ||
+              searchController.text.isNotEmpty)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    selectedRoleFilter = 'Semua';
+                    selectedStatusFilter = 'Semua';
+                    searchController.clear();
+                  });
+                },
+                icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+                label: const Text('Reset Filter'),
               ),
+            ),
+        ],
+      ),
+    );
+  }
 
-              const SizedBox(height: 18),
+  // ============================================================
+  // DAFTAR PENGGUNA
+  // ============================================================
 
-              // =================================================
-              // JUDUL DAFTAR
-              // =================================================
-              Row(
+  Widget _buildUserList() {
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 40),
+        child: Center(child: CircularProgressIndicator(color: primaryGreen)),
+      );
+    }
+
+    if (filteredUsers.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 80),
+        child: Column(
+          children: [
+            Icon(Icons.people_outline, size: 64, color: textGrey),
+
+            SizedBox(height: 16),
+
+            Center(
+              child: Text(
+                'Data pengguna tidak ditemukan.',
+                style: TextStyle(color: textGrey, fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ==========================================================
+    // PERBAIKAN SCROLL
+    // ListView.builder dihapus karena sudah berada di dalam
+    // SingleChildScrollView pada build().
+    // ==========================================================
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Column(
+        children: filteredUsers.map((user) {
+          return _buildUserCard(user);
+        }).toList(),
+      ),
+    );
+  }
+
+  // ============================================================
+  // CARD PENGGUNA
+  // ============================================================
+
+  Widget _buildUserCard(Map<String, dynamic> user) {
+    final role = user['role']?.toString() ?? '';
+    final status = user['status']?.toString() ?? 'Nonaktif';
+
+    final isActive = status == 'Aktif';
+
+    Color roleColor;
+    IconData roleIcon;
+
+    switch (role.toLowerCase()) {
+      case 'admin':
+        roleColor = Colors.blue;
+        roleIcon = Icons.admin_panel_settings_outlined;
+        break;
+
+      case 'petugas':
+        roleColor = Colors.orange;
+        roleIcon = Icons.badge_outlined;
+        break;
+
+      default:
+        roleColor = primaryGreen;
+        roleIcon = Icons.person_outline;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ==================================================
+            // ICON ROLE
+            // ==================================================
+
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: roleColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(roleIcon, color: roleColor),
+            ),
+
+            const SizedBox(width: 12),
+
+            // ==================================================
+            // INFORMASI PENGGUNA
+            // ==================================================
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Daftar Pengguna',
-                    style: TextStyle(
-                      color: textDark,
-                      fontSize: 16,
+                  Text(
+                    user['nama']?.toString() ?? '-',
+                    style: const TextStyle(
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
+                      color: textDark,
                     ),
                   ),
 
-                  const Spacer(),
+                  const SizedBox(height: 4),
 
                   Text(
-                    '${filteredUsers.length} pengguna',
-                    style: const TextStyle(color: textGrey, fontSize: 11),
+                    user['email']?.toString() ?? '-',
+                    style: const TextStyle(fontSize: 12, color: textGrey),
                   ),
-                ],
-              ),
 
-              const SizedBox(height: 12),
+                  const SizedBox(height: 3),
 
-              // =================================================
-              // LIST USER
-              // =================================================
-              if (filteredUsers.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 45),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: const Color(0xFFE5EBE9)),
+                  Text(
+                    user['telepon']?.toString() ?? '-',
+                    style: const TextStyle(fontSize: 12, color: textGrey),
                   ),
-                  child: const Column(
+
+                  const SizedBox(height: 8),
+
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
                     children: [
-                      Icon(
-                        Icons.person_search_outlined,
-                        size: 45,
-                        color: Color(0xFF9CA3AF),
+                      // ==================================================
+                      // ROLE
+                      // ==================================================
+
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: roleColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          role,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: roleColor,
+                          ),
+                        ),
                       ),
-                      SizedBox(height: 10),
-                      Text(
-                        'Pengguna tidak ditemukan',
-                        style: TextStyle(color: textGrey, fontSize: 13),
+
+                      // ==================================================
+                      // STATUS
+                      // ==================================================
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? Colors.green.withOpacity(0.1)
+                              : Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          status,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: isActive ? Colors.green : Colors.red,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                )
-              else
-                ...filteredUsers.map((user) => _userCard(user)),
-            ],
-          ),
+                ],
+              ),
+            ),
+
+            // ==================================================
+            // MENU AKSI
+            // ==================================================
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'edit') {
+                  showEditUserDialog(user);
+                }
+
+                if (value == 'delete') {
+                  showDeleteUserDialog(user);
+                }
+              },
+              itemBuilder: (context) {
+                return [
+                  // ==================================================
+                  // EDIT
+                  // ==================================================
+
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 20),
+
+                        SizedBox(width: 8),
+
+                        Text('Edit'),
+                      ],
+                    ),
+                  ),
+
+                  // ==================================================
+                  // HAPUS
+                  // ==================================================
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, size: 20, color: Colors.red),
+
+                        SizedBox(width: 8),
+
+                        Text('Hapus', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ];
+              },
+              icon: const Icon(Icons.more_vert, color: textGrey),
+            ),
+          ],
         ),
       ),
     );

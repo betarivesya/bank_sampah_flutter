@@ -1,28 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../../data/petugas_dummy_data.dart';
-import 'nasabah_screen.dart';
-import 'setoran_screen.dart';
-import 'penarikan_screen.dart';
 
 class PetugasDrawer extends StatelessWidget {
   static const Color darkGreen = Color(0xFF075B4F);
   static const Color primaryGreen = Color(0xFF2E8B72);
 
-  final VoidCallback onRiwayat;
+  final String selectedMenu;
+  final Function(String) onMenuSelected;
   final VoidCallback onLogout;
 
   const PetugasDrawer({
     super.key,
-    required this.onRiwayat,
+    required this.selectedMenu,
+    required this.onMenuSelected,
     required this.onLogout,
   });
-
-  void bukaHalaman(BuildContext context, Widget halaman) {
-    Navigator.pop(context);
-
-    Navigator.push(context, MaterialPageRoute(builder: (context) => halaman));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +29,7 @@ class PetugasDrawer extends StatelessWidget {
         child: Column(
           children: [
             // ==================================================
-            // HEADER DRAWER
+            // HEADER
             // ==================================================
 
             Padding(
@@ -56,9 +49,7 @@ class PetugasDrawer extends StatelessWidget {
                       size: 29,
                     ),
                   ),
-
                   const SizedBox(width: 13),
-
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,94 +80,92 @@ class PetugasDrawer extends StatelessWidget {
 
             Container(height: 1, color: Colors.white24),
 
-            const SizedBox(height: 18),
+            // ==================================================
+            // DAFTAR MENU YANG BISA DI-SCROLL
+            // ==================================================
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 18),
 
-            // ==================================================
-            // LABEL MENU
-            // ==================================================
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'MENU',
-                  style: TextStyle(
-                    color: Colors.white60,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
+                    // LABEL MENU
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'MENU',
+                          style: TextStyle(
+                            color: Colors.white60,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 9),
+
+                    // DASHBOARD
+                    _drawerMenu(
+                      icon: Icons.home_rounded,
+                      title: 'Dashboard',
+                      active: selectedMenu == 'dashboard',
+                      onTap: () {
+                        onMenuSelected('dashboard');
+                        Navigator.pop(context);
+                      },
+                    ),
+
+                    // SETOR SAMPAH
+                    _drawerMenu(
+                      icon: Icons.recycling_outlined,
+                      title: 'Setor Sampah',
+                      active: selectedMenu == 'setoran',
+                      onTap: () {
+                        onMenuSelected('setoran');
+                        Navigator.pop(context);
+                      },
+                    ),
+
+                    // RIWAYAT TRANSAKSI
+                    _drawerMenu(
+                      icon: Icons.receipt_long_outlined,
+                      title: 'Riwayat Transaksi',
+                      active: selectedMenu == 'riwayat',
+                      onTap: () {
+                        onMenuSelected('riwayat');
+                        Navigator.pop(context);
+                      },
+                    ),
+
+                    // PENARIKAN SALDO
+                    _drawerMenu(
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'Penarikan Saldo',
+                      active: selectedMenu == 'penarikan',
+                      badge: totalPending > 0 ? '$totalPending' : null,
+                      onTap: () {
+                        onMenuSelected('penarikan');
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 9),
-
             // ==================================================
-            // DASHBOARD
-            // ==================================================
-            _drawerMenu(
-              icon: Icons.home_rounded,
-              title: 'Dashboard',
-              active: true,
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-
-            // ==================================================
-            // DATA NASABAH
-            // ==================================================
-            _drawerMenu(
-              icon: Icons.people_outline_rounded,
-              title: 'Data Nasabah',
-              onTap: () {
-                bukaHalaman(context, const NasabahScreen());
-              },
-            ),
-
-            // ==================================================
-            // SETOR SAMPAH
-            // ==================================================
-            _drawerMenu(
-              icon: Icons.recycling_outlined,
-              title: 'Setor Sampah',
-              onTap: () {
-                bukaHalaman(context, const SetoranScreen());
-              },
-            ),
-
-            // ==================================================
-            // RIWAYAT
-            // ==================================================
-            _drawerMenu(
-              icon: Icons.receipt_long_outlined,
-              title: 'Riwayat Transaksi',
-              onTap: () {
-                Navigator.pop(context);
-                onRiwayat();
-              },
-            ),
-
-            // ==================================================
-            // PENARIKAN
-            // ==================================================
-            _drawerMenu(
-              icon: Icons.account_balance_wallet_outlined,
-              title: 'Penarikan Saldo',
-              badge: totalPending > 0 ? '$totalPending' : null,
-              onTap: () {
-                bukaHalaman(context, const PenarikanScreen());
-              },
-            ),
-
-            const Spacer(),
-
-            // ==================================================
-            // PROFILE PETUGAS
+            // PROFILE PETUGAS DAN LOGOUT
+            // TETAP DI BAGIAN BAWAH DRAWER
             // ==================================================
             Container(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               padding: const EdgeInsets.all(13),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.09),
@@ -206,7 +195,7 @@ class PetugasDrawer extends StatelessWidget {
 
                   const SizedBox(width: 11),
 
-                  // NAMA
+                  // NAMA PETUGAS
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,8 +237,6 @@ class PetugasDrawer extends StatelessWidget {
                 ],
               ),
             ),
-
-            const SizedBox(height: 10),
           ],
         ),
       ),
@@ -257,7 +244,7 @@ class PetugasDrawer extends StatelessWidget {
   }
 
   // ==========================================================
-  // ITEM HAMBURGER
+  // ITEM MENU
   // ==========================================================
 
   Widget _drawerMenu({
@@ -284,9 +271,7 @@ class PetugasDrawer extends StatelessWidget {
                   color: active ? Colors.white : Colors.white70,
                   size: 21,
                 ),
-
                 const SizedBox(width: 13),
-
                 Expanded(
                   child: Text(
                     title,
@@ -297,7 +282,6 @@ class PetugasDrawer extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 if (badge != null)
                   Container(
                     padding: const EdgeInsets.symmetric(

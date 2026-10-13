@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../app_styles.dart';
+import '../../models/jenis_sampah_model.dart';
+import '../../services/api_service.dart';
 
 class KelolaSampahScreen extends StatefulWidget {
   const KelolaSampahScreen({super.key});
@@ -14,24 +16,55 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
 
   String _selectedStatus = 'Semua Status';
 
+  List<JenisSampah> _dataSampah = [];
+
+  bool _isLoading = true;
+
   // ==========================================================
-  // DATA DUMMY
-  // Nanti bagian ini bisa diganti dengan data dari API
+  // LOAD DATA API
   // ==========================================================
 
-  final List<Map<String, dynamic>> _dataSampah = [
-    {'id': 1, 'jenis': 'Botol Plastik', 'harga': 4000, 'status': 'Aktif'},
-    {'id': 2, 'jenis': 'Kardus', 'harga': 3000, 'status': 'Aktif'},
-    {'id': 3, 'jenis': 'Kertas', 'harga': 2500, 'status': 'Aktif'},
-    {'id': 4, 'jenis': 'Plastik Campur', 'harga': 1500, 'status': 'Nonaktif'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final data = await ApiService.getJenisSampah();
+
+      if (!mounted) return;
+
+      setState(() {
+        _dataSampah = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengambil data: ${e.toString()}')),
+      );
+    }
+  }
 
   // ==========================================================
   // FORMAT RUPIAH
   // ==========================================================
 
-  String _formatRupiah(int value) {
-    final text = value.toString();
+  String _formatRupiah(double value) {
+    final intValue = value.toInt();
+
+    final text = intValue.toString();
     final buffer = StringBuffer();
 
     for (int i = 0; i < text.length; i++) {
@@ -49,12 +82,13 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
   // FILTER DATA
   // ==========================================================
 
-  List<Map<String, dynamic>> get _filteredData {
+  List<JenisSampah> get _filteredData {
     final keyword = _searchController.text.toLowerCase().trim();
 
     return _dataSampah.where((item) {
-      final jenis = item['jenis'].toString().toLowerCase();
-      final status = item['status'].toString();
+      final jenis = item.namaSampah.toLowerCase();
+
+      final status = item.status ? 'Aktif' : 'Nonaktif';
 
       final cocokSearch = keyword.isEmpty || jenis.contains(keyword);
 
@@ -69,18 +103,22 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
   // TAMBAH / EDIT DATA
   // ==========================================================
 
-  void _showFormDialog({Map<String, dynamic>? data}) {
+  void _showFormDialog({JenisSampah? data}) {
     final bool isEdit = data != null;
 
     final jenisController = TextEditingController(
-      text: isEdit ? data['jenis'].toString() : '',
+      text: isEdit ? data.namaSampah : '',
     );
 
     final hargaController = TextEditingController(
-      text: isEdit ? data['harga'].toString() : '',
+      text: isEdit ? data.hargaPerKg.toInt().toString() : '',
     );
 
-    String selectedStatus = isEdit ? data['status'].toString() : 'Aktif';
+    String selectedStatus = isEdit && data.status ? 'Aktif' : 'Nonaktif';
+
+    if (!isEdit) {
+      selectedStatus = 'Aktif';
+    }
 
     showDialog(
       context: context,
@@ -104,10 +142,6 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // ==================================================
-                    // JENIS SAMPAH
-                    // ==================================================
-
                     const Text(
                       'Jenis Sampah',
                       style: TextStyle(
@@ -131,9 +165,6 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
 
                     const SizedBox(height: 16),
 
-                    // ==================================================
-                    // HARGA
-                    // ==================================================
                     const Text(
                       'Harga per kg',
                       style: TextStyle(
@@ -159,9 +190,6 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
 
                     const SizedBox(height: 16),
 
-                    // ==================================================
-                    // STATUS
-                    // ==================================================
                     const Text(
                       'Status',
                       style: TextStyle(
@@ -199,9 +227,6 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 ),
               ),
 
-              // ========================================================
-              // BUTTON
-              // ========================================================
               actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
 
               actions: [
@@ -216,7 +241,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 ),
 
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final jenis = jenisController.text.trim();
 
                     final hargaText = hargaController.text.trim();
@@ -243,49 +268,49 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                       return;
                     }
 
-                    setState(() {
+                    final status = selectedStatus == 'Aktif';
+
+                    try {
                       if (isEdit) {
-                        final index = _dataSampah.indexWhere(
-                          (item) => item['id'] == data['id'],
+                        await ApiService.updateJenisSampah(
+                          id: data.idJenisSampah,
+                          namaSampah: jenis,
+                          hargaPerKg: harga,
+                          status: status,
                         );
-
-                        if (index != -1) {
-                          _dataSampah[index] = {
-                            'id': data['id'],
-                            'jenis': jenis,
-                            'harga': harga,
-                            'status': selectedStatus,
-                          };
-                        }
                       } else {
-                        final newId = _dataSampah.isEmpty
-                            ? 1
-                            : _dataSampah
-                                      .map((item) => item['id'] as int)
-                                      .reduce((a, b) => a > b ? a : b) +
-                                  1;
-
-                        _dataSampah.add({
-                          'id': newId,
-                          'jenis': jenis,
-                          'harga': harga,
-                          'status': selectedStatus,
-                        });
+                        await ApiService.tambahJenisSampah(
+                          namaSampah: jenis,
+                          hargaPerKg: harga,
+                          status: status,
+                        );
                       }
-                    });
 
-                    Navigator.pop(dialogContext);
+                      if (!mounted) return;
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          isEdit
-                              ? 'Data sampah berhasil diperbarui.'
-                              : 'Jenis sampah berhasil ditambahkan.',
+                      Navigator.pop(dialogContext);
+
+                      await _loadData();
+
+                      if (!mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            isEdit
+                                ? 'Data sampah berhasil diperbarui.'
+                                : 'Jenis sampah berhasil ditambahkan.',
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(content: Text(e.toString())));
+                    }
                   },
+
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -294,6 +319,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
+
                   child: const Text(
                     'Simpan',
                     style: TextStyle(fontWeight: FontWeight.bold),
@@ -311,7 +337,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
   // HAPUS DATA
   // ==========================================================
 
-  void _showDeleteDialog(Map<String, dynamic> data) {
+  void _showDeleteDialog(JenisSampah data) {
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -323,10 +349,6 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ==================================================
-              // ICON WARNING
-              // ==================================================
-
               Container(
                 width: 62,
                 height: 62,
@@ -359,12 +381,17 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
 
               const SizedBox(height: 10),
 
-              const Text(
-                'Yakin ingin menghapus harga sampah ini? '
-                'Data harga yang dihapus tidak dapat digunakan '
-                'untuk perhitungan setoran berikutnya.',
+              Text(
+                'Yakin ingin menghapus '
+                '${data.namaSampah}? '
+                'Data yang dihapus tidak dapat '
+                'digunakan lagi.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.5),
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 13,
+                  height: 1.5,
+                ),
               ),
             ],
           ),
@@ -380,19 +407,36 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
             ),
 
             ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _dataSampah.removeWhere((item) => item['id'] == data['id']);
-                });
+              onPressed: () async {
+                try {
+                  await ApiService.deleteJenisSampah(
+                    idJenisSampah: data.idJenisSampah,
+                    idHarga: data.idHarga,
+                  );
 
-                Navigator.pop(dialogContext);
+                  if (!mounted) return;
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Data sampah berhasil dihapus.'),
-                  ),
-                );
+                  Navigator.pop(dialogContext);
+
+                  await _loadData();
+
+                  if (!mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Data sampah berhasil dihapus.'),
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+
+                  Navigator.pop(dialogContext);
+
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text(e.toString())));
+                }
               },
+
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -401,6 +445,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
+
               child: const Text(
                 'Ya, Lanjutkan',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -416,8 +461,8 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
   // STATUS BADGE
   // ==========================================================
 
-  Widget _buildStatusBadge(String status) {
-    final bool aktif = status == 'Aktif';
+  Widget _buildStatusBadge(bool status) {
+    final bool aktif = status;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -428,7 +473,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        status,
+        aktif ? 'Aktif' : 'Nonaktif',
         style: TextStyle(
           color: aktif ? Colors.green.shade700 : Colors.red.shade700,
           fontSize: 10,
@@ -442,7 +487,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
   // CARD DATA SAMPAH
   // ==========================================================
 
-  Widget _buildSampahCard(Map<String, dynamic> item) {
+  Widget _buildSampahCard(JenisSampah item) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(15),
@@ -459,10 +504,6 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
       ),
       child: Row(
         children: [
-          // ======================================================
-          // ICON
-          // ======================================================
-
           Container(
             width: 48,
             height: 48,
@@ -479,15 +520,12 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
 
           const SizedBox(width: 13),
 
-          // ======================================================
-          // DATA
-          // ======================================================
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item['jenis'].toString(),
+                  item.namaSampah,
                   style: const TextStyle(
                     color: Color(0xFF24413D),
                     fontSize: 14,
@@ -498,20 +536,17 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 const SizedBox(height: 5),
 
                 Text(
-                  '${_formatRupiah(item['harga'])} / kg',
+                  '${_formatRupiah(item.hargaPerKg)} / kg',
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
 
                 const SizedBox(height: 7),
 
-                _buildStatusBadge(item['status'].toString()),
+                _buildStatusBadge(item.status),
               ],
             ),
           ),
 
-          // ======================================================
-          // ACTION
-          // ======================================================
           Row(
             children: [
               IconButton(
@@ -555,17 +590,11 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
     return Container(
       color: AppColors.background,
       child: RefreshIndicator(
-        onRefresh: () async {
-          await Future.delayed(const Duration(milliseconds: 500));
-        },
+        onRefresh: _loadData,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [
-            // ==================================================
-            // HEADER
-            // ==================================================
-
             Row(
               children: [
                 const Expanded(
@@ -613,9 +642,6 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
 
             const SizedBox(height: 18),
 
-            // ==================================================
-            // SEARCH
-            // ==================================================
             TextField(
               controller: _searchController,
               onChanged: (_) {
@@ -628,6 +654,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                     ? IconButton(
                         onPressed: () {
                           _searchController.clear();
+
                           setState(() {});
                         },
                         icon: const Icon(Icons.close_rounded),
@@ -645,9 +672,6 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
 
             const SizedBox(height: 12),
 
-            // ==================================================
-            // FILTER STATUS
-            // ==================================================
             DropdownButtonFormField<String>(
               value: _selectedStatus,
               decoration: InputDecoration(
@@ -679,9 +703,6 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
 
             const SizedBox(height: 20),
 
-            // ==================================================
-            // JUMLAH DATA
-            // ==================================================
             Row(
               children: [
                 const Text(
@@ -718,10 +739,12 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
 
             const SizedBox(height: 12),
 
-            // ==================================================
-            // LIST DATA
-            // ==================================================
-            if (data.isEmpty)
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.all(40),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (data.isEmpty)
               Container(
                 padding: const EdgeInsets.all(30),
                 decoration: BoxDecoration(

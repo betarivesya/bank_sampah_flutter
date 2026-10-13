@@ -19,7 +19,11 @@ class PetugasPreviewApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
       ),
-      home: const PetugasDashboard(),
+      home: PetugasDashboard(
+        onMenuSelected: (menu) {
+          debugPrint('Menu dipilih: $menu');
+        },
+      ),
     );
   }
 }

@@ -28,7 +28,7 @@ class _AdminLayoutState extends State<AdminLayout> {
   }
 
   // ==========================================================
-  // LOGOUT
+  // LOGOUT DARI MENU
   // ==========================================================
 
   void _logout() {
@@ -36,6 +36,9 @@ class _AdminLayoutState extends State<AdminLayout> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: const Text(
             'Konfirmasi Keluar',
             style: TextStyle(fontWeight: FontWeight.bold),
@@ -43,6 +46,52 @@ class _AdminLayoutState extends State<AdminLayout> {
           content: const Text(
             'Apakah Anda yakin ingin keluar dari akun Admin?',
           ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Keluar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ==========================================================
+  // KONFIRMASI KELUAR DENGAN TOMBOL BACK HP
+  // ==========================================================
+
+  void _showExitConfirmation() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Keluar dari aplikasi?',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
           actions: [
             TextButton(
               onPressed: () {
@@ -92,6 +141,7 @@ class _AdminLayoutState extends State<AdminLayout> {
           ),
         );
 
+      case 'dashboard':
       default:
         return const AdminDashboard();
     }
@@ -121,16 +171,12 @@ class _AdminLayoutState extends State<AdminLayout> {
               ),
               child: Icon(icon, size: 40, color: const Color(0xFF2E8B72)),
             ),
-
             const SizedBox(height: 20),
-
             Text(
               title,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 8),
-
             Text(
               message,
               textAlign: TextAlign.center,
@@ -169,80 +215,105 @@ class _AdminLayoutState extends State<AdminLayout> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return PopScope(
+      canPop: false,
 
-      // ======================================================
-      // DRAWER
-      // ======================================================
-      drawer: AdminDrawer(
-        selectedMenu: _selectedMenu,
-        onMenuSelected: _selectMenu,
-        onLogout: _logout,
-      ),
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
 
-      // ======================================================
-      // APP BAR
-      // ======================================================
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF075B4F),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        titleSpacing: 0,
+        // ------------------------------------------------------
+        // Jika sedang berada di menu selain Dashboard,
+        // tombol Back HP akan kembali ke Dashboard.
+        // ------------------------------------------------------
 
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _getTitle(),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        if (_selectedMenu != 'dashboard') {
+          setState(() {
+            _selectedMenu = 'dashboard';
+          });
+          return;
+        }
+
+        // ------------------------------------------------------
+        // Jika sudah berada di Dashboard,
+        // tampilkan konfirmasi keluar aplikasi.
+        // ------------------------------------------------------
+
+        _showExitConfirmation();
+      },
+
+      child: Scaffold(
+        // ======================================================
+        // DRAWER
+        // ======================================================
+
+        drawer: AdminDrawer(
+          selectedMenu: _selectedMenu,
+          onMenuSelected: _selectMenu,
+          onLogout: _logout,
+        ),
+
+        // ======================================================
+        // APP BAR
+        // ======================================================
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF075B4F),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          titleSpacing: 0,
+
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _getTitle(),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'Bank Sampah Griya Ayu',
+                style: TextStyle(fontSize: 11, color: Colors.white70),
+              ),
+            ],
+          ),
+
+          actions: [
+            IconButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Belum ada notifikasi baru.')),
+                );
+              },
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.notifications_none_rounded, size: 25),
+                  Positioned(
+                    right: -1,
+                    top: -1,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-
-            const SizedBox(height: 2),
-
-            const Text(
-              'Bank Sampah Griya Ayu',
-              style: TextStyle(fontSize: 11, color: Colors.white70),
-            ),
+            const SizedBox(width: 8),
           ],
         ),
 
-        actions: [
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Belum ada notifikasi baru.')),
-              );
-            },
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.notifications_none_rounded, size: 25),
-
-                Positioned(
-                  right: -1,
-                  top: -1,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.redAccent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 8),
-        ],
+        // ======================================================
+        // BODY
+        // ======================================================
+        body: _buildBody(),
       ),
-
-      // ======================================================
-      // BODY
-      // ======================================================
-      body: _buildBody(),
     );
   }
 }

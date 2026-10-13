@@ -11,108 +11,209 @@ class JenisSampahScreen extends StatefulWidget {
 
 class _JenisSampahScreenState extends State<JenisSampahScreen> {
   final TextEditingController _tambahController = TextEditingController();
+  final TextEditingController _hargaTambahController = TextEditingController();
+
   late Future<List<JenisSampah>> _jenisSampahFuture;
+  bool _sedangMenyimpan = false;
 
   @override
   void initState() {
     super.initState();
-    _refreshData();
+    _jenisSampahFuture = ApiService.getJenisSampah();
   }
 
-  // Fungsi khusus untuk memicu reload data dari API
+  @override
+  void dispose() {
+    _tambahController.dispose();
+    _hargaTambahController.dispose();
+    super.dispose();
+  }
+
   void _refreshData() {
+    if (!mounted) return;
+
     setState(() {
       _jenisSampahFuture = ApiService.getJenisSampah();
     });
   }
 
-  // 1. Pop-up Dialog untuk Edit Nama Sampah
-  void _showEditDialog(JenisSampah item) {
-    TextEditingController editController =
-        TextEditingController(text: item.namaSampah);
+  void _tampilkanPesan(String pesan, {bool error = false}) {
+    if (!mounted) return;
 
-    showDialog(
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(pesan),
+          backgroundColor: error ? Colors.red.shade700 : AppColors.primary,
+        ),
+      );
+  }
+
+  String _pesanError(Object error) {
+    return error.toString().replaceFirst('Exception: ', '');
+  }
+
+  // TAMBAH JENIS SAMPAH
+  Future<void> _tambahJenisSampah() async {
+    final nama = _tambahController.text.trim();
+    final harga = int.tryParse(_hargaTambahController.text.trim());
+
+    if (nama.isEmpty) {
+      _tampilkanPesan('Nama jenis sampah wajib diisi.', error: true);
+      return;
+    }
+
+    if (harga == null || harga <= 0) {
+      _tampilkanPesan('Masukkan harga per kg yang valid.', error: true);
+      return;
+    }
+
+    setState(() => _sedangMenyimpan = true);
+
+    try {
+      await ApiService.tambahJenisSampah(
+        namaSampah: nama,
+        hargaPerKg: harga,
+        status: true,
+      );
+
+      _tambahController.clear();
+      _hargaTambahController.clear();
+
+      _refreshData();
+      _tampilkanPesan('Jenis sampah berhasil ditambahkan.');
+    } catch (e) {
+      _tampilkanPesan(_pesanError(e), error: true);
+    } finally {
+      if (mounted) {
+        setState(() => _sedangMenyimpan = false);
+      }
+    }
+  }
+
+  // EDIT NAMA JENIS SAMPAH
+  Future<void> _showEditDialog(JenisSampah item) async {
+    final controller = TextEditingController(text: item.namaSampah);
+
+    await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Edit Jenis Sampah', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Edit Jenis Sampah',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: TextField(
-          controller: editController,
-          decoration: AppStyles.inputDecoration('Nama Jenis Sampah', icon: Icons.edit),
+          controller: controller,
+          autofocus: true,
+          decoration: AppStyles.inputDecoration(
+            'Nama Jenis Sampah',
+            icon: Icons.edit,
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Batal'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              if (editController.text.isNotEmpty) {
-                bool berhasil = await ApiService.updateJenisSampah(
-                  item.id,
-                  editController.text,
+              final nama = controller.text.trim();
+
+              if (nama.isEmpty) {
+                _tampilkanPesan(
+                  'Nama jenis sampah tidak boleh kosong.',
+                  error: true,
                 );
-                if (berhasil && mounted) {
-                  Navigator.pop(context);
-                  _refreshData();
-                }
+                return;
+              }
+
+              try {
+                await ApiService.updateJenisSampah(
+                  id: item.idJenisSampah,
+                  namaSampah: nama,
+                  hargaPerKg: item.hargaPerKg.round(),
+                  status: item.status,
+                );
+
+                if (!mounted) return;
+
+                Navigator.pop(dialogContext);
+                _refreshData();
+                _tampilkanPesan('Nama jenis sampah berhasil diperbarui.');
+              } catch (e) {
+                _tampilkanPesan(_pesanError(e), error: true);
               }
             },
-            child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+            child: const Text('Simpan'),
           ),
         ],
       ),
     );
+
+    controller.dispose();
   }
 
-  // 2. Pop-up Dialog Konfirmasi Hapus Data Sampah
-  void _showDeleteDialog(int id) {
-    showDialog(
+  // HAPUS JENIS SAMPAH
+  Future<void> _showDeleteDialog(JenisSampah item) async {
+    final konfirmasi = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Hapus Data', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('Apakah Anda yakin ingin menghapus data ini?'),
+        title: const Text(
+          'Hapus Jenis Sampah',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Apakah kamu yakin ingin menghapus jenis sampah ini?',
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
             ),
-            onPressed: () async {
-              bool berhasil = await ApiService.deleteJenisSampah(id);
-              if (berhasil && mounted) {
-                Navigator.pop(context);
-                _refreshData();
-              }
-            },
-            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Hapus'),
           ),
         ],
       ),
     );
+
+    if (konfirmasi != true) return;
+
+    try {
+      await ApiService.deleteJenisSampah(
+        idJenisSampah: item.idJenisSampah,
+        idHarga: item.idHarga,
+      );
+      _refreshData();
+      _tampilkanPesan('Jenis sampah berhasil dihapus.');
+    } catch (e) {
+      _tampilkanPesan(_pesanError(e), error: true);
+    }
   }
 
-  // 3. Pop-up Dialog Atur / Edit Harga Sampah
-  void _showAturHargaDialog(JenisSampah item) {
-    TextEditingController hargaInputController = TextEditingController();
+  // ATUR HARGA SAMPAH
+  Future<void> _showAturHargaDialog(JenisSampah item) async {
+    final controller = TextEditingController(
+      text: item.idHarga != null ? item.hargaPerKg.toStringAsFixed(0) : '',
+    );
 
-    bool adaHarga = item.listHarga.isNotEmpty;
-    if (adaHarga) {
-      hargaInputController.text = item.listHarga.last.hargaPerKg.toString();
-    }
+    final adaHarga = item.idHarga != null;
 
-    showDialog(
+    await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           adaHarga ? 'Edit Harga Sampah' : 'Atur Harga Sampah',
@@ -122,13 +223,22 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Jenis Sampah: ${item.namaSampah}',
-                style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.primary)),
-            const SizedBox(height: 12),
+            Text(
+              item.namaSampah,
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 14),
             TextField(
-              controller: hargaInputController,
+              controller: controller,
+              autofocus: true,
               keyboardType: TextInputType.number,
-              decoration: AppStyles.inputDecoration('Harga per Kg (Rp)', icon: Icons.payments),
+              decoration: AppStyles.inputDecoration(
+                'Harga per Kg (Rp)',
+                icon: Icons.payments,
+              ),
             ),
           ],
         ),
@@ -136,52 +246,66 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
           if (adaHarga)
             TextButton(
               onPressed: () async {
-                bool berhasil = await ApiService.deleteHargaSampah(
-                    item.listHarga.last.idHarga);
-                if (berhasil && mounted) {
-                  Navigator.pop(context);
+                try {
+                  await ApiService.deleteHargaSampah(item.idHarga!);
+
+                  if (!mounted) return;
+
+                  Navigator.pop(dialogContext);
                   _refreshData();
+                  _tampilkanPesan('Harga sampah berhasil dihapus.');
+                } catch (e) {
+                  _tampilkanPesan(_pesanError(e), error: true);
                 }
               },
-              child: const Text('Hapus Harga',
-                  style: TextStyle(color: Colors.red)),
+              child: const Text(
+                'Hapus Harga',
+                style: TextStyle(color: Colors.red),
+              ),
             ),
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Batal'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              int? harga = int.tryParse(hargaInputController.text);
-              if (harga != null) {
-                bool berhasil;
+              final harga = int.tryParse(controller.text.trim());
+
+              if (harga == null || harga <= 0) {
+                _tampilkanPesan(
+                  'Masukkan harga per kg yang valid.',
+                  error: true,
+                );
+                return;
+              }
+
+              try {
                 if (adaHarga) {
-                  berhasil = await ApiService.updateHargaSampah(
-                    item.listHarga.last.idHarga,
-                    harga,
-                  );
+                  await ApiService.updateHargaSampah(item.idHarga!, harga);
                 } else {
-                  berhasil = await ApiService.tambahHargaSampah(
-                    item.id,
-                    harga,
-                  );
+                  await ApiService.tambahHargaSampah(item.idJenisSampah, harga);
                 }
 
-                if (berhasil && mounted) {
-                  Navigator.pop(context);
-                  _refreshData();
-                }
+                if (!mounted) return;
+
+                Navigator.pop(dialogContext);
+                _refreshData();
+                _tampilkanPesan('Harga sampah berhasil disimpan.');
+              } catch (e) {
+                _tampilkanPesan(_pesanError(e), error: true);
               }
             },
-            child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+            child: const Text('Simpan'),
           ),
         ],
       ),
     );
+
+    controller.dispose();
   }
 
   @override
@@ -196,14 +320,20 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Muat ulang',
+            onPressed: _refreshData,
+            icon: const Icon(Icons.refresh, color: Colors.white),
+          ),
+        ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Form Tambah Data Jenis Sampah
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -212,56 +342,112 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
                     color: Colors.black.withOpacity(0.04),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
-                  )
+                  ),
                 ],
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _tambahController,
-                      decoration: AppStyles.inputDecoration(
-                        'Nama Jenis Sampah',
-                        icon: Icons.recycling,
-                      ),
+                  TextField(
+                    controller: _tambahController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: AppStyles.inputDecoration(
+                      'Nama Jenis Sampah',
+                      icon: Icons.recycling,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.all(16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _hargaTambahController,
+                    keyboardType: TextInputType.number,
+                    decoration: AppStyles.inputDecoration(
+                      'Harga per Kg (Rp)',
+                      icon: Icons.payments_outlined,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _sedangMenyimpan ? null : _tambahJenisSampah,
+                      icon: _sedangMenyimpan
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.add),
+                      label: Text(
+                        _sedangMenyimpan
+                            ? 'Menyimpan...'
+                            : 'Tambah Jenis Sampah',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
-                    onPressed: () async {
-                      if (_tambahController.text.isNotEmpty) {
-                        bool berhasil = await ApiService.tambahJenisSampah(
-                            _tambahController.text);
-                        if (berhasil) {
-                          _tambahController.clear();
-                          _refreshData();
-                        }
-                      }
-                    },
-                    child: const Icon(Icons.add, color: Colors.white),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-
-            // List Data Jenis Sampah + Harga
+            const SizedBox(height: 18),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Daftar Jenis Sampah',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+            const SizedBox(height: 8),
             Expanded(
               child: FutureBuilder<List<JenisSampah>>(
                 future: _jenisSampahFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 42,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Gagal mengambil data jenis sampah.\n${snapshot.error}',
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            ElevatedButton.icon(
+                              onPressed: _refreshData,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Coba Lagi'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return const Center(
                       child: Text(
                         'Tidak ada data sampah.',
@@ -276,12 +462,12 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
                     itemCount: listData.length,
                     itemBuilder: (context, index) {
                       final item = listData[index];
-                      // PANGGIL WIDGET KARTU YANG SUDAH KITA PERCANTIK
+
                       return SampahItemCard(
                         item: item,
                         onAturHarga: () => _showAturHargaDialog(item),
                         onEdit: () => _showEditDialog(item),
-                        onDelete: () => _showDeleteDialog(item.id),
+                        onDelete: () => _showDeleteDialog(item),
                       );
                     },
                   );
@@ -295,16 +481,14 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
   }
 }
 
-// ============================================================================
-// STYLING / WARNA DITARUH DI BAWAH SINI (Supaya mudah diubah-ubah)
-// ============================================================================
-
+// WARNA
 class AppColors {
-  static const Color primary = Color(0xFF2E7D32); // Hijau Bank Sampah
-  static const Color secondary = Color(0xFFA5D6A7); // Hijau Muda
-  static const Color background = Color(0xFFF4F6F8); // Abu-abu Terang
+  static const Color primary = Color(0xFF2E7D32);
+  static const Color secondary = Color(0xFFA5D6A7);
+  static const Color background = Color(0xFFF4F6F8);
 }
 
+// STYLE INPUT
 class AppStyles {
   static InputDecoration inputDecoration(String label, {IconData? icon}) {
     return InputDecoration(
@@ -313,10 +497,7 @@ class AppStyles {
       filled: true,
       fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.grey.shade300),
@@ -329,10 +510,7 @@ class AppStyles {
   }
 }
 
-// ============================================================================
-// WIDGET KARTU TAMPILAN ITEM SAMPAH DITARUH DI BAWAH SINI
-// ============================================================================
-
+// KARTU JENIS SAMPAH
 class SampahItemCard extends StatelessWidget {
   final JenisSampah item;
   final VoidCallback onAturHarga;
@@ -349,7 +527,7 @@ class SampahItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool adaHarga = item.listHarga.isNotEmpty;
+    final adaHarga = item.idHarga != null;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -361,11 +539,11 @@ class SampahItemCard extends StatelessWidget {
             color: Colors.black.withOpacity(0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
-          )
+          ),
         ],
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         leading: CircleAvatar(
           radius: 22,
           backgroundColor: AppColors.secondary.withOpacity(0.3),
@@ -376,10 +554,10 @@ class SampahItemCard extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4.0),
+          padding: const EdgeInsets.only(top: 4),
           child: Text(
             adaHarga
-                ? 'Rp ${item.listHarga.last.hargaPerKg} / kg'
+                ? 'Rp ${item.hargaPerKg.toStringAsFixed(0)} / kg'
                 : 'Harga: Belum diatur',
             style: TextStyle(
               color: adaHarga ? Colors.green.shade700 : Colors.orange.shade800,
@@ -388,26 +566,45 @@ class SampahItemCard extends StatelessWidget {
             ),
           ),
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Tombol Atur Harga
-            IconButton(
-              icon: const Icon(Icons.attach_money, color: Colors.green),
-              tooltip: 'Atur Harga',
-              onPressed: onAturHarga,
+        trailing: PopupMenuButton<String>(
+          tooltip: 'Aksi',
+          onSelected: (value) {
+            switch (value) {
+              case 'harga':
+                onAturHarga();
+                break;
+              case 'edit':
+                onEdit();
+                break;
+              case 'hapus':
+                onDelete();
+                break;
+            }
+          },
+          itemBuilder: (context) => const [
+            PopupMenuItem(
+              value: 'harga',
+              child: ListTile(
+                leading: Icon(Icons.payments_outlined),
+                title: Text('Atur Harga'),
+                contentPadding: EdgeInsets.zero,
+              ),
             ),
-            // Tombol Edit Nama
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, color: Colors.blue),
-              tooltip: 'Edit Nama',
-              onPressed: onEdit,
+            PopupMenuItem(
+              value: 'edit',
+              child: ListTile(
+                leading: Icon(Icons.edit_outlined),
+                title: Text('Edit Nama'),
+                contentPadding: EdgeInsets.zero,
+              ),
             ),
-            // Tombol Hapus
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              tooltip: 'Hapus',
-              onPressed: onDelete,
+            PopupMenuItem(
+              value: 'hapus',
+              child: ListTile(
+                leading: Icon(Icons.delete_outline, color: Colors.red),
+                title: Text('Hapus'),
+                contentPadding: EdgeInsets.zero,
+              ),
             ),
           ],
         ),

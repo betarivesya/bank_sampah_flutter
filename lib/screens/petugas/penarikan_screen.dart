@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:bank_sampah_flutter/app_styles.dart';
-import 'package:bank_sampah_flutter/data/petugas_dummy_data.dart';
-import 'package:bank_sampah_flutter/models/petugas_model.dart';
+import 'package:bank_sampah_flutter/services/api_service.dart';
 
 class PenarikanScreen extends StatefulWidget {
-  const PenarikanScreen({super.key});
+  final int idPetugas;
+
+  const PenarikanScreen({super.key, required this.idPetugas});
 
   @override
   State<PenarikanScreen> createState() => _PenarikanScreenState();
@@ -12,10 +12,26 @@ class PenarikanScreen extends StatefulWidget {
 
 class _PenarikanScreenState extends State<PenarikanScreen> {
   final TextEditingController _kodeController = TextEditingController();
-  DummyPenarikan? _pengajuan;
-  DummyNasabah? _nasabah;
-  String? _pesanValidasi;
-  bool? _saldoCukup;
+
+  Map<String, dynamic>? _pengajuan;
+  bool _loading = false;
+  bool _memproses = false;
+  bool _saldoCukup = false;
+  String? _pesan;
+  bool _pesanError = false;
+
+  List<Map<String, dynamic>> _daftarPenarikan = [];
+  String _filterStatus = 'Semua';
+
+  static const Color hijau = Color(0xFF166534);
+  static const Color hijauMuda = Color(0xFFDCFCE7);
+  static const Color latar = Color(0xFFF8FAFC);
+
+  @override
+  void initState() {
+    super.initState();
+    _muatDaftarPenarikan();
+  }
 
   @override
   void dispose() {
@@ -23,441 +39,761 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
     super.dispose();
   }
 
-  void _validasiKode() {
-    final kode = _kodeController.text.trim().toUpperCase();
+  Future<void> _muatDaftarPenarikan() async {
+    try {
+      final data = await ApiService.getPenarikanPetugas();
+
+      if (!mounted) return;
+
+      setState(() {
+        _daftarPenarikan = data;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _pesan = _bersihkanError(e);
+        _pesanError = true;
+      });
+    }
+  }
+
+  Future<void> _validasiKode() async {
+    final kode = _kodeController.text.trim();
 
     if (kode.isEmpty) {
       setState(() {
+        _pesan = 'Masukkan kode verifikasi dari nasabah.';
+        _pesanError = true;
         _pengajuan = null;
-        _nasabah = null;
-        _pesanValidasi = 'Masukkan kode pengajuan terlebih dahulu.';
-        _saldoCukup = null;
       });
       return;
     }
 
-    DummyPenarikan? ditemukan;
-    for (final item in PetugasDummyData.penarikan) {
-      if (item.kodePengajuan.toUpperCase() == kode) {
-        ditemukan = item;
-        break;
-      }
-    }
+    setState(() {
+      _loading = true;
+      _pesan = null;
+      _pengajuan = null;
+    });
 
-    if (ditemukan == null) {
+    try {
+      final data = await ApiService.cariPenarikanPetugas(kode);
+
+      if (!mounted) return;
+
+      final saldo = _angka(data['saldo']);
+      final nominal = _angka(data['nominal']);
+      final status = _normalisasiStatus(data['status']);
+
+      setState(() {
+        _pengajuan = data;
+        _saldoCukup =
+            data['saldo_cukup'] == true ||
+            (status == 'pending' && saldo >= nominal);
+        _pesan = status == 'pending'
+            ? 'Pengajuan berhasil ditemukan.'
+            : 'Pengajuan ini sudah ${_labelStatus(status).toLowerCase()}.';
+        _pesanError = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _pengajuan = null;
-        _nasabah = null;
-        _pesanValidasi = 'Kode pengajuan tidak ditemukan.';
-        _saldoCukup = null;
+        _pesan = _bersihkanError(e);
+        _pesanError = true;
       });
-      return;
-    }
-
-    DummyNasabah? nasabah;
-    for (final item in PetugasDummyData.nasabah) {
-      if (item.idNasabah == ditemukan!.idNasabah) {
-        nasabah = item;
-        break;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
       }
     }
-
-    final saldoCukup = nasabah != null && nasabah.saldo >= ditemukan.nominal;
-
-    setState(() {
-      _pengajuan = ditemukan;
-      _nasabah = nasabah;
-      _saldoCukup = saldoCukup;
-      _pesanValidasi = ditemukan!.status == 'Menunggu'
-          ? 'Pengajuan ditemukan.'
-          : 'Pengajuan sudah ${ditemukan.status.toLowerCase()}.';
-    });
   }
 
-  Future<void> _proses(String statusBaru) async {
+  Future<void> _prosesPenarikan(String statusBaru) async {
     final pengajuan = _pengajuan;
-    final nasabah = _nasabah;
 
-    if (pengajuan == null || nasabah == null) {
+    if (pengajuan == null) return;
+
+    final statusSaatIni = _normalisasiStatus(pengajuan['status']);
+
+    if (statusSaatIni != 'pending') {
+      _tampilkanPesan('Pengajuan ini sudah diproses sebelumnya.', error: true);
       return;
     }
 
-    if (pengajuan.status != 'Menunggu') {
-      _showMessage('Pengajuan ini sudah diproses.');
+    if (statusBaru == 'Disetujui' && !_saldoCukup) {
+      _tampilkanPesan('Saldo nasabah tidak mencukupi.', error: true);
       return;
     }
 
-    if (statusBaru == 'Disetujui' && !_saldoCukup!) {
-      _showMessage('Saldo nasabah tidak mencukupi.', error: true);
-      return;
-    }
+    final nominal = _angka(pengajuan['nominal']);
 
-    final shouldContinue = await showDialog<bool>(
+    final konfirmasi = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        final isApprove = statusBaru == 'Disetujui';
-        return AlertDialog(
-          title: Text(isApprove ? 'Setujui Penarikan?' : 'Tolak Penarikan?'),
-          content: Text(
-            isApprove
-                ? 'Saldo ${nasabah.nama} akan dikurangi ${rupiah(pengajuan.nominal)}.'
-                : 'Pengajuan ${pengajuan.kodePengajuan} akan ditandai sebagai ditolak.',
+      builder: (context) => AlertDialog(
+        title: Text(
+          statusBaru == 'Disetujui' ? 'Setujui Penarikan?' : 'Tolak Penarikan?',
+        ),
+        content: Text(
+          statusBaru == 'Disetujui'
+              ? 'Setujui penarikan sebesar ${formatRupiah(nominal)}? '
+                    'Saldo nasabah akan dipotong setelah persetujuan berhasil.'
+              : 'Yakin ingin menolak pengajuan penarikan ini?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal'),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: statusBaru == 'Disetujui' ? hijau : Colors.red,
             ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isApprove ? AppColors.primary : Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(isApprove ? 'Setujui' : 'Tolak'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (shouldContinue != true) {
-      return;
-    }
-
-    setState(() {
-      pengajuan.status = statusBaru;
-      if (statusBaru == 'Disetujui') {
-        nasabah.saldo -= pengajuan.nominal;
-      }
-      _saldoCukup = nasabah.saldo >= pengajuan.nominal;
-      _pesanValidasi =
-          'Pengajuan berhasil diproses sebagai ${pengajuan.status}.';
-    });
-
-    _showMessage('Status pengajuan diperbarui.');
-  }
-
-  void _showMessage(String message, {bool error = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: error ? Colors.red.shade700 : AppColors.primary,
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(statusBaru),
+          ),
+        ],
       ),
     );
+
+    if (konfirmasi != true || !mounted) return;
+
+    setState(() {
+      _memproses = true;
+      _pesan = null;
+    });
+
+    try {
+      final idPenarikan = int.tryParse(pengajuan['id_penarikan'].toString());
+
+      if (idPenarikan == null) {
+        throw Exception('ID pengajuan penarikan tidak valid.');
+      }
+
+      final hasil = await ApiService.prosesPenarikanPetugas(
+        idPenarikan: idPenarikan,
+        idPetugas: widget.idPetugas,
+        status: statusBaru,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _pengajuan!['status'] = statusBaru;
+        _pesan = hasil['message']?.toString() ?? 'Pengajuan berhasil diproses.';
+        _pesanError = false;
+      });
+
+      _tampilkanPesan(
+        hasil['message']?.toString() ?? 'Pengajuan berhasil diproses.',
+      );
+
+      await _muatDaftarPenarikan();
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _pesan = _bersihkanError(e);
+        _pesanError = true;
+      });
+
+      _tampilkanPesan(_bersihkanError(e), error: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _memproses = false;
+        });
+      }
+    }
+  }
+
+  void _pilihPengajuan(Map<String, dynamic> data) {
+    setState(() {
+      _pengajuan = Map<String, dynamic>.from(data);
+      _kodeController.text = data['kode_verifikasi']?.toString() ?? '';
+      _saldoCukup =
+          data['saldo_cukup'] == true ||
+          _angka(data['saldo']) >= _angka(data['nominal']);
+      _pesan = null;
+    });
+
+    _validasiKode();
+  }
+
+  void _tampilkanPesan(String pesan, {bool error = false}) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(pesan),
+          backgroundColor: error ? Colors.red.shade700 : hijau,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
+  String _bersihkanError(Object error) {
+    return error.toString().replaceFirst('Exception: ', '');
+  }
+
+  double _angka(dynamic nilai) {
+    if (nilai is num) return nilai.toDouble();
+    return double.tryParse(nilai?.toString() ?? '') ?? 0;
+  }
+
+  String _normalisasiStatus(dynamic status) {
+    return status?.toString().trim().toLowerCase() ?? '';
+  }
+
+  String _labelStatus(dynamic status) {
+    switch (_normalisasiStatus(status)) {
+      case 'pending':
+        return 'Menunggu Verifikasi';
+      case 'disetujui':
+        return 'Disetujui';
+      case 'ditolak':
+        return 'Ditolak';
+      default:
+        return status?.toString() ?? '-';
+    }
+  }
+
+  Color _warnaStatus(dynamic status) {
+    switch (_normalisasiStatus(status)) {
+      case 'pending':
+        return Colors.orange;
+      case 'disetujui':
+        return hijau;
+      case 'ditolak':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String formatRupiah(num nilai) {
+    final angka = nilai.round().toString();
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < angka.length; i++) {
+      buffer.write(angka[i]);
+
+      final sisa = angka.length - i - 1;
+      if (sisa > 0 && sisa % 3 == 0) {
+        buffer.write('.');
+      }
+    }
+
+    return 'Rp${buffer.toString()}';
+  }
+
+  String formatTanggal(dynamic tanggal) {
+    if (tanggal == null || tanggal.toString().isEmpty) return '-';
+
+    final date = DateTime.tryParse(tanggal.toString());
+    if (date == null) return tanggal.toString();
+
+    const bulan = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+
+    return '${date.day} ${bulan[date.month - 1]} ${date.year}';
+  }
+
+  List<Map<String, dynamic>> get _penarikanTerfilter {
+    if (_filterStatus == 'Semua') return _daftarPenarikan;
+
+    return _daftarPenarikan.where((item) {
+      return _normalisasiStatus(item['status']) == _filterStatus.toLowerCase();
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final pengajuan = _pengajuan;
-    final nasabah = _nasabah;
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        title: const Text(
-          'Verifikasi Penarikan',
-          style: TextStyle(fontWeight: FontWeight.bold),
+    return Container(
+      color: latar,
+      child: RefreshIndicator(
+        onRefresh: _muatDaftarPenarikan,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 20),
+            _buildFormValidasi(),
+            if (_pesan != null) ...[const SizedBox(height: 12), _buildPesan()],
+            if (_pengajuan != null) ...[
+              const SizedBox(height: 20),
+              _buildDetailPengajuan(),
+            ],
+            const SizedBox(height: 28),
+            _buildDaftarPengajuan(),
+          ],
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF166534), Color(0xFF15803D)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PageIntro(),
+          Icon(
+            Icons.account_balance_wallet_outlined,
+            color: Colors.white,
+            size: 34,
+          ),
+          SizedBox(height: 12),
+          Text(
+            'Verifikasi Penarikan',
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: 6),
+          Text(
+            'Periksa pengajuan nasabah sebelum menyetujui atau menolaknya.',
+            style: TextStyle(color: Colors.white, height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormValidasi() {
+    return _kartu(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Validasi Pengajuan',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Masukkan kode verifikasi 6 digit yang diberikan kepada nasabah.',
+            style: TextStyle(color: Colors.black54, height: 1.4),
+          ),
           const SizedBox(height: 16),
           TextField(
             controller: _kodeController,
-            textCapitalization: TextCapitalization.characters,
-            decoration: AppDecorations.inputDecoration(
-              'Kode Pengajuan',
-              icon: Icons.qr_code_2_outlined,
-            ).copyWith(hintText: 'Contoh: PGJ-001'),
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.search,
+            maxLength: 6,
+            onSubmitted: (_) => _validasiKode(),
+            decoration: InputDecoration(
+              labelText: 'Kode Verifikasi',
+              hintText: 'Contoh: 123456',
+              prefixIcon: const Icon(Icons.verified_user_outlined),
+              counterText: '',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: _validasiKode,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _loading ? null : _validasiKode,
+              icon: _loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.search),
+              label: Text(_loading ? 'Memvalidasi...' : 'Validasi Pengajuan'),
+              style: FilledButton.styleFrom(
+                backgroundColor: hijau,
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              icon: const Icon(Icons.verified_outlined),
-              label: const Text('Validasi Pengajuan'),
             ),
           ),
-          if (_pesanValidasi != null) ...[
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(13),
-              decoration: BoxDecoration(
-                color:
-                    (_pengajuan != null
-                            ? AppColors.secondary
-                            : Colors.red.shade100)
-                        .withOpacity(0.22),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                _pesanValidasi!,
-                style: TextStyle(
-                  color: _pengajuan != null
-                      ? AppColors.primary
-                      : Colors.red.shade700,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-          if (pengajuan != null && nasabah != null) ...[
-            const SizedBox(height: 18),
-            _PengajuanCard(
-              pengajuan: pengajuan,
-              nasabah: nasabah,
-              saldoCukup: _saldoCukup ?? false,
-            ),
-            const SizedBox(height: 14),
-            if (_saldoCukup == true && pengajuan.status == 'Menunggu')
-              Container(
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.09),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.check_circle_outline,
-                      color: Colors.green.shade700,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Saldo mencukupi. Penarikan dapat disetujui.',
-                        style: TextStyle(
-                          color: Colors.green.shade800,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (_saldoCukup == false && pengajuan.status == 'Menunggu')
-              Container(
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber_outlined,
-                      color: Colors.red.shade700,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Saldo tidak mencukupi. Pengajuan tidak dapat disetujui.',
-                        style: TextStyle(
-                          color: Colors.red.shade800,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 18),
-            if (pengajuan.status == 'Menunggu')
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _proses('Ditolak'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red.shade700,
-                        side: BorderSide(color: Colors.red.shade300),
-                        minimumSize: const Size.fromHeight(50),
-                      ),
-                      icon: const Icon(Icons.close),
-                      label: const Text('Tolak'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _saldoCukup == true
-                          ? () => _proses('Disetujui')
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(50),
-                      ),
-                      icon: const Icon(Icons.check),
-                      label: const Text('Setujui'),
-                    ),
-                  ),
-                ],
-              )
-            else
-              _StatusBadge(status: pengajuan.status),
-          ],
         ],
       ),
     );
   }
-}
 
-class _PageIntro extends StatelessWidget {
-  const _PageIntro();
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildPesan() {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: AppDecorations.cardBoxDecoration,
-      child: const Row(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _pesanError ? Colors.red.withValues(alpha: 0.08) : hijauMuda,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline, color: AppColors.primary, size: 28),
-          SizedBox(width: 12),
+          Icon(
+            _pesanError ? Icons.error_outline : Icons.check_circle_outline,
+            color: _pesanError ? Colors.red : hijau,
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Masukkan kode pengajuan untuk melihat data nasabah, nominal penarikan, dan saldo.',
-              style: AppTextStyles.subtitle,
+              _pesan!,
+              style: TextStyle(
+                color: _pesanError ? Colors.red.shade800 : hijau,
+              ),
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _PengajuanCard extends StatelessWidget {
-  final DummyPenarikan pengajuan;
-  final DummyNasabah nasabah;
-  final bool saldoCukup;
+  Widget _buildDetailPengajuan() {
+    final data = _pengajuan!;
+    final status = _normalisasiStatus(data['status']);
+    final nominal = _angka(data['nominal']);
+    final saldo = _angka(data['saldo']);
+    final masihPending = status == 'pending';
 
-  const _PengajuanCard({
-    required this.pengajuan,
-    required this.nasabah,
-    required this.saldoCukup,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: AppDecorations.cardBoxDecoration,
+    return _kartu(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.receipt_long_outlined, color: AppColors.primary),
-              const SizedBox(width: 10),
-              Expanded(
+              const Expanded(
                 child: Text(
-                  pengajuan.kodePengajuan,
-                  style: AppTextStyles.title,
+                  'Detail Pengajuan',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
               ),
-              _StatusBadge(status: pengajuan.status),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _warnaStatus(status).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _labelStatus(status),
+                  style: TextStyle(
+                    color: _warnaStatus(status),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ],
           ),
-          const Divider(height: 24),
-          _DetailRow(label: 'Nasabah', value: nasabah.nama),
-          _DetailRow(label: 'Nomor HP', value: nasabah.noHp),
-          _DetailRow(
-            label: 'Tanggal',
-            value: tanggalIndonesia(pengajuan.tanggalPengajuan),
+          const Divider(height: 28),
+          _barisDetail(
+            'Kode Pengajuan',
+            data['kode_penarikan']?.toString() ?? '-',
           ),
-          _DetailRow(label: 'Saldo', value: rupiah(nasabah.saldo)),
-          _DetailRow(label: 'Nominal', value: rupiah(pengajuan.nominal)),
-          _DetailRow(
-            label: 'Saldo cukup',
-            value: saldoCukup ? 'Ya' : 'Tidak',
-            valueColor: saldoCukup
-                ? Colors.green.shade700
-                : Colors.red.shade700,
+          _barisDetail('Nama Nasabah', data['nama_nasabah']?.toString() ?? '-'),
+          _barisDetail('Nomor Telepon', data['no_telepon']?.toString() ?? '-'),
+          _barisDetail(
+            'Tanggal Pengajuan',
+            formatTanggal(data['tgl_pengajuan']),
           ),
+          _barisDetail('Saldo Saat Ini', formatRupiah(saldo)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: hijauMuda,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Nominal Penarikan',
+                    style: TextStyle(color: hijau, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Text(
+                  formatRupiah(nominal),
+                  style: const TextStyle(
+                    color: hijau,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(
+                _saldoCukup ? Icons.check_circle : Icons.cancel,
+                color: _saldoCukup ? hijau : Colors.red,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _saldoCukup
+                      ? 'Saldo nasabah mencukupi.'
+                      : 'Saldo nasabah tidak mencukupi.',
+                  style: TextStyle(
+                    color: _saldoCukup ? hijau : Colors.red,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (masihPending) ...[
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _memproses
+                        ? null
+                        : () => _prosesPenarikan('Ditolak'),
+                    icon: const Icon(Icons.close),
+                    label: const Text('Tolak'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _memproses || !_saldoCukup
+                        ? null
+                        : () => _prosesPenarikan('Disetujui'),
+                    icon: _memproses
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.check),
+                    label: Text(_memproses ? 'Memproses...' : 'Setujui'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: hijau,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
-}
 
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? valueColor;
-
-  const _DetailRow({required this.label, required this.value, this.valueColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(label, style: AppTextStyles.subtitle),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: valueColor ?? AppColors.textPrimary,
+  Widget _buildDaftarPengajuan() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Daftar Pengajuan Penarikan',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
+            ),
+            IconButton(
+              onPressed: _muatDaftarPenarikan,
+              tooltip: 'Muat ulang',
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(
+          value: _filterStatus,
+          decoration: InputDecoration(
+            labelText: 'Filter Status',
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'Semua', child: Text('Semua')),
+            DropdownMenuItem(
+              value: 'pending',
+              child: Text('Menunggu Verifikasi'),
+            ),
+            DropdownMenuItem(value: 'Disetujui', child: Text('Disetujui')),
+            DropdownMenuItem(value: 'Ditolak', child: Text('Ditolak')),
+          ],
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() {
+              _filterStatus = value;
+            });
+          },
+        ),
+        const SizedBox(height: 12),
+        if (_penarikanTerfilter.isEmpty)
+          _kartu(
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Text(
+                  'Belum ada pengajuan penarikan.',
+                  style: TextStyle(color: Colors.black54),
+                ),
+              ),
+            ),
+          )
+        else
+          ..._penarikanTerfilter.map(_buildItemDaftar),
+      ],
+    );
+  }
+
+  Widget _buildItemDaftar(Map<String, dynamic> data) {
+    final status = data['status'];
+    final warna = _warnaStatus(status);
+
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _pilihPengajuan(data),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.receipt_long_outlined, color: hijau),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      data['kode_penarikan']?.toString() ?? '-',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: warna.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _labelStatus(status),
+                      style: TextStyle(
+                        color: warna,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                data['nama_nasabah']?.toString() ??
+                    'Nama nasabah tidak tersedia',
+              ),
+              const SizedBox(height: 5),
+              Text(
+                formatRupiah(_angka(data['nominal'])),
+                style: const TextStyle(
+                  color: hijau,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                formatTanggal(data['tgl_pengajuan']),
+                style: const TextStyle(color: Colors.black54, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _kartu({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _barisDetail(String label, String nilai) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 13),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 5,
+            child: Text(label, style: const TextStyle(color: Colors.black54)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 5,
+            child: Text(
+              nilai,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final String status;
-
-  const _StatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    Color color;
-    if (status == 'Disetujui') {
-      color = Colors.green.shade700;
-    } else if (status == 'Ditolak') {
-      color = Colors.red.shade700;
-    } else {
-      color = Colors.orange.shade800;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        status,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
       ),
     );
   }
