@@ -6,7 +6,7 @@ import '../models/jenis_sampah_model.dart';
 import '../models/setoran_model.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://10.152.239.158:8000/api';
+  static const String baseUrl = 'http://10.204.29.158:8000/api';
 
   // ==========================================================
   // LOGIN
@@ -549,28 +549,43 @@ class ApiService {
   static Future<Map<String, dynamic>> tambahSetoran({
     required int idNasabah,
     required int idPetugas,
-    required int idJenisSampah,
-    required double totalBerat,
+    required List<Map<String, dynamic>> items,
   }) async {
     try {
+      final uri = Uri.parse('$baseUrl/petugas/setoran');
+
+      final body = {
+        'id_pengguna_nasabah': idNasabah,
+        'id_pengguna_petugas': idPetugas,
+        'items': items.map((item) {
+          return {
+            'id_jenis_sampah': item['id_jenis_sampah'],
+            'total_berat': item['total_berat'],
+          };
+        }).toList(),
+      };
+
+      print('========== TAMBAH SETORAN ==========');
+      print('URL: $uri');
+      print('BODY: ${jsonEncode(body)}');
+
       final response = await http.post(
-        Uri.parse('$baseUrl/petugas/setoran'),
+        uri,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({
-          'id_pengguna_nasabah': idNasabah,
-          'id_pengguna_petugas': idPetugas,
-          'id_jenis_sampah': idJenisSampah,
-          'total_berat': totalBerat,
-        }),
+        body: jsonEncode(body),
       );
 
-      print('TAMBAH SETORAN STATUS: ${response.statusCode}');
-      print('TAMBAH SETORAN RESPONSE: ${response.body}');
+      print('STATUS: ${response.statusCode}');
+      print('RESPONSE: ${response.body}');
+      print('====================================');
 
-      final data = jsonDecode(response.body);
+      final dynamic decoded = jsonDecode(response.body);
+      final Map<String, dynamic> data = decoded is Map
+          ? Map<String, dynamic>.from(decoded)
+          : <String, dynamic>{};
 
       if (response.statusCode == 201) {
         return {
@@ -578,6 +593,14 @@ class ApiService {
           'message': data['message'] ?? 'Setoran berhasil disimpan',
           'data': data['data'],
         };
+      }
+
+      final errors = data['errors'];
+      if (errors is Map && errors.isNotEmpty) {
+        final firstError = errors.values.first;
+        if (firstError is List && firstError.isNotEmpty) {
+          throw Exception(firstError.first.toString());
+        }
       }
 
       throw Exception(data['message'] ?? 'Gagal menyimpan setoran');
