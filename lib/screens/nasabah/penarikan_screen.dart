@@ -84,6 +84,60 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
     }
   }
 
+  Color _warnaLatarStatus(dynamic value) {
+    switch ((value ?? '').toString().trim().toLowerCase()) {
+      case 'pending':
+      case 'menunggu':
+      case 'menunggu verifikasi':
+        return Colors.orange.withValues(alpha: 0.12);
+
+      case 'disetujui':
+      case 'approved':
+      case 'selesai':
+      case "completed":
+        return Colors.green.withValues(alpha: 0.12);
+
+      case 'ditolak':
+      case 'rejected':
+        return Colors.red.withValues(alpha: 0.10);
+
+      case 'dibatalkan':
+      case 'cancelled':
+      case 'canceled':
+        return Colors.grey.withValues(alpha: 0.12);
+
+      default:
+        return Colors.blueGrey.withValues(alpha: 0.10);
+    }
+  }
+
+  Color _warnaTeksStatus(dynamic value) {
+    switch ((value ?? '').toString().trim().toLowerCase()) {
+      case 'pending':
+      case 'menunggu':
+      case 'menunggu verifikasi':
+        return Colors.orange.shade800;
+
+      case 'disetujui':
+      case 'approved':
+      case 'selesai':
+      case "completed":
+        return Colors.green.shade700;
+
+      case 'ditolak':
+      case 'rejected':
+        return Colors.red.shade700;
+
+      case 'dibatalkan':
+      case 'cancelled':
+      case 'canceled':
+        return Colors.grey.shade700;
+
+      default:
+        return Colors.blueGrey.shade700;
+    }
+  }
+
   Future<void> muatData() async {
     if (mounted) {
       setState(() => sedangMemuat = true);
@@ -576,11 +630,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                                     vertical: 5,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: pending
-                                        ? Colors.orange.withValues(alpha: 0.12)
-                                        : status.toLowerCase() == 'disetujui'
-                                        ? Colors.green.withValues(alpha: 0.12)
-                                        : Colors.red.withValues(alpha: 0.10),
+                                    color: _warnaLatarStatus(status),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
@@ -588,11 +638,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
-                                      color: pending
-                                          ? Colors.orange.shade800
-                                          : status.toLowerCase() == 'disetujui'
-                                          ? Colors.green.shade700
-                                          : Colors.red.shade700,
+                                      color: _warnaTeksStatus(status),
                                     ),
                                   ),
                                 ),

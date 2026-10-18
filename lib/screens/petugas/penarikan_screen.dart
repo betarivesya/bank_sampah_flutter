@@ -253,11 +253,27 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
   String _labelStatus(dynamic status) {
     switch (_normalisasiStatus(status)) {
       case 'pending':
+      case 'menunggu':
+      case 'menunggu verifikasi':
         return 'Menunggu Verifikasi';
+
+      case 'approved':
       case 'disetujui':
         return 'Disetujui';
+
+      case 'rejected':
       case 'ditolak':
         return 'Ditolak';
+
+      case 'completed':
+      case 'selesai':
+        return 'Selesai';
+
+      case 'cancelled':
+      case 'canceled':
+      case 'dibatalkan':
+        return 'Dibatalkan';
+
       default:
         return status?.toString() ?? '-';
     }
@@ -266,13 +282,27 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
   Color _warnaStatus(dynamic status) {
     switch (_normalisasiStatus(status)) {
       case 'pending':
-        return Colors.orange;
+      case 'menunggu':
+      case 'menunggu verifikasi':
+        return Color(0xFF9A5700);
+
+      case 'approved':
       case 'disetujui':
-        return hijau;
+      case 'completed':
+      case 'selesai':
+        return const Color(0xFF146C2E);
+
+      case 'rejected':
       case 'ditolak':
-        return Colors.red;
+        return const Color(0xFFB42318);
+
+      case 'cancelled':
+      case 'canceled':
+      case 'dibatalkan':
+        return const Color(0xFF424242);
+
       default:
-        return Colors.grey;
+        return const Color(0xFF37474F);
     }
   }
 

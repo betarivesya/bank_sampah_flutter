@@ -6,7 +6,7 @@ import '../models/jenis_sampah_model.dart';
 import '../models/setoran_model.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://10.204.29.158:8000/api';
+  static const String baseUrl = 'http://10.252.30.158:8000/api';
 
   // ==========================================================
   // LOGIN

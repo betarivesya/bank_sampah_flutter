@@ -476,33 +476,57 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   // ============================================================
 
   Widget _statusBadge(String status) {
-    final normalized = status.toLowerCase();
+    final normalized = status.trim().toLowerCase();
 
+    String label;
     Color warna;
 
     switch (normalized) {
-      case 'selesai':
-      case 'disetujui':
-        warna = primaryGreen;
-        break;
-      case 'ditolak':
-        warna = Colors.redAccent;
-        break;
       case 'pending':
+      case 'menunggu':
+      case 'menunggu verfikasi':
+        label = 'Menunggu Verfikasi';
         warna = Colors.orange;
         break;
+
+      case 'approved':
+      case 'disetujui':
+        label = 'Disetujui';
+        warna = primaryGreen;
+        break;
+
+      case 'selesai':
+      case 'completed':
+        label = 'Selesai';
+        warna = darkGreen;
+        break;
+
+      case 'ditolak':
+      case 'rejected':
+        label = 'Ditolak';
+        warna = Colors.redAccent;
+        break;
+
+      case 'dibatalkan':
+      case 'cancelled':
+      case 'canceled':
+        label = 'Dibatalkan';
+        warna = Colors.blueGrey;
+        break;
+
       default:
+        label = status;
         warna = Colors.blueGrey;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
         color: warna.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        status,
+        label,
         style: TextStyle(
           color: warna,
           fontSize: 9,
