@@ -24,8 +24,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   int nasabahAktif = 0;
   double nilaiSetoran = 0;
-  double saldoNasabah = 0;
-  int menungguValidasi = 0;
+  double totalSampahTerkumpul = 0;
+  int totalPetugasAktif = 0;
   int penarikanPending = 0;
   int transaksiDisetujui = 0;
 
@@ -74,11 +74,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
         nilaiSetoran =
             double.tryParse(data['nilai_setoran']?.toString() ?? '0') ?? 0;
 
-        saldoNasabah =
-            double.tryParse(data['saldo_nasabah']?.toString() ?? '0') ?? 0;
+        totalSampahTerkumpul =
+            double.tryParse(
+              data['total_sampah_terkumpul']?.toString() ?? '0',
+            ) ??
+            0;
 
-        menungguValidasi =
-            int.tryParse(data['menunggu_validasi']?.toString() ?? '0') ?? 0;
+        totalPetugasAktif =
+            int.tryParse(data['total_petugas_aktif']?.toString() ?? '0') ?? 0;
 
         penarikanPending =
             int.tryParse(data['penarikan_pending']?.toString() ?? '0') ?? 0;
@@ -274,50 +277,40 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       children: [
         _statisticCard(
-          title: 'Nasabah Aktif',
-
+          title: 'Total Nasabah Aktif',
           value: isLoading ? '...' : '$nasabahAktif',
-
           icon: Icons.people_outline_rounded,
         ),
 
         _statisticCard(
+          title: 'Total Sampah Terkumpul',
+          value: isLoading
+              ? '...'
+              : '${totalSampahTerkumpul.toStringAsFixed(2).replaceAll('.', ',')} kg',
+          icon: Icons.recycling_outlined,
+        ),
+
+        _statisticCard(
+          title: 'Total Petugas Aktif',
+          value: isLoading ? '...' : '$totalPetugasAktif',
+          icon: Icons.badge_outlined,
+        ),
+
+        _statisticCard(
           title: 'Nilai Setoran',
-
           value: isLoading ? '...' : formatRupiah(nilaiSetoran),
-
           icon: Icons.payments_outlined,
         ),
 
         _statisticCard(
-          title: 'Saldo Nasabah',
-
-          value: isLoading ? '...' : formatRupiah(saldoNasabah),
-
-          icon: Icons.account_balance_wallet_outlined,
-        ),
-
-        _statisticCard(
-          title: 'Menunggu Validasi',
-
-          value: isLoading ? '...' : '$menungguValidasi',
-
-          icon: Icons.pending_actions_outlined,
-        ),
-
-        _statisticCard(
           title: 'Penarikan Pending',
-
           value: isLoading ? '...' : '$penarikanPending',
-
           icon: Icons.money_outlined,
         ),
 
         _statisticCard(
           title: 'Transaksi Disetujui',
-
           value: isLoading ? '...' : '$transaksiDisetujui',
-
           icon: Icons.check_circle_outline_rounded,
         ),
       ],
@@ -414,26 +407,23 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   // ============================================================
-  // CHART
+  // CHART CAROUSEL
   // ============================================================
+  final PageController _chartPageController = PageController();
+
+  int _currentChartPage = 0;
 
   Widget _buildChartSection() {
     return Container(
       width: double.infinity,
-
       padding: const EdgeInsets.all(18),
-
       decoration: BoxDecoration(
         color: Colors.white,
-
         borderRadius: BorderRadius.circular(18),
-
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-
             blurRadius: 8,
-
             offset: const Offset(0, 3),
           ),
         ],
@@ -441,45 +431,99 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-
         children: [
-          const Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Statistik Setoran 2026',
-
-                  style: TextStyle(
-                    color: AdminDashboard.textDark,
-
-                    fontSize: 16,
-
-                    fontWeight: FontWeight.bold,
+          SizedBox(
+            height: 215,
+            child: PageView(
+              controller: _chartPageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentChartPage = index;
+                });
+              },
+              children: [
+                _buildChartPage(
+                  title: 'Nilai Setoran per Bulan',
+                  subtitle: DateTime.now().year.toString(),
+                  chart: CustomPaint(
+                    painter: _BarChartPainter(grafikSetoran, isCurrency: true),
+                    child: const SizedBox.expand(),
                   ),
                 ),
-              ),
-
-              Text(
-                '2026',
-
-                style: TextStyle(color: AdminDashboard.textGrey, fontSize: 12),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          SizedBox(
-            height: 180,
-
-            child: CustomPaint(
-              painter: _LineChartPainter(grafikSetoran),
-
-              child: const SizedBox.expand(),
+                _buildChartPage(
+                  title: 'Jumlah Berat Sampah per Jenis',
+                  subtitle: 'Berat dalam kg',
+                  chart: const Center(
+                    child: Text(
+                      'Data berat sampah per jenis belum tersedia.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AdminDashboard.textGrey,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(2, (index) {
+              final selected = _currentChartPage == index;
+
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: selected ? 20 : 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? AdminDashboard.primaryGreen
+                      : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              );
+            }),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildChartPage({
+    required String title,
+    required String subtitle,
+    required Widget chart,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: AdminDashboard.textDark,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                color: AdminDashboard.textGrey,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        Expanded(child: chart),
+      ],
     );
   }
 
@@ -692,83 +736,96 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _chartPageController.dispose();
+    super.dispose();
+  }
 }
 
 // ============================================================
 // LINE CHART
 // ============================================================
-
-class _LineChartPainter extends CustomPainter {
+class _BarChartPainter extends CustomPainter {
   final List<dynamic> data;
+  final bool isCurrency;
 
-  _LineChartPainter(this.data);
+  _BarChartPainter(this.data, {this.isCurrency = false});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paintLine = Paint()
-      ..color = const Color(0xFF2E8B72)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-
-    final paintPoint = Paint()
-      ..color = const Color(0xFF2E8B72)
-      ..style = PaintingStyle.fill;
-
-    final paintGrid = Paint()
-      ..color = Colors.grey.withValues(alpha: 0.12)
+    final gridPaint = Paint()
+      ..color = Colors.grey.withValues(alpha: 0.15)
       ..strokeWidth = 1;
 
-    // ============================================================
-    // GRID
-    // ============================================================
+    final barPaint = Paint()
+      ..color = AdminDashboard.primaryGreen
+      ..style = PaintingStyle.fill;
 
     for (int i = 0; i < 4; i++) {
-      final y = (size.height / 4) * i;
-
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paintGrid);
+      final y = size.height * i / 4;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
-    if (data.isEmpty) {
-      return;
-    }
-
-    // ============================================================
-    // DATA GRAFIK
-    // ============================================================
+    if (data.isEmpty) return;
 
     final values = data.map<double>((item) {
       return double.tryParse(item['nilai']?.toString() ?? '0') ?? 0;
     }).toList();
 
-    final maxValue = values.reduce((a, b) => a > b ? a : b);
+    final maxValue = values.fold<double>(
+      0,
+      (maximum, value) => value > maximum ? value : maximum,
+    );
 
-    if (maxValue <= 0) {
-      return;
-    }
+    if (maxValue <= 0) return;
 
-    final path = Path();
+    const gap = 5.0;
+    final barWidth = (size.width - gap * (values.length - 1)) / values.length;
 
     for (int i = 0; i < values.length; i++) {
-      final x = values.length == 1
-          ? size.width / 2
-          : (size.width / (values.length - 1)) * i;
+      final barHeight = (values[i] / maxValue) * (size.height - 15);
+      final left = i * (barWidth + gap);
 
-      final y = size.height - ((values[i] / maxValue) * size.height);
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(left, size.height - barHeight, barWidth, barHeight),
+        const Radius.circular(3),
+      );
 
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
+      canvas.drawRRect(rect, barPaint);
 
-      canvas.drawCircle(Offset(x, y), 4, paintPoint);
+      final bulan = int.tryParse(data[i]['bulan']?.toString() ?? '') ?? 0;
+
+      final label = TextPainter(
+        text: TextSpan(
+          text: [
+            '',
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'Mei',
+            'Jun',
+            'Jul',
+            'Agu',
+            'Sep',
+            'Okt',
+            'Nov',
+            'Des',
+          ][bulan.clamp(0, 12)],
+          style: const TextStyle(color: AdminDashboard.textGrey, fontSize: 9),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      label.paint(
+        canvas,
+        Offset(left + (barWidth - label.width) / 2, size.height - label.height),
+      );
     }
-
-    canvas.drawPath(path, paintLine);
   }
 
   @override
-  bool shouldRepaint(covariant _LineChartPainter oldDelegate) {
-    return true;
-  }
+  bool shouldRepaint(covariant _BarChartPainter oldDelegate) => true;
 }
