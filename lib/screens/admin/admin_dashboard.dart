@@ -30,6 +30,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int transaksiDisetujui = 0;
 
   List<dynamic> grafikSetoran = [];
+  List<dynamic> grafikBeratJenis = [];
   List<dynamic> transaksiTerbaru = [];
 
   // ============================================================
@@ -90,6 +91,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             int.tryParse(data['transaksi_disetujui']?.toString() ?? '0') ?? 0;
 
         grafikSetoran = List<dynamic>.from(data['grafik_setoran'] ?? []);
+
+        grafikBeratJenis = List<dynamic>.from(data['grafik_berat_jenis'] ?? []);
 
         transaksiTerbaru = List<dynamic>.from(data['transaksi_terbaru'] ?? []);
 
@@ -453,16 +456,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 _buildChartPage(
                   title: 'Jumlah Berat Sampah per Jenis',
                   subtitle: 'Berat dalam kg',
-                  chart: const Center(
-                    child: Text(
-                      'Data berat sampah per jenis belum tersedia.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AdminDashboard.textGrey,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
+                  chart: _buildWeightChart(),
                 ),
               ],
             ),
@@ -524,6 +518,87 @@ class _AdminDashboardState extends State<AdminDashboard> {
         const SizedBox(height: 18),
         Expanded(child: chart),
       ],
+    );
+  }
+
+  // ============================================================
+  // GRAFIK BERAT SAMPAH PER JENIS
+  // ============================================================
+
+  Widget _buildWeightChart() {
+    if (grafikBeratJenis.isEmpty) {
+      return const Center(
+        child: Text(
+          'Belum ada data berat sampah.',
+          style: TextStyle(color: AdminDashboard.textGrey, fontSize: 12),
+        ),
+      );
+    }
+
+    final values = grafikBeratJenis.map<double>((item) {
+      return double.tryParse(item['total_berat']?.toString() ?? '0') ?? 0;
+    }).toList();
+
+    final maxBerat = values.fold<double>(
+      0,
+      (max, value) => value > max ? value : max,
+    );
+
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      itemCount: grafikBeratJenis.length,
+      itemBuilder: (context, index) {
+        final item = Map<String, dynamic>.from(grafikBeratJenis[index]);
+
+        final nama = item['nama_sampah']?.toString() ?? '-';
+        final berat = values[index];
+
+        final progress = maxBerat > 0 ? berat / maxBerat : 0.0;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 9),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 85,
+                child: Text(
+                  nama,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AdminDashboard.textDark,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(5),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 10,
+                    backgroundColor: const Color(0xFFEF8F1EE),
+                    color: AdminDashboard.primaryGreen,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 55,
+                child: Text(
+                  '${berat.toStringAsFixed(2)} kg',
+                  textAlign: TextAlign.end,
+                  style: const TextStyle(
+                    color: AdminDashboard.textGrey,
+                    fontSize: 9,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
