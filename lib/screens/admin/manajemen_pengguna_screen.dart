@@ -1298,54 +1298,46 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
             // ==================================================
             // MENU AKSI
             // ==================================================
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'edit') {
-                  showEditUserDialog(user);
-                }
-
-                if (value == 'delete') {
-                  showDeleteUserDialog(user);
-                }
-              },
-              itemBuilder: (context) {
-                return [
-                  // ==================================================
-                  // EDIT
-                  // ==================================================
-
-                  const PopupMenuItem(
+            if (user['protected'] == true)
+              IconButton(
+                tooltip: 'Edit Admin Utama',
+                onPressed: () => showEditUserDialog(user),
+                icon: const Icon(Icons.edit_outlined, color: darkGreen),
+              )
+            else
+              PopupMenuButton<String>(
+                tooltip: 'Aksi Pengguna',
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    showEditUserDialog(user);
+                  } else if (value == 'delete') {
+                    showDeleteUserDialog(user);
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
                     value: 'edit',
                     child: Row(
                       children: [
                         Icon(Icons.edit_outlined, size: 20),
-
                         SizedBox(width: 8),
-
                         Text('Edit'),
                       ],
                     ),
                   ),
-
-                  // ==================================================
-                  // HAPUS
-                  // ==================================================
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'delete',
                     child: Row(
                       children: [
                         Icon(Icons.delete_outline, size: 20, color: Colors.red),
-
                         SizedBox(width: 8),
-
                         Text('Hapus', style: TextStyle(color: Colors.red)),
                       ],
                     ),
                   ),
-                ];
-              },
-              icon: const Icon(Icons.more_vert, color: textGrey),
-            ),
+                ],
+                icon: const Icon(Icons.more_vert, color: textGrey),
+              ),
           ],
         ),
       ),

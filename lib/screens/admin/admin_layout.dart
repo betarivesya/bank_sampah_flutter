@@ -6,6 +6,7 @@ import 'admin_dashboard.dart';
 import 'admin_drawer.dart';
 import 'kelola_sampah_screen.dart';
 import 'manajemen_pengguna_screen.dart';
+import 'admin_notification_screen.dart';
 
 class AdminLayout extends StatefulWidget {
   const AdminLayout({super.key});
@@ -141,51 +142,13 @@ class _AdminLayoutState extends State<AdminLayout> {
           ),
         );
 
+      case 'notifikasi':
+        return const AdminNotificationScreen();
+
       case 'dashboard':
       default:
         return const AdminDashboard();
     }
-  }
-
-  // ==========================================================
-  // MENU YANG BELUM DIBUAT
-  // ==========================================================
-
-  Widget _buildComingSoon({
-    required String title,
-    required String message,
-    required IconData icon,
-  }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE6F4ED),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(icon, size: 40, color: const Color(0xFF2E8B72)),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   // ==========================================================
@@ -202,6 +165,9 @@ class _AdminLayoutState extends State<AdminLayout> {
 
       case 'laporan':
         return 'Laporan';
+
+      case 'notifikasi':
+        return 'Notifikasi Admin';
 
       case 'dashboard':
       default:
@@ -281,31 +247,33 @@ class _AdminLayoutState extends State<AdminLayout> {
 
           actions: [
             IconButton(
+              tooltip: 'Notifikasi',
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Belum ada notifikasi baru.')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AdminNotificationScreen(),
+                  ),
                 );
               },
-              icon: Stack(
+              icon: const Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  const Icon(Icons.notifications_none_rounded, size: 25),
+                  Icon(Icons.notifications_none_outlined, size: 25),
                   Positioned(
                     right: -1,
                     top: -1,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
                         color: Colors.redAccent,
                         shape: BoxShape.circle,
                       ),
+                      child: SizedBox(width: 8, height: 8),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
           ],
         ),
 
