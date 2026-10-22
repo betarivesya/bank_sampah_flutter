@@ -483,6 +483,68 @@ class ApiService {
   }
 
   // ============================================================
+  // NOTIFIKASI ADMIN
+  // ============================================================
+
+  static Future<Map<String, dynamic>> getNotifikasiAdmin() async {
+    final response = await http.get(
+      Uri.parse(
+        '$baseUrl/admin/notifikasi'
+        '?t=${DateTime.now().millisecondsSinceEpoch}',
+      ),
+      headers: {'Accept': 'application/json', 'Cache-Control': 'no-cache'},
+    );
+
+    final dynamic decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && decoded is Map) {
+      return Map<String, dynamic>.from(decoded);
+    }
+
+    final message = decoded is Map ? decoded['message']?.toString() : null;
+
+    throw Exception(message ?? 'Gagal mengambil notifikasi admin.');
+  }
+
+  static Future<bool> tandaiNotifikasiAdminDibaca(int idNotifikasi) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/admin/notifikasi/$idNotifikasi/dibaca'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    }
+
+    final dynamic decoded = jsonDecode(response.body);
+    final message = decoded is Map ? decoded['message']?.toString() : null;
+
+    throw Exception(message ?? 'Gagal menandai notifikasi');
+  }
+
+  static Future<bool> tandaiSemuaNotifikasiAdminDibaca() async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/admin/notifikasi/dibaca-semua'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    }
+
+    final dynamic decoded = jsonDecode(response.body);
+    final message = decoded is Map ? decoded['message']?.toString() : null;
+
+    throw Exception(message ?? 'Gagal memperbarui notifikasi admin.');
+  }
+
+  // ============================================================
   // DASHBOARD PETUGAS
   // ============================================================
 
@@ -901,6 +963,70 @@ class ApiService {
       rethrow;
     }
   }
+
+  // ==========================================================
+  // UPDATE PROFIL NASABAH
+  // ==========================================================
+
+  static Future<bool> updateProfilNasabah({
+    required int idNasabah,
+    required String namaLengkap,
+    required String email,
+    required String noTelepon,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/nasabah/$idNasabah/profil'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'nama_lengkap': namaLengkap,
+        'email': email,
+        'no_telepon': noTelepon,
+      }),
+    );
+
+    final dynamic decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200) return true;
+
+    final message = decoded is Map ? decoded['message']?.toString() : null;
+
+    throw Exception(message ?? 'Gagal memperbarui profil.');
+  }
+
+  // ==========================================================
+  // UBAH PASSWORD NASABAH
+  // ==========================================================
+  static Future<bool> ubahPasswordNasabah({
+    required int idNasabah,
+    required String passwordLama,
+    required String passwordBaru,
+    required String konfirmasiPassword,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/nasabah/$idNasabah/password'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'password_lama': passwordLama,
+        'password_baru': passwordBaru,
+        'konfirmasi_password': konfirmasiPassword,
+      }),
+    );
+
+    final dynamic decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200) return true;
+
+    final message = decoded is Map ? decoded['message']?.toString() : null;
+
+    throw Exception(message ?? 'Gagal mengubah password.');
+  }
+
   // ==========================================================
   // NOTIFIKASI NASABAH
   // ==========================================================

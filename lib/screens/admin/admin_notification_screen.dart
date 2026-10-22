@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../services/api_service.dart';
+
 class AdminNotificationScreen extends StatefulWidget {
   const AdminNotificationScreen({super.key});
 
@@ -28,7 +30,6 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
   }
 
   // Memuat notifikasi admin.
-  // TODO: Sambungkan ke endpoint API khusus admin.
   Future<void> _muatNotifikasi() async {
     if (!mounted) return;
 
@@ -38,9 +39,25 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
     });
 
     try {
-      // API notifikasi admin belum disambungkan.
-      // Jangan menggunakan API notifikasi nasabah di sini.
-      throw Exception('API notifikasi admin belum dihubungkan.');
+      final response = await ApiService.getNotifikasiAdmin();
+
+      final dynamic data = response['data'];
+
+      if (data is! List) {
+        throw Exception('Format data notifikasi tidak valid.');
+      }
+
+      final notifikasi = data
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        _notifikasi = notifikasi;
+        _loading = false;
+      });
     } catch (e) {
       if (!mounted) return;
 
@@ -60,26 +77,70 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
   }
 
   // Menandai satu notifikasi sebagai sudah dibaca.
-  // TODO: Sambungkan ke endpoint API khusus admin.
   Future<void> _tandaiDibaca(Map<String, dynamic> item) async {
     if (_sudahDibaca(item)) return;
 
-    final id = item['id_notifikasi'] ?? item['id'];
+    final id = int.tryParse(
+      (item['id_notifikasi'] ?? item['id'] ?? '').toString(),
+    );
 
     if (id == null) {
       _pesan('ID notifikasi tidak valid.');
       return;
     }
 
-    _pesan('API untuk menandai notifikasi admin belum dihubungkan.');
+    try {
+      await ApiService.tandaiNotifikasiAdminDibaca(id);
+
+      if (!mounted) return;
+
+      setState(() {
+        final index = _notifikasi.indexWhere(
+          (notifikasi) =>
+              (notifikasi['id_notifikasi'] ?? notifikasi['id']).toString() ==
+              id.toString(),
+        );
+
+        if (index != -1) {
+          _notifikasi[index]['dibaca'] = 1;
+        }
+      });
+    } catch (e) {
+      _pesan(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   // Menandai seluruh notifikasi sebagai sudah dibaca.
-  // TODO: Sambungkan ke endpoint API khusus admin.
   Future<void> _tandaiSemuaDibaca() async {
     if (_jumlahBelumDibaca == 0 || _menandaiSemua) return;
 
-    _pesan('API untuk menandai semua notifikasi admin belum dihubungkan.');
+    setState(() {
+      _menandaiSemua = true;
+    });
+
+    try {
+      await ApiService.tandaiSemuaNotifikasiAdminDibaca();
+
+      if (!mounted) return;
+
+      setState(() {
+        for (final item in _notifikasi) {
+          item['dibaca'] = 1;
+        }
+
+        _menandaiSemua = false;
+      });
+
+      _pesan('Semua notifikasi sudah dibaca.');
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _menandaiSemua = false;
+      });
+
+      _pesan(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   void _pesan(String pesan) {
