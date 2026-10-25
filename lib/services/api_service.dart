@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:http_parser/http_parser.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/jenis_sampah_model.dart';
@@ -965,6 +967,92 @@ class ApiService {
   }
 
   // ==========================================================
+  // UPDATE FOTO PROFIL NASABAH
+  // ==========================================================
+
+  static Future<Map<String, dynamic>> uploadFotoProfilNasabah({
+    required int idNasabah,
+    required File foto,
+  }) async {
+    final uploadUrl = '$baseUrl/nasabah/$idNasabah/foto-profil';
+
+    print('UPLOAD FOTO URL: $uploadUrl');
+
+    final request = http.MultipartRequest('POST', Uri.parse(uploadUrl));
+
+    request.headers['Accept'] = 'application/json';
+
+    final namaFile = foto.path.split('/').last.toLowerCase();
+
+    String? mimeSubtype;
+    if (namaFile.endsWith('.jpg') || namaFile.endsWith('.jpeg')) {
+      mimeSubtype = 'jpeg';
+    } else if (namaFile.endsWith('.png')) {
+      mimeSubtype = 'png';
+    } else if (namaFile.endsWith('.webp')) {
+      mimeSubtype = 'webp';
+    }
+
+    if (mimeSubtype == null) {
+      throw Exception('Format foto harus JPG, JPEG, PNG, atau WEBP');
+    }
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'foto_profil',
+        foto.path,
+        contentType: MediaType('image', mimeSubtype),
+      ),
+    );
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    print('UPLOAD FOTO STATUS: ${response.statusCode}');
+    print('UPLOAD FOTO RESPONSE: ${response.body}');
+
+    final dynamic decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && decoded is Map) {
+      final dynamic data = decoded['data'];
+
+      if (data is Map) {
+        return Map<String, dynamic>.from(data);
+      }
+
+      throw Exception('Respons foto profil tidak sesuai');
+    }
+
+    final message = decoded is Map ? decoded['message']?.toString() : null;
+
+    throw Exception(message ?? 'Gagal mengunggah foto profil.');
+  }
+
+  // ==========================================================
+  // HAPUS FOTO PROFIL NASABAH
+  // ==========================================================
+
+  static Future<bool> hapusFotoProfilNasabah({required int idNasabah}) async {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/nasabah/$idNasabah/foto-profil"),
+      headers: {'Accept': 'application/json'},
+    );
+
+    print('HAPUS FOTO STATUS: ${response.statusCode}');
+    print('HAPUS FOTO RESPONSE: ${response.body}');
+
+    final dynamic decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return true;
+    }
+
+    final message = decoded is Map ? decoded['message']?.toString() : null;
+
+    throw Exception(message ?? 'Gagal menghapus foto profil.');
+  }
+
+  // ==========================================================
   // UPDATE PROFIL NASABAH
   // ==========================================================
 
@@ -975,7 +1063,7 @@ class ApiService {
     required String noTelepon,
   }) async {
     final response = await http.put(
-      Uri.parse('$baseUrl/nasabah/$idNasabah/profil'),
+      Uri.parse('$baseUrl/nasabah/$idNasabah/profil/foto-profil'),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',

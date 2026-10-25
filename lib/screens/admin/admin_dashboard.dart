@@ -92,7 +92,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
         grafikSetoran = List<dynamic>.from(data['grafik_setoran'] ?? []);
 
-        grafikBeratJenis = List<dynamic>.from(data['grafik_berat_jenis'] ?? []);
+        grafikBeratJenis = List<dynamic>.from(data['grafik_berat_jenis'] ?? [])
+          ..sort((a, b) {
+            final beratA =
+                double.tryParse(a['total_berat']?.toString() ?? '0') ?? 0.0;
+
+            final beratB =
+                double.tryParse(b['total_berat']?.toString() ?? '0') ?? 0.0;
+
+            return beratB.compareTo(beratA);
+          });
 
         transaksiTerbaru = List<dynamic>.from(data['transaksi_terbaru'] ?? []);
 

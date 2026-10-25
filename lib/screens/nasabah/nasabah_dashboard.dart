@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/setoran_model.dart';
@@ -20,26 +22,43 @@ class NasabahDashboard extends StatefulWidget {
 }
 
 class _NasabahDashboardState extends State<NasabahDashboard> {
+  // =========================================================
+  // VARIABEL NOTIFIKASI
+  // =========================================================
+
+  int _jumlahNotifikasiBelumDibaca = 0;
+  Timer? _timerNotifikasi;
+  bool _sedangMemuatJumlahNotifikasi = false;
+
+  // Menentukan menu yang sedang dipilih pada bottom navigation.
   int _selectedIndex = 0;
 
-  // =========================
-  // DATA DARI API
-  // =========================
+  // =========================================================
+  // DATA YANG DITERIMA DARI API
+  // =========================================================
 
   Map<String, dynamic> _dataNasabah = {};
   List<SetoranModel> _setoranSaya = [];
   List<Map<String, dynamic>> _penarikanSaya = [];
 
+  // Menyimpan URL foto profil dari API.
+  // Jika belum ada foto, aplikasi akan menampilkan inisial nama.
+  String? _fotoProfilUrl;
+
   bool _loadingDashboard = true;
   String? _errorDashboard;
 
+  // Mengambil nama nasabah dari beberapa kemungkinan nama field API.
   String get namaNasabah => _ambilTeks([
     'nama_nasabah',
     'nama_pengguna',
+    'nama_lengkap',
     'nama',
     'name',
   ], fallback: 'Nasabah');
 
+  // Mengambil nomor anggota.
+  // Jika API tidak mengirim nomor anggota, gunakan ID nasabah sebagai pengganti.
   String get nomorAnggota => _ambilTeks([
     'nomor_anggota',
     'no_anggota',
@@ -47,16 +66,21 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     'nomor_nasabah',
   ], fallback: 'BSA-${widget.idNasabah.toString().padLeft(4, '0')}');
 
+  // Mengambil saldo dari data API.
   double get saldo => _ambilAngka(['saldo', 'saldo_tabungan', 'saldo_akhir']);
 
+  // Menghitung jumlah transaksi setoran.
   int get totalSetoran => _setoranSaya.length;
 
+  // Menjumlahkan seluruh berat sampah yang pernah disetorkan.
   double get totalSampah =>
       _setoranSaya.fold(0.0, (total, item) => total + item.totalBerat);
 
+  // Menjumlahkan nilai dari seluruh transaksi setoran.
   double get totalPendapatan =>
       _setoranSaya.fold(0.0, (total, item) => total + item.totalNilai);
 
+  // Membaca nilai teks berdasarkan beberapa kemungkinan nama field.
   String _ambilTeks(List<String> keys, {String fallback = '-'}) {
     for (final key in keys) {
       final value = _dataNasabah[key];
@@ -69,6 +93,8 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     return fallback;
   }
 
+  // Membaca angka dari API.
+  // Nilai yang tidak dapat dikonversi akan dianggap 0.
   double _ambilAngka(List<String> keys) {
     for (final key in keys) {
       final value = _dataNasabah[key];
@@ -81,15 +107,85 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     return 0.0;
   }
 
-  // =========================
-  // MEMUAT DATA DASHBOARD
-  // =========================
+  // =========================================================
+  // INISIALISASI DAN SIKLUS HIDUP HALAMAN
+  // =========================================================
 
   @override
   void initState() {
     super.initState();
+
+    // Memuat data dashboard ketika halaman pertama kali dibuka.
     _muatDashboard();
+
+    // Memuat jumlah notifikasi yang belum dibaca.
+    _muatJumlahNotifikasi();
+
+    // Memeriksa kembali notifikasi setiap 30 detik.
+    _timerNotifikasi = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _muatJumlahNotifikasi(),
+    );
   }
+
+  @override
+  void dispose() {
+    // Menghentikan timer agar tidak berjalan setelah halaman ditutup.
+    _timerNotifikasi?.cancel();
+    super.dispose();
+  }
+
+  // =========================================================
+  // MEMUAT JUMLAH NOTIFIKASI
+  // =========================================================
+
+  Future<void> _muatJumlahNotifikasi() async {
+    // Mencegah permintaan API yang sama berjalan bersamaan.
+    if (_sedangMemuatJumlahNotifikasi) return;
+
+    _sedangMemuatJumlahNotifikasi = true;
+
+    try {
+      final hasil = await ApiService.getNotifikasiNasabah(widget.idNasabah);
+
+      final dynamic data = hasil['data'];
+
+      if (data is! List) return;
+
+      final notifikasi = data
+          .whereType<Map>()
+          .map<Map<String, dynamic>>((item) => Map<String, dynamic>.from(item))
+          .toList();
+
+      // Menghitung notifikasi yang belum dibaca.
+      final jumlah = notifikasi.where((item) {
+        final nilai = item['dibaca'];
+
+        final sudahDibaca =
+            nilai == true ||
+            nilai.toString() == '1' ||
+            nilai.toString().toLowerCase() == 'true';
+
+        return !sudahDibaca;
+      }).length;
+
+      if (!mounted) return;
+
+      if (_jumlahNotifikasiBelumDibaca != jumlah) {
+        setState(() {
+          _jumlahNotifikasiBelumDibaca = jumlah;
+        });
+      }
+    } catch (e) {
+      debugPrint('Gagal memperbarui jumlah notifikasi: $e');
+    } finally {
+      _sedangMemuatJumlahNotifikasi = false;
+    }
+  }
+
+  // =========================================================
+  // MEMUAT SELURUH DATA DASHBOARD
+  // =========================================================
 
   Future<void> _muatDashboard() async {
     if (!mounted) return;
@@ -100,19 +196,25 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     });
 
     try {
+      // Mengambil data nasabah, setoran, penarikan, dan profil secara bersamaan.
+      // Endpoint profil digunakan untuk memperoleh foto_profil_url.
       final hasil = await Future.wait([
         ApiService.getNasabah(),
         ApiService.getSetoran(),
         ApiService.getRiwayatPenarikanNasabah(widget.idNasabah),
+        ApiService.getProfilNasabah(widget.idNasabah),
       ]);
 
       final daftarNasabah = hasil[0] as List<Map<String, dynamic>>;
-
       final semuaSetoran = hasil[1] as List<SetoranModel>;
-
       final semuaPenarikan = hasil[2] as List<Map<String, dynamic>>;
+      final profilNasabah = hasil[3] as Map<String, dynamic>;
 
-      // Cari data nasabah berdasarkan ID.
+      // Mengambil alamat foto yang dikirim oleh Laravel.
+      final dynamic fotoApi = profilNasabah['foto_profil_url'];
+      final fotoUrl = fotoApi?.toString();
+
+      // Mencari data nasabah yang ID-nya sesuai dengan pengguna yang login.
       Map<String, dynamic>? nasabah;
 
       for (final item in daftarNasabah) {
@@ -127,14 +229,15 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
         }
       }
 
-      // Ambil setoran milik nasabah yang sedang login.
+      // Mengambil transaksi setoran milik nasabah yang sedang login.
       final setoranNasabah = semuaSetoran
           .where((item) => item.idNasabah == widget.idNasabah)
           .toList();
 
+      // Mengurutkan setoran dari tanggal terbaru.
       setoranNasabah.sort((a, b) => b.tanggal.compareTo(a.tanggal));
 
-      // Urutkan penarikan dari yang terbaru.
+      // Mengurutkan riwayat penarikan dari yang terbaru.
       semuaPenarikan.sort((a, b) {
         final tanggalA =
             (a['created_at'] ?? a['tgl_penarikan'] ?? a['tanggal'] ?? '')
@@ -150,9 +253,13 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
       if (!mounted) return;
 
       setState(() {
-        _dataNasabah = nasabah ?? {};
+        // Menggabungkan data daftar nasabah dengan data profil.
+        // Data profil ditambahkan agar foto dan field profil tersedia.
+        _dataNasabah = {...?nasabah, ...profilNasabah};
+
         _setoranSaya = setoranNasabah;
         _penarikanSaya = semuaPenarikan;
+        _fotoProfilUrl = fotoUrl;
         _loadingDashboard = false;
       });
     } catch (e) {
@@ -167,9 +274,69 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     }
   }
 
-  // =========================
+  // =========================================================
+  // FOTO PROFIL NASABAH
+  // =========================================================
+
+  Widget _buildFotoNasabah({double ukuran = 48}) {
+    // Jika URL foto tersedia, tampilkan gambar dari server.
+    // Jika URL kosong atau gambar gagal dimuat, tampilkan inisial nama.
+    final url = _fotoProfilUrl?.trim();
+
+    if (url != null && url.isNotEmpty && url != 'null') {
+      return ClipOval(
+        child: Image.network(
+          url,
+          width: ukuran,
+          height: ukuran,
+          fit: BoxFit.cover,
+
+          // Jika gambar gagal dimuat, gunakan avatar inisial.
+          errorBuilder: (context, error, stackTrace) {
+            return _buildInisialNasabah(ukuran: ukuran);
+          },
+
+          // Menampilkan avatar sementara saat gambar sedang dimuat.
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+
+            return _buildInisialNasabah(ukuran: ukuran);
+          },
+        ),
+      );
+    }
+
+    // Avatar cadangan apabila nasabah belum mengunggah foto.
+    return _buildInisialNasabah(ukuran: ukuran);
+  }
+
+  Widget _buildInisialNasabah({double ukuran = 48}) {
+    // Mengambil huruf pertama nama untuk avatar cadangan.
+    final nama = namaNasabah.trim();
+    final inisial = nama.isNotEmpty ? nama[0].toUpperCase() : 'N';
+
+    return Container(
+      width: ukuran,
+      height: ukuran,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: Color(0xFF2E9B7D),
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        inisial,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: ukuran * 0.42,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  // =========================================================
   // NAVIGASI
-  // =========================
+  // =========================================================
 
   void _onItemTapped(int index) {
     setState(() {
@@ -177,15 +344,21 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     });
   }
 
-  void _showNotifications() {
-    Navigator.push(
+  // Membuka halaman notifikasi dan memperbarui jumlah setelah kembali.
+  Future<void> _showNotifications() async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => NotifikasiScreen(idNasabah: widget.idNasabah),
       ),
     );
+
+    if (!mounted) return;
+
+    await _muatJumlahNotifikasi();
   }
 
+  // Menampilkan dialog konfirmasi sebelum logout.
   void _logout() {
     showDialog(
       context: context,
@@ -216,6 +389,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
+  // Konfirmasi ketika pengguna menekan tombol kembali dari beranda.
   void _showExitConfirmation() {
     showDialog(
       context: context,
@@ -240,6 +414,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
+  // Menentukan halaman berdasarkan menu yang dipilih.
   Widget _buildPage() {
     switch (_selectedIndex) {
       case 1:
@@ -256,9 +431,9 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     }
   }
 
-  // =========================
-  // HOME / DASHBOARD
-  // =========================
+  // =========================================================
+  // BERANDA / DASHBOARD
+  // =========================================================
 
   Widget _buildHome() {
     return SafeArea(
@@ -267,6 +442,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
           _buildHeader(),
           Expanded(
             child: RefreshIndicator(
+              // Tarik layar ke bawah untuk memuat ulang data.
               onRefresh: _muatDashboard,
               color: const Color(0xFF167A63),
               child: SingleChildScrollView(
@@ -284,6 +460,8 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                     _buildSectionHeader(
                       title: 'Transaksi Terbaru',
                       onTap: () {
+                        // Membuka halaman profil saat tombol "Lihat semua"
+                        // pada bagian ini ditekan, mengikuti kode awal.
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -310,9 +488,9 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
-  // =========================
-  // HEADER
-  // =========================
+  // =========================================================
+  // HEADER APLIKASI
+  // =========================================================
 
   Widget _buildHeader() {
     return Padding(
@@ -359,7 +537,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
           _buildHeaderButton(
             icon: Icons.notifications_none_rounded,
             onTap: _showNotifications,
-            showDot: true,
+            notificationCount: _jumlahNotifikasiBelumDibaca,
           ),
           const SizedBox(width: 8),
           _buildHeaderButton(icon: Icons.logout_rounded, onTap: _logout),
@@ -368,12 +546,14 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
+  // Tombol ikon pada header, termasuk badge jumlah notifikasi.
   Widget _buildHeaderButton({
     required IconData icon,
     required VoidCallback onTap,
-    bool showDot = false,
+    int notificationCount = 0,
   }) {
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         Material(
           color: Colors.white,
@@ -392,16 +572,26 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             ),
           ),
         ),
-        if (showDot)
+        if (notificationCount > 0)
           Positioned(
-            top: 7,
-            right: 7,
+            top: -5,
+            right: -5,
             child: Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFF8A3D),
-                shape: BoxShape.circle,
+              constraints: const BoxConstraints(minWidth: 19, minHeight: 19),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF8A3D),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: Text(
+                notificationCount > 99 ? '99+' : notificationCount.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -409,20 +599,27 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
-  // =========================
-  // PROFILE CARD
-  // =========================
+  // =========================================================
+  // KARTU PROFIL NASABAH
+  // =========================================================
 
   Widget _buildProfileCard() {
     return InkWell(
       borderRadius: BorderRadius.circular(18),
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        // Membuka halaman profil untuk melihat atau mengubah data nasabah.
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => ProfilScreen(idNasabah: widget.idNasabah),
           ),
         );
+
+        // Setelah kembali dari halaman profil, ambil data terbaru.
+        // Ini membuat foto yang baru diganti dapat muncul di dashboard.
+        if (mounted) {
+          await _muatDashboard();
+        }
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -433,24 +630,8 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
         ),
         child: Row(
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: const BoxDecoration(
-                color: Color(0xFF2E9B7D),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  namaNasabah.isNotEmpty ? namaNasabah[0].toUpperCase() : 'N',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
+            // Foto profil dari server atau inisial jika belum ada foto.
+            _buildFotoNasabah(ukuran: 48),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -479,9 +660,9 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
-  // =========================
-  // SALDO - GRADIENT
-  // =========================
+  // =========================================================
+  // KARTU SALDO
+  // =========================================================
 
   Widget _buildBalanceCard() {
     return Container(
@@ -550,6 +731,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {
+                // Berpindah ke menu penarikan.
                 setState(() {
                   _selectedIndex = 2;
                 });
@@ -573,9 +755,9 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
-  // =========================
-  // STATISTICS
-  // =========================
+  // =========================================================
+  // STATISTIK NASABAH
+  // =========================================================
 
   Widget _buildStatistics() {
     return GridView.count(
@@ -622,6 +804,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
+  // Komponen satu kartu statistik agar desain semua kartu konsisten.
   Widget _buildStatisticCard({
     required String title,
     required String value,
@@ -686,9 +869,9 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
-  // =========================
-  // SECTION HEADER
-  // =========================
+  // =========================================================
+  // JUDUL BAGIAN
+  // =========================================================
 
   Widget _buildSectionHeader({required String title, VoidCallback? onTap}) {
     return Row(
@@ -719,11 +902,12 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
-  // =========================
-  // TRANSAKSI TERBARU DARI API
-  // =========================
+  // =========================================================
+  // DAFTAR TRANSAKSI SETORAN TERBARU
+  // =========================================================
 
   Widget _buildTransactionCard() {
+    // Hanya menampilkan maksimal tiga transaksi terbaru.
     final transaksi = _setoranSaya.take(3).toList();
 
     return Container(
@@ -757,6 +941,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
+  // Tampilan satu transaksi setoran.
   Widget _buildTransactionItem({
     required String code,
     required String date,
@@ -821,9 +1006,9 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
-  // =========================
-  // WITHDRAWAL CTA
-  // =========================
+  // =========================================================
+  // AJAKAN MELAKUKAN PENARIKAN
+  // =========================================================
 
   Widget _buildWithdrawalCard() {
     return Container(
@@ -863,6 +1048,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                 const SizedBox(height: 14),
                 ElevatedButton(
                   onPressed: () {
+                    // Berpindah ke halaman penarikan.
                     setState(() {
                       _selectedIndex = 2;
                     });
@@ -906,13 +1092,14 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
-  // =========================
-  // PENARIKAN TERBARU DARI API
-  // =========================
+  // =========================================================
+  // PENARIKAN TERBARU
+  // =========================================================
 
   Widget _buildLatestWithdrawal() {
     final penarikan = _penarikanSaya.isEmpty ? null : _penarikanSaya.first;
 
+    // Mengambil nominal dari field yang tersedia di respons API.
     final nominal =
         double.tryParse(
           (penarikan?['nominal'] ??
@@ -953,6 +1140,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
               ),
               TextButton(
                 onPressed: () {
+                  // Membuka menu riwayat penarikan.
                   setState(() {
                     _selectedIndex = 2;
                   });
@@ -1040,6 +1228,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
+  // Tampilan ketika belum ada data transaksi.
   Widget _buildEmptyContent({required IconData icon, required String message}) {
     return Container(
       width: double.infinity,
@@ -1062,9 +1251,9 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
-  // =========================
+  // =========================================================
   // FORMAT TANGGAL
-  // =========================
+  // =========================================================
 
   String _formatTanggalDashboard(String tanggal) {
     if (tanggal.isEmpty) return '-';
@@ -1089,15 +1278,17 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
 
       return '${date.day} ${bulan[date.month - 1]} ${date.year}';
     } catch (_) {
+      // Jika format tanggal tidak sesuai, tampilkan nilai asli dari API.
       return tanggal;
     }
   }
 
-  // =========================
+  // =========================================================
   // FORMAT RUPIAH
-  // =========================
+  // =========================================================
 
   String _formatRupiah(double value) {
+    // Menggunakan titik sebagai pemisah ribuan, contoh Rp 10.000.
     final formatted = value
         .toStringAsFixed(0)
         .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.');
@@ -1105,9 +1296,9 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     return 'Rp $formatted';
   }
 
-  // =========================
+  // =========================================================
   // BOTTOM NAVIGATION
-  // =========================
+  // =========================================================
 
   Widget _buildBottomNavigation() {
     return NavigationBar(
@@ -1142,27 +1333,32 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     );
   }
 
-  // =========================
+  // =========================================================
   // BUILD UTAMA
-  // =========================
+  // =========================================================
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
+      // Mencegah aplikasi langsung tertutup saat tombol kembali ditekan.
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
 
+        // Jika sedang di halaman lain, tombol kembali mengarah ke beranda.
         if (_selectedIndex != 0) {
           setState(() {
             _selectedIndex = 0;
           });
         } else {
+          // Jika sudah di beranda, tampilkan konfirmasi keluar.
           _showExitConfirmation();
         }
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F9F8),
+
+        // Menampilkan indikator loading, pesan error, atau halaman yang dipilih.
         body: _loadingDashboard
             ? const Center(
                 child: CircularProgressIndicator(color: Color(0xFF167A63)),
@@ -1192,6 +1388,8 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                 ),
               )
             : _buildPage(),
+
+        // Navigasi utama yang selalu muncul di bagian bawah layar.
         bottomNavigationBar: _buildBottomNavigation(),
       ),
     );

@@ -1,12 +1,16 @@
+import 'package:bank_sampah_flutter/services/api_service.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_styles.dart';
+import '../../services/api_service.dart';
 import '../auth/login_screen.dart';
 import 'admin_dashboard.dart';
 import 'admin_drawer.dart';
 import 'kelola_sampah_screen.dart';
 import 'manajemen_pengguna_screen.dart';
 import 'admin_notification_screen.dart';
+
+import 'dart:async';
 
 class AdminLayout extends StatefulWidget {
   const AdminLayout({super.key});
@@ -17,6 +21,68 @@ class AdminLayout extends StatefulWidget {
 
 class _AdminLayoutState extends State<AdminLayout> {
   String _selectedMenu = 'dashboard';
+
+  int _jumlahNotifikasiBelumDibaca = 0;
+  Timer? _timerNotifikasi;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _muatJumlahNotifikasi();
+
+    // Periksa notifikasi baru setiap 30 detik
+    _timerNotifikasi = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _muatJumlahNotifikasi(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _timerNotifikasi?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _muatJumlahNotifikasi() async {
+    try {
+      final response = await ApiService.getNotifikasiAdmin();
+      final dynamic data = response['data'];
+
+      if (data is! List || !mounted) return;
+
+      final jumlah = data.where((item) {
+        if (item is! Map) return false;
+
+        final dibaca = item['dibaca'];
+
+        final sudahDibaca =
+            dibaca == true ||
+            dibaca.toString() == '1' ||
+            dibaca.toString().toLowerCase() == 'true';
+
+        return !sudahDibaca;
+      }).length;
+
+      if (!mounted) return;
+
+      setState(() {
+        _jumlahNotifikasiBelumDibaca = jumlah;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _bukaNotifikasi() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AdminNotificationScreen()),
+    );
+
+    // Perbaiki bagde setelah halaman notifikasi ditutup
+    if (mounted) {
+      await _muatJumlahNotifikasi();
+    }
+  }
 
   // ==========================================================
   // PILIH MENU
@@ -248,29 +314,42 @@ class _AdminLayoutState extends State<AdminLayout> {
           actions: [
             IconButton(
               tooltip: 'Notifikasi',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AdminNotificationScreen(),
-                  ),
-                );
-              },
-              icon: const Stack(
+              onPressed: _bukaNotifikasi,
+              icon: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Icon(Icons.notifications_none_outlined, size: 25),
-                  Positioned(
-                    right: -1,
-                    top: -1,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
+                  const Icon(Icons.notifications_none_outlined, size: 25),
+                  if (_jumlahNotifikasiBelumDibaca > 0)
+                    Positioned(
+                      right: -9,
+                      top: -7,
+                      child: Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.rectangle,
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          _jumlahNotifikasiBelumDibaca > 99
+                              ? '99+'
+                              : '$_jumlahNotifikasiBelumDibaca',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                      child: SizedBox(width: 8, height: 8),
                     ),
-                  ),
                 ],
               ),
             ),
