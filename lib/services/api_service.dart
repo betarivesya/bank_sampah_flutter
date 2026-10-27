@@ -1062,26 +1062,39 @@ class ApiService {
     required String email,
     required String noTelepon,
   }) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/nasabah/$idNasabah/profil/foto-profil'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'nama_lengkap': namaLengkap,
-        'email': email,
-        'no_telepon': noTelepon,
-      }),
-    );
+    try {
+      final uri = Uri.parse('$baseUrl/nasabah/$idNasabah/profil');
 
-    final dynamic decoded = jsonDecode(response.body);
+      final response = await http.put(
+        uri,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'nama_lengkap': namaLengkap,
+          'email': email,
+          'no_telepon': noTelepon,
+        }),
+      );
 
-    if (response.statusCode == 200) return true;
+      print('UPDATE PROFIL URL: $uri');
+      print('UPDATE PROFIL STATUS: ${response.statusCode}');
+      print('UPDATE PROFIL RESPONSE: ${response.body}');
 
-    final message = decoded is Map ? decoded['message']?.toString() : null;
+      final dynamic decoded = jsonDecode(response.body);
 
-    throw Exception(message ?? 'Gagal memperbarui profil.');
+      if (response.statusCode == 200) {
+        return true;
+      }
+
+      final message = decoded is Map ? decoded['message']?.toString() : null;
+
+      throw Exception(message ?? 'Gagal memperbarui profil.');
+    } catch (e) {
+      print('UPDATE PROFIL ERROR: $e');
+      rethrow;
+    }
   }
 
   // ==========================================================

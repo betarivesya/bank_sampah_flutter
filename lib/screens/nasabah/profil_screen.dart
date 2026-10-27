@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../auth/login_screen.dart';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 
@@ -510,204 +513,26 @@ class _ProfilScreenState extends State<ProfilScreen> {
   // =========================================================
 
   Future<void> _editProfil() async {
-    final namaController = TextEditingController(
-      text: _getValue('nama_lengkap', fallback: ''),
+    // Dialog memiliki controller sendiri supaya controller tidak dibuang
+    // sebelum animasi penutupan dialog selesai.
+    final hasil = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return _EditProfilDialog(
+          idNasabah: widget.idNasabah,
+          namaAwal: _getValue('nama_lengkap', fallback: ''),
+          emailAwal: _getValue('email', fallback: ''),
+          teleponAwal: _getValue('no_telepon', fallback: ''),
+          onBerhasil: _loadProfil,
+          tampilkanPesan: _tampilkanPesan,
+        );
+      },
     );
 
-    final emailController = TextEditingController(
-      text: _getValue('email', fallback: ''),
-    );
-
-    final teleponController = TextEditingController(
-      text: _getValue('no_telepon', fallback: ''),
-    );
-
-    bool menyimpan = false;
-
-    try {
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return StatefulBuilder(
-            builder: (context, setDialogState) {
-              return AlertDialog(
-                backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                titlePadding: const EdgeInsets.fromLTRB(20, 18, 12, 12),
-                contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                title: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Edit Profil',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: menyimpan
-                          ? null
-                          : () => Navigator.pop(dialogContext),
-                      icon: const Icon(Icons.close, size: 19),
-                    ),
-                  ],
-                ),
-                content: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _fieldEdit('Nama Lengkap', namaController),
-                      const SizedBox(height: 12),
-                      _fieldEdit(
-                        'Email',
-                        emailController,
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 12),
-                      _fieldEdit(
-                        'Nomor HP',
-                        teleponController,
-                        keyboardType: TextInputType.phone,
-                      ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          onPressed: menyimpan
-                              ? null
-                              : () => Navigator.pop(dialogContext),
-                          child: const Text('Batal'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          onPressed: menyimpan
-                              ? null
-                              : () async {
-                                  final nama = namaController.text.trim();
-                                  final email = emailController.text.trim();
-                                  final telepon = teleponController.text.trim();
-
-                                  if (nama.isEmpty ||
-                                      email.isEmpty ||
-                                      telepon.isEmpty) {
-                                    _tampilkanPesan('Semua kolom wajib diisi.');
-                                    return;
-                                  }
-
-                                  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                                      .hasMatch(email)) {
-                                    _tampilkanPesan(
-                                      'Format email tidak valid.',
-                                    );
-                                    return;
-                                  }
-
-                                  setDialogState(() {
-                                    menyimpan = true;
-                                  });
-
-                                  try {
-                                    await ApiService.updateProfilNasabah(
-                                      idNasabah: widget.idNasabah,
-                                      namaLengkap: nama,
-                                      email: email,
-                                      noTelepon: telepon,
-                                    );
-
-                                    if (!mounted) return;
-
-                                    Navigator.pop(dialogContext);
-
-                                    await _loadProfil();
-
-                                    if (!mounted) return;
-
-                                    _tampilkanPesan(
-                                      'Profil berhasil diperbarui.',
-                                    );
-                                  } catch (e) {
-                                    setDialogState(() {
-                                      menyimpan = false;
-                                    });
-
-                                    _tampilkanPesan(
-                                      e.toString().replaceFirst(
-                                        'Exception: ',
-                                        '',
-                                      ),
-                                    );
-                                  }
-                                },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                          ),
-                          child: menyimpan
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text('Simpan'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      );
-    } finally {
-      namaController.dispose();
-      emailController.dispose();
-      teleponController.dispose();
+    if (hasil == true && mounted) {
+      _tampilkanPesan('Profil berhasil diperbarui.');
     }
-  }
-
-  Widget _fieldEdit(
-    String label,
-    TextEditingController controller, {
-    TextInputType? keyboardType,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-        ),
-        const SizedBox(height: 5),
-        TextField(
-          controller: controller,
-          keyboardType: keyboardType,
-          decoration: InputDecoration(
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 12,
-            ),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(9)),
-          ),
-        ),
-      ],
-    );
   }
 
   // =========================================================
@@ -775,31 +600,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
   // FORMAT DATA
   // =========================================================
 
-  String _formatRupiah(dynamic value) {
-    final saldo = double.tryParse(value?.toString() ?? '') ?? 0;
-    final angka = saldo.toInt().toString();
-
-    final hasil = angka.replaceAllMapped(
-      RegExp(r'\B(?=(\d{3})+(?!\d))'),
-      (match) => '.',
-    );
-
-    return 'Rp$hasil';
-  }
-
-  String _formatBerat(dynamic value) {
-    final berat = double.tryParse(value?.toString() ?? '') ?? 0;
-
-    final angka = berat == berat.truncateToDouble()
-        ? berat.toStringAsFixed(0)
-        : berat
-              .toStringAsFixed(2)
-              .replaceFirst(RegExp(r'0+$'), '')
-              .replaceFirst(RegExp(r'\.$'), '');
-
-    return '$angka kg';
-  }
-
   String _getValue(String key, {String fallback = '-'}) {
     final value = profil?[key];
 
@@ -820,6 +620,50 @@ class _ProfilScreenState extends State<ProfilScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(pesan)));
+  }
+
+  // =========================================================
+  // LOGOUT / KELUAR DARI AKUN
+  // =========================================================
+
+  Future<void> _konfirmasiLogout() async {
+    final yakin = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Keluar dari Akun?'),
+          content: const Text(
+            'Apakah kamu yakin ingin keluar dari akun? '
+            'Kamu perlu login kembali untuk mengakses aplikasi.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Batal'),
+            ),
+
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Keluar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // Jika pengguna membatalkan, hentikan proses
+    if (yakin != true || !mounted) return;
+
+    // Hapus halaman-halaman sebelumnya agar tombol Back
+    // tidak membawa pengguna kembali ke halaman setelah login.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   // =========================================================
@@ -1077,11 +921,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   'Keluar dari Akun',
                   style: TextStyle(fontSize: 11, color: Colors.redAccent),
                 ),
-                onTap: () {
-                  _tampilkanPesan(
-                    'Hubungkan menu ini ke proses logout aplikasi.',
-                  );
-                },
+                onTap: _konfirmasiLogout,
               ),
             ),
           ),
@@ -1143,83 +983,206 @@ class _ProfilScreenState extends State<ProfilScreen> {
   Widget _pemisahProfil() {
     return const Divider(height: 1, thickness: 0.5, color: Color(0xFFF0F1F3));
   }
+}
 
-  // Komponen tambahan yang dipertahankan.
-  Widget _buildInfoItem({
-    required IconData icon,
-    required String label,
-    required String value,
+// =========================================================
+// DIALOG EDIT PROFIL
+// =========================================================
+
+class _EditProfilDialog extends StatefulWidget {
+  final int idNasabah;
+  final String namaAwal;
+  final String emailAwal;
+  final String teleponAwal;
+  final Future<void> Function() onBerhasil;
+  final void Function(String pesan) tampilkanPesan;
+
+  const _EditProfilDialog({
+    required this.idNasabah,
+    required this.namaAwal,
+    required this.emailAwal,
+    required this.teleponAwal,
+    required this.onBerhasil,
+    required this.tampilkanPesan,
+  });
+
+  @override
+  State<_EditProfilDialog> createState() => _EditProfilDialogState();
+}
+
+class _EditProfilDialogState extends State<_EditProfilDialog> {
+  late final TextEditingController namaController;
+  late final TextEditingController emailController;
+  late final TextEditingController teleponController;
+
+  bool menyimpan = false;
+
+  @override
+  void initState() {
+    super.initState();
+    namaController = TextEditingController(text: widget.namaAwal);
+    emailController = TextEditingController(text: widget.emailAwal);
+    teleponController = TextEditingController(text: widget.teleponAwal);
+  }
+
+  @override
+  void dispose() {
+    namaController.dispose();
+    emailController.dispose();
+    teleponController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _simpan() async {
+    final nama = namaController.text.trim();
+    final email = emailController.text.trim();
+    final telepon = teleponController.text.trim();
+
+    // Validasi semua kolom wajib diisi.
+    if (nama.isEmpty || email.isEmpty || telepon.isEmpty) {
+      widget.tampilkanPesan('Semua kolom wajib diisi.');
+      return;
+    }
+
+    // Validasi format email sebelum mengirim data ke API.
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      widget.tampilkanPesan('Format email tidak valid.');
+      return;
+    }
+
+    setState(() => menyimpan = true);
+
+    try {
+      await ApiService.updateProfilNasabah(
+        idNasabah: widget.idNasabah,
+        namaLengkap: nama,
+        email: email,
+        noTelepon: telepon,
+      );
+
+      if (!mounted) return;
+
+      // Muat data terbaru, kemudian tutup dialog dengan hasil berhasil.
+      await widget.onBerhasil();
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() => menyimpan = false);
+      widget.tampilkanPesan(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  Widget _fieldEdit(
+    String label,
+    TextEditingController controller, {
+    TextInputType? keyboardType,
   }) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 18, color: AppColors.primary),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
+        const SizedBox(height: 5),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          enabled: !menyimpan,
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(9)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStatisticCard({
-    required IconData icon,
-    required String title,
-    required String value,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      titlePadding: const EdgeInsets.fromLTRB(20, 18, 12, 12),
+      contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      title: Row(
         children: [
-          Icon(icon, size: 20, color: AppColors.primary),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 9, color: AppColors.textSecondary),
+          const Expanded(
+            child: Text('Edit Profil', style: TextStyle(fontSize: 16)),
           ),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
+          IconButton(
+            tooltip: 'Tutup dialog edit profil',
+            onPressed: menyimpan
+                ? null
+                : () => Navigator.of(context).pop(false),
+            icon: const Icon(Icons.close, size: 19),
           ),
         ],
       ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _fieldEdit('Nama Lengkap', namaController),
+            const SizedBox(height: 12),
+            _fieldEdit(
+              'Email',
+              emailController,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 12),
+            _fieldEdit(
+              'Nomor HP',
+              teleponController,
+              keyboardType: TextInputType.phone,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                onPressed: menyimpan
+                    ? null
+                    : () => Navigator.of(context).pop(false),
+                child: const Text('Batal'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: ElevatedButton(
+                onPressed: menyimpan ? null : _simpan,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                ),
+                child: menyimpan
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Simpan'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

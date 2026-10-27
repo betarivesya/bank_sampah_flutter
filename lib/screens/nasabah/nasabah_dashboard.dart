@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models/setoran_model.dart';
 import '../../services/api_service.dart';
 
+import 'nasabah_bottom_bar.dart';
 import 'riwayat_transaksi_screen.dart';
 import 'penarikan_screen.dart';
 import 'harga_sampah_screen.dart';
@@ -424,7 +425,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
         return PenarikanScreen(idNasabah: widget.idNasabah);
 
       case 3:
-        return const HargaSampahScreen();
+        return ProfilScreen(idNasabah: widget.idNasabah);
 
       default:
         return _buildHome();
@@ -456,19 +457,15 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                     _buildBalanceCard(),
                     const SizedBox(height: 16),
                     _buildStatistics(),
+                    const SizedBox(height: 18),
+                    _buildHargaSampahShortcut(),
                     const SizedBox(height: 24),
                     _buildSectionHeader(
                       title: 'Transaksi Terbaru',
                       onTap: () {
-                        // Membuka halaman profil saat tombol "Lihat semua"
-                        // pada bagian ini ditekan, mengikuti kode awal.
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                ProfilScreen(idNasabah: widget.idNasabah),
-                          ),
-                        );
+                        setState(() {
+                          _selectedIndex = 1;
+                        });
                       },
                     ),
                     const SizedBox(height: 10),
@@ -903,6 +900,70 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
   }
 
   // =========================================================
+  // HARGA SAMPAH
+  // =========================================================
+
+  Widget _buildHargaSampahShortcut() {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HargaSampahScreen()),
+        );
+      },
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE8ECEA)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5F0),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.price_change_rounded,
+                color: Color(0xFF167A63),
+                size: 25,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Harga Sampah',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF172033),
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Lihat harga setiap jenis sampah',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // =========================================================
   // DAFTAR TRANSAKSI SETORAN TERBARU
   // =========================================================
 
@@ -1297,43 +1358,6 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
   }
 
   // =========================================================
-  // BOTTOM NAVIGATION
-  // =========================================================
-
-  Widget _buildBottomNavigation() {
-    return NavigationBar(
-      selectedIndex: _selectedIndex,
-      onDestinationSelected: _onItemTapped,
-      backgroundColor: Colors.white,
-      indicatorColor: const Color(0xFFE0F2EB),
-      elevation: 8,
-      height: 68,
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home_rounded),
-          label: 'Beranda',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.receipt_long_outlined),
-          selectedIcon: Icon(Icons.receipt_long_rounded),
-          label: 'Transaksi',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.account_balance_wallet_outlined),
-          selectedIcon: Icon(Icons.account_balance_wallet_rounded),
-          label: 'Penarikan',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.price_change_outlined),
-          selectedIcon: Icon(Icons.price_change_rounded),
-          label: 'Harga Sampah',
-        ),
-      ],
-    );
-  }
-
-  // =========================================================
   // BUILD UTAMA
   // =========================================================
 
@@ -1390,7 +1414,10 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             : _buildPage(),
 
         // Navigasi utama yang selalu muncul di bagian bawah layar.
-        bottomNavigationBar: _buildBottomNavigation(),
+        bottomNavigationBar: NasabahBottomBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onItemTapped,
+        ),
       ),
     );
   }
