@@ -134,6 +134,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   // ============================================================
+  // HEADER DASHBOARD
+  // ============================================================
+
+  Widget _buildDashboardHeader() {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Dashboard Admin',
+          style: TextStyle(
+            color: AdminDashboard.darkGreen,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          'Ringkasan aktivitas Bank Sampah Griya Ayu',
+          style: TextStyle(color: AdminDashboard.darkGreen, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================
   // BUILD
   // ============================================================
 
@@ -155,13 +180,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             crossAxisAlignment: CrossAxisAlignment.start,
 
             children: [
-              _buildWelcomeCard(),
+              _buildDashboardHeader(),
 
-              const SizedBox(height: 20),
-
-              _buildSectionTitle('Ringkasan'),
-
-              const SizedBox(height: 12),
+              const SizedBox(height: 18),
 
               _buildStatistics(),
 
@@ -177,79 +198,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // HERO
-  // ============================================================
-
-  Widget _buildWelcomeCard() {
-    return Container(
-      width: double.infinity,
-
-      padding: const EdgeInsets.all(20),
-
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AdminDashboard.darkGreen, AdminDashboard.primaryGreen],
-        ),
-
-        borderRadius: BorderRadius.circular(22),
-      ),
-
-      child: Row(
-        children: [
-          Container(
-            width: 58,
-            height: 58,
-
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.14),
-
-              borderRadius: BorderRadius.circular(18),
-            ),
-
-            child: const Icon(
-              Icons.manage_accounts_outlined,
-              color: Colors.white,
-              size: 31,
-            ),
-          ),
-
-          const SizedBox(width: 15),
-
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
-                Text(
-                  'Halo, Admin 👋',
-
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                SizedBox(height: 6),
-
-                Text(
-                  'Siap mengelola aktivitas Bank Sampah hari ini?',
-
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -419,13 +367,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   // ============================================================
-  // CHART CAROUSEL
+  // GRAFIK DASHBOARD
   // ============================================================
-  final PageController _chartPageController = PageController();
-
-  int _currentChartPage = 0;
-
   Widget _buildChartSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildChartCard(
+          title: 'Nilai Setoran per Bulan',
+          subtitle: DateTime.now().year.toString(),
+          chart: CustomPaint(
+            painter: _BarChartPainter(grafikSetoran, isCurrency: true),
+            child: const SizedBox.expand(),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        _buildChartCard(
+          title: 'Jumlah Berat Sampah per Jenis',
+          subtitle: 'Berat dalam kg',
+          chart: _buildWeightChart(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChartCard({
+    required String title,
+    required String subtitle,
+    required Widget chart,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -440,93 +412,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         ],
       ),
-
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            height: 215,
-            child: PageView(
-              controller: _chartPageController,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentChartPage = index;
-                });
-              },
-              children: [
-                _buildChartPage(
-                  title: 'Nilai Setoran per Bulan',
-                  subtitle: DateTime.now().year.toString(),
-                  chart: CustomPaint(
-                    painter: _BarChartPainter(grafikSetoran, isCurrency: true),
-                    child: const SizedBox.expand(),
-                  ),
-                ),
-                _buildChartPage(
-                  title: 'Jumlah Berat Sampah per Jenis',
-                  subtitle: 'Berat dalam kg',
-                  chart: _buildWeightChart(),
-                ),
-              ],
+          Text(
+            title,
+            style: const TextStyle(
+              color: AdminDashboard.textDark,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(2, (index) {
-              final selected = _currentChartPage == index;
 
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                width: selected ? 20 : 7,
-                height: 7,
-                decoration: BoxDecoration(
-                  color: selected
-                      ? AdminDashboard.primaryGreen
-                      : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              );
-            }),
+          const SizedBox(height: 4),
+
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: AdminDashboard.textDark,
+              fontSize: 11,
+            ),
           ),
+
+          const SizedBox(height: 18),
+
+          SizedBox(height: 200, child: chart),
         ],
       ),
-    );
-  }
-
-  Widget _buildChartPage({
-    required String title,
-    required String subtitle,
-    required Widget chart,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: AdminDashboard.textDark,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                color: AdminDashboard.textGrey,
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        Expanded(child: chart),
-      ],
     );
   }
 
@@ -587,7 +499,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 10,
-                    backgroundColor: const Color(0xFFEF8F1EE),
+                    backgroundColor: const Color(0xFFEEF1EE),
                     color: AdminDashboard.primaryGreen,
                   ),
                 ),
@@ -823,7 +735,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   void dispose() {
-    _chartPageController.dispose();
     super.dispose();
   }
 }

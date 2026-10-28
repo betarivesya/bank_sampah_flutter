@@ -2,13 +2,13 @@ import 'package:bank_sampah_flutter/services/api_service.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_styles.dart';
-import '../../services/api_service.dart';
 import '../auth/login_screen.dart';
 import 'admin_dashboard.dart';
 import 'admin_drawer.dart';
 import 'kelola_sampah_screen.dart';
 import 'manajemen_pengguna_screen.dart';
 import 'admin_notification_screen.dart';
+import 'laporan_screen.dart';
 
 import 'dart:async';
 
@@ -201,12 +201,7 @@ class _AdminLayoutState extends State<AdminLayout> {
         return const ManajemenPenggunaScreen();
 
       case 'laporan':
-        return const Center(
-          child: Text(
-            'Laporan',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        );
+        return const LaporanScreen();
 
       case 'notifikasi':
         return const AdminNotificationScreen();
@@ -214,30 +209,6 @@ class _AdminLayoutState extends State<AdminLayout> {
       case 'dashboard':
       default:
         return const AdminDashboard();
-    }
-  }
-
-  // ==========================================================
-  // JUDUL APPBAR
-  // ==========================================================
-
-  String _getTitle() {
-    switch (_selectedMenu) {
-      case 'sampah':
-        return 'Kelola Sampah';
-
-      case 'pengguna':
-        return 'Manajemen Pengguna';
-
-      case 'laporan':
-        return 'Laporan';
-
-      case 'notifikasi':
-        return 'Notifikasi Admin';
-
-      case 'dashboard':
-      default:
-        return 'Dashboard Admin';
     }
   }
 
@@ -293,20 +264,32 @@ class _AdminLayoutState extends State<AdminLayout> {
           elevation: 0,
           titleSpacing: 0,
 
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Logo dan nama
+          title: Row(
             children: [
-              Text(
-                _getTitle(),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2E8B72),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: const Icon(
+                  Icons.recycling_rounded,
+                  color: Colors.white,
+                  size: 23,
                 ),
               ),
-              const SizedBox(height: 2),
+
+              const SizedBox(width: 10),
+
               const Text(
-                'Bank Sampah Griya Ayu',
-                style: TextStyle(fontSize: 11, color: Colors.white70),
+                'Griya Ayu',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
@@ -319,6 +302,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                 clipBehavior: Clip.none,
                 children: [
                   const Icon(Icons.notifications_none_outlined, size: 25),
+
                   if (_jumlahNotifikasiBelumDibaca > 0)
                     Positioned(
                       right: -9,
@@ -328,15 +312,18 @@ class _AdminLayoutState extends State<AdminLayout> {
                           minWidth: 18,
                           minHeight: 18,
                         ),
+
                         padding: const EdgeInsets.symmetric(
                           horizontal: 4,
                           vertical: 2,
                         ),
+
                         decoration: const BoxDecoration(
                           color: Colors.redAccent,
                           shape: BoxShape.rectangle,
                           borderRadius: BorderRadius.all(Radius.circular(10)),
                         ),
+
                         alignment: Alignment.center,
                         child: Text(
                           _jumlahNotifikasiBelumDibaca > 99
