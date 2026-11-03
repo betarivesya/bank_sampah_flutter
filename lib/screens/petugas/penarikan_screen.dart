@@ -11,6 +11,7 @@ class PenarikanScreen extends StatefulWidget {
 }
 
 class _PenarikanScreenState extends State<PenarikanScreen> {
+  static const int _pageSize = 20;
   final TextEditingController _kodeController = TextEditingController();
 
   Map<String, dynamic>? _pengajuan;
@@ -22,6 +23,14 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
 
   List<Map<String, dynamic>> _daftarPenarikan = [];
   String _filterStatus = 'Semua';
+  int _currentPage = 1;
+  int _totalPages = 1;
+  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+
+  List<DateTime> get _monthOptions {
+    final now = DateTime(DateTime.now().year, DateTime.now().month);
+    return List.generate(12, (index) => DateTime(now.year, now.month - index));
+  }
 
   static const Color hijau = Color(0xFF166534);
   static const Color hijauMuda = Color(0xFFDCFCE7);
@@ -39,14 +48,22 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
     super.dispose();
   }
 
-  Future<void> _muatDaftarPenarikan() async {
+  Future<void> _muatDaftarPenarikan({int page = 1}) async {
+    _currentPage = page;
     try {
-      final data = await ApiService.getPenarikanPetugas();
+      final result = await ApiService.getPetugasPenarikanPage(
+        bulan: _selectedMonth.month,
+        tahun: _selectedMonth.year,
+        status: _filterStatus,
+        page: page,
+        perPage: _pageSize,
+      );
 
       if (!mounted) return;
 
       setState(() {
-        _daftarPenarikan = data;
+        _daftarPenarikan = result.items;
+        _totalPages = result.lastPage;
       });
     } catch (e) {
       if (!mounted) return;
@@ -365,6 +382,8 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
           children: [
             _buildHeader(),
             const SizedBox(height: 20),
+            _buildMonthSelector(),
+            const SizedBox(height: 20),
             _buildFormValidasi(),
             if (_pesan != null) ...[const SizedBox(height: 12), _buildPesan()],
             if (_pengajuan != null) ...[
@@ -476,6 +495,47 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildMonthSelector() {
+    return _kartu(
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<DateTime>(
+          isExpanded: true,
+          value: _selectedMonth,
+          icon: const Icon(Icons.calendar_month, color: hijau),
+          items: _monthOptions.map((month) {
+            return DropdownMenuItem(
+              value: month,
+              child: Text('Penarikan ${_namaBulan(month.month)} ${month.year}'),
+            );
+          }).toList(),
+          onChanged: (month) {
+            if (month == null) return;
+            setState(() => _selectedMonth = month);
+            _muatDaftarPenarikan();
+          },
+        ),
+      ),
+    );
+  }
+
+  String _namaBulan(int bulan) {
+    const nama = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    return nama[bulan - 1];
   }
 
   Widget _buildPesan() {
@@ -695,6 +755,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
             setState(() {
               _filterStatus = value;
             });
+            _muatDaftarPenarikan();
           },
         ),
         const SizedBox(height: 12),
@@ -711,8 +772,33 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
             ),
           )
         else
-          ..._penarikanTerfilter.map(_buildItemDaftar),
+          ..._daftarPenarikan.map(_buildItemDaftar),
+        if (_totalPages > 1) _buildPagination(),
       ],
+    );
+  }
+
+  Widget _buildPagination() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: _currentPage > 1
+                ? () => _muatDaftarPenarikan(page: _currentPage - 1)
+                : null,
+            icon: const Icon(Icons.chevron_left),
+          ),
+          Text('Halaman $_currentPage dari $_totalPages'),
+          IconButton(
+            onPressed: _currentPage < _totalPages
+                ? () => _muatDaftarPenarikan(page: _currentPage + 1)
+                : null,
+            icon: const Icon(Icons.chevron_right),
+          ),
+        ],
+      ),
     );
   }
 

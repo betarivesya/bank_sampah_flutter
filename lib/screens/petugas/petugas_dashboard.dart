@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../services/api_service.dart';
 
-import 'nasabah_screen.dart';
-import 'setoran_screen.dart';
-
 class PetugasDashboard extends StatefulWidget {
   final Function(String) onMenuSelected;
 
@@ -23,7 +20,6 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   static const Color primaryGreen = Color(0xFF2E8B72);
   static const Color lightGreen = Color(0xFFE8F5F1);
 
-  static const Color background = Color(0xFFF6F8F7);
   static const Color textDark = Color(0xFF172033);
   static const Color textGrey = Color(0xFF7B8A89);
 
@@ -46,6 +42,19 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
 
   List<dynamic> aktivitasTerbaru = [];
   bool isLoadingAktivitas = true;
+  bool hasPendingFromDashboard = false;
+  final bool _tampilkanHero = false;
+  final bool _tampilkanMenuCepat = false;
+
+  int _toInt(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  double _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
 
   // ============================================================
   // FORMAT RUPIAH
@@ -85,20 +94,21 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
       if (!mounted) return;
 
       setState(() {
-        totalNasabah =
-            int.tryParse(data['total_nasabah']?.toString() ?? '0') ?? 0;
-
-        totalSetoran =
-            int.tryParse(data['total_setoran']?.toString() ?? '0') ?? 0;
-
-        totalPenarikan =
-            int.tryParse(data['total_penarikan']?.toString() ?? '0') ?? 0;
-
-        setoranHariIni =
-            int.tryParse(data['setoran_hari_ini']?.toString() ?? '0') ?? 0;
-
-        penarikanHariIni =
-            int.tryParse(data['penarikan_hari_ini']?.toString() ?? '0') ?? 0;
+        totalNasabah = _toInt(data['total_nasabah']);
+        totalSetoran = _toInt(data['total_setoran']);
+        totalPenarikan = _toInt(data['total_penarikan']);
+        setoranHariIni = _toInt(data['setoran_hari_ini']);
+        penarikanHariIni = _toInt(data['penarikan_hari_ini']);
+        totalSaldo = _toDouble(data['total_saldo'] ?? data['saldo']);
+        totalSampah = _toDouble(
+          data['total_sampah'] ?? data['total_sampah_terkumpul'],
+        );
+        hasPendingFromDashboard =
+            data.containsKey('total_pending') ||
+            data.containsKey('penarikan_pending');
+        totalPending = _toInt(
+          data['total_pending'] ?? data['penarikan_pending'],
+        );
 
         isLoading = false;
       });
@@ -119,8 +129,15 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
 
   Future<void> _loadAktivitas() async {
     try {
-      final hasilSetoran = await ApiService.getSetoran();
-      final hasilPenarikan = await ApiService.getPenarikanPetugas();
+      final sekarang = DateTime.now();
+      final hasilSetoran = await ApiService.getSetoran(
+        bulan: sekarang.month,
+        tahun: sekarang.year,
+      );
+      final hasilPenarikan = await ApiService.getPenarikanPetugas(
+        bulan: sekarang.month,
+        tahun: sekarang.year,
+      );
 
       final List<Map<String, dynamic>> data = [];
 
@@ -150,6 +167,17 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
           'icon': Icons.account_balance_wallet_rounded,
           'warna': Colors.orange,
         });
+      }
+
+      if (!hasPendingFromDashboard) {
+        final pending = hasilPenarikan.where((item) {
+          final status = item['status']?.toString().toLowerCase();
+          return status == 'pending' ||
+              status == 'diajukan' ||
+              status == 'menunggu' ||
+              status == 'menunggu_verifikasi';
+        }).length;
+        if (mounted) setState(() => totalPending = pending);
       }
 
       // Urutkan dari transaksi paling baru
@@ -422,6 +450,137 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
     );
   }
 
+  Widget _buildDashboardCharts() {
+    final values = <double>[0, 0, 0, 0, 0, 0, totalSampah];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 700;
+        final cards = [
+          _chartCard(
+            title: 'Setoran Sampah 7 Hari Terakhir',
+            subtitle: 'Total berat sampah',
+            values: values,
+            labels: const [
+              '-6h',
+              '-5h',
+              '-4h',
+              '-3h',
+              '-2h',
+              '-1h',
+              'Hari ini',
+            ],
+          ),
+          _chartCard(
+            title: 'Ringkasan Aktivitas',
+            subtitle: 'Jumlah aktivitas hari ini',
+            values: [
+              setoranHariIni.toDouble(),
+              penarikanHariIni.toDouble(),
+              totalPending.toDouble(),
+            ],
+            labels: const ['Setoran', 'Penarikan', 'Pending'],
+          ),
+        ];
+
+        return Flex(
+          direction: narrow ? Axis.vertical : Axis.horizontal,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(flex: narrow ? 0 : 1, child: cards[0]),
+            SizedBox(width: narrow ? 0 : 14, height: narrow ? 14 : 0),
+            Expanded(flex: narrow ? 0 : 1, child: cards[1]),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _chartCard({
+    required String title,
+    required String subtitle,
+    required List<double> values,
+    required List<String> labels,
+  }) {
+    final maximum = values.fold<double>(
+      0,
+      (max, value) => value > max ? value : max,
+    );
+    final safeMaximum = maximum == 0 ? 1 : maximum;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: textDark,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(subtitle, style: const TextStyle(color: textGrey, fontSize: 11)),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 145,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(values.length, (index) {
+                final height = (values[index] / safeMaximum).clamp(0.04, 1.0);
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: FractionallySizedBox(
+                              heightFactor: height,
+                              child: Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: primaryGreen,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          labels[index],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: textGrey, fontSize: 9),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ============================================================
   // INIT STATE
   // ============================================================
@@ -457,68 +616,69 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
             // HERO
             // ==================================================
 
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
+            if (_tampilkanHero)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
 
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [darkGreen, primaryGreen],
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [darkGreen, primaryGreen],
+                  ),
+                  borderRadius: BorderRadius.circular(21),
                 ),
-                borderRadius: BorderRadius.circular(21),
-              ),
 
-              child: Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
 
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(15),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+
+                      child: const Icon(
+                        Icons.person_outline_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
                     ),
 
-                    child: const Icon(
-                      Icons.person_outline_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
+                    const SizedBox(width: 13),
 
-                  const SizedBox(width: 13),
-
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Halo, Petugas 👋',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 19,
-                            fontWeight: FontWeight.bold,
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Halo, Petugas 👋',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 19,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
 
-                        SizedBox(height: 5),
+                          SizedBox(height: 5),
 
-                        Text(
-                          'Siap melayani aktivitas Bank Sampah hari ini?',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                            height: 1.4,
+                          Text(
+                            'Siap melayani aktivitas Bank Sampah hari ini?',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                              height: 1.4,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
             const SizedBox(height: 22),
 
@@ -589,46 +749,51 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
             // ==================================================
             // MENU UTAMA
             // ==================================================
-            const Text(
-              'Menu Utama',
-              style: TextStyle(
-                color: textDark,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+            if (_tampilkanMenuCepat) ...[
+              const Text(
+                'Menu Utama',
+                style: TextStyle(
+                  color: textDark,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
 
-            const SizedBox(height: 11),
+              const SizedBox(height: 11),
+
+              // ==================================================
+              // PENARIKAN
+              // ==================================================
+              menuCepat(
+                icon: Icons.account_balance_wallet_outlined,
+                title: 'Penarikan Saldo',
+                subtitle: 'Verifikasi pengajuan penarikan',
+                onTap: () {
+                  widget.onMenuSelected('penarikan');
+                },
+              ),
+
+              const SizedBox(height: 10),
+
+              // ==================================================
+              // SETOR SAMPAH
+              // ==================================================
+              menuCepat(
+                icon: Icons.recycling_outlined,
+                title: 'Setor Sampah',
+                subtitle: 'Input dan catat setoran sampah',
+                onTap: () {
+                  widget.onMenuSelected('setoran');
+                },
+              ),
+
+              const SizedBox(height: 24),
+            ],
 
             // ==================================================
-            // PENARIKAN
-            // ==================================================
-            menuCepat(
-              icon: Icons.account_balance_wallet_outlined,
-              title: 'Penarikan Saldo',
-              subtitle: 'Verifikasi pengajuan penarikan',
-              onTap: () {
-                widget.onMenuSelected('penarikan');
-              },
-            ),
-
-            const SizedBox(height: 10),
-
-            // ==================================================
-            // SETOR SAMPAH
-            // ==================================================
-            menuCepat(
-              icon: Icons.recycling_outlined,
-              title: 'Setor Sampah',
-              subtitle: 'Input dan catat setoran sampah',
-              onTap: () {
-                widget.onMenuSelected('setoran');
-              },
-            ),
-
+            _buildDashboardCharts(),
             const SizedBox(height: 24),
 
-            // ==================================================
             // AKTIVITAS TERBARU
             // ==================================================
             Row(

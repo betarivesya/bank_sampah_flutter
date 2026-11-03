@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../app_styles.dart';
@@ -5,7 +7,9 @@ import '../../models/jenis_sampah_model.dart';
 import '../../services/api_service.dart';
 
 class TambahSetoranScreen extends StatefulWidget {
-  const TambahSetoranScreen({super.key});
+  final int idPetugas;
+
+  const TambahSetoranScreen({super.key, required this.idPetugas});
 
   @override
   State<TambahSetoranScreen> createState() => _TambahSetoranScreenState();
@@ -16,14 +20,14 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
   List<JenisSampah> _jenisSampah = [];
 
   Map<String, dynamic>? _nasabahTerpilih;
+  final TextEditingController _nasabahSearchController =
+      TextEditingController();
+  Timer? _nasabahSearchTimer;
 
   final List<_ItemSetoran> _items = [];
 
   bool _loading = true;
   bool _saving = false;
-
-  // ID petugas mengikuti konfigurasi aplikasi saat ini.
-  final int _idPetugas = 1;
 
   static const Color _hijau = Color(0xFF075B4F);
   static const Color _latar = Color(0xFFF6F8F7);
@@ -36,6 +40,8 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
 
   @override
   void dispose() {
+    _nasabahSearchTimer?.cancel();
+    _nasabahSearchController.dispose();
     for (final item in _items) {
       item.dispose();
     }
@@ -48,14 +54,16 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
 
   Future<void> _loadData() async {
     try {
-      final nasabah = await ApiService.getNasabah();
-      final jenisSampah = await ApiService.getJenisSampah();
+      final hasil = await Future.wait([
+        ApiService.getPetugasNasabahPage(perPage: 20),
+        ApiService.getJenisSampah(),
+      ]);
 
       if (!mounted) return;
 
       setState(() {
-        _nasabah = nasabah;
-        _jenisSampah = jenisSampah;
+        _nasabah = (hasil[0] as PetugasPage<Map<String, dynamic>>).items;
+        _jenisSampah = hasil[1] as List<JenisSampah>;
         _loading = false;
 
         if (_items.isEmpty) {
@@ -74,6 +82,27 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
         ),
       );
     }
+  }
+
+  void _searchNasabah(String keyword) {
+    _nasabahSearchTimer?.cancel();
+    _nasabahSearchTimer = Timer(const Duration(milliseconds: 350), () async {
+      if (keyword.trim().isEmpty) {
+        if (mounted) setState(() => _nasabah = []);
+        return;
+      }
+
+      try {
+        final result = await ApiService.getPetugasNasabahPage(
+          keyword: keyword,
+          perPage: 20,
+        );
+        if (!mounted) return;
+        setState(() => _nasabah = result.items);
+      } catch (_) {
+        if (mounted) setState(() => _nasabah = []);
+      }
+    });
   }
 
   // ============================================================
@@ -188,7 +217,7 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
           _nasabahTerpilih!['id_pengguna_nasabah']?.toString() ??
               _nasabahTerpilih!['id_nasabah'].toString(),
         ),
-        idPetugas: _idPetugas,
+        idPetugas: widget.idPetugas,
         items: itemsRequest,
       );
 
@@ -288,30 +317,77 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
         children: [
           const _SectionTitle(number: '1', title: 'Pilih Nasabah'),
           const SizedBox(height: 14),
-          DropdownButtonFormField<Map<String, dynamic>>(
-            value: _nasabahTerpilih,
-            isExpanded: true,
-            decoration: _inputDecoration('Pilih nasabah', Icons.person_outline),
-            items: _nasabah.map((item) {
-              return DropdownMenuItem<Map<String, dynamic>>(
-                value: item,
-                child: Text(
-                  item['nama']?.toString() ??
-                      item['nama_lengkap']?.toString() ??
-                      '-',
-                  overflow: TextOverflow.ellipsis,
+          TextField(
+            controller: _nasabahSearchController,
+            enabled: !_saving,
+            onChanged: (value) {
+              setState(() {
+                _nasabahTerpilih = null;
+              });
+              _searchNasabah(value);
+            },
+            decoration:
+                _inputDecoration(
+                  'Cari nama, nomor HP, atau email nasabah',
+                  Icons.search,
+                ).copyWith(
+                  suffixIcon: _nasabahSearchController.text.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _nasabahSearchController.clear();
+                            setState(() {
+                              _nasabah = [];
+                              _nasabahTerpilih = null;
+                            });
+                          },
+                        ),
                 ),
-              );
-            }).toList(),
-            onChanged: _saving
-                ? null
-                : (value) {
-                    setState(() => _nasabahTerpilih = value);
-                  },
           ),
+          if (_nasabahTerpilih != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Nasabah dipilih: ${_namaNasabah(_nasabahTerpilih!)}',
+              style: const TextStyle(
+                color: _hijau,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ] else if (_nasabahSearchController.text.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ..._nasabah.map(
+              (item) => ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.person_outline, color: _hijau),
+                title: Text(_namaNasabah(item)),
+                subtitle: Text(
+                  item['no_hp']?.toString() ??
+                      item['no_telp']?.toString() ??
+                      item['email']?.toString() ??
+                      '-',
+                ),
+                onTap: () {
+                  setState(() {
+                    _nasabahTerpilih = item;
+                    _nasabah = [];
+                    _nasabahSearchController.text = _namaNasabah(item);
+                  });
+                  FocusScope.of(context).unfocus();
+                },
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  String _namaNasabah(Map<String, dynamic> item) {
+    return item['nama']?.toString() ??
+        item['nama_lengkap']?.toString() ??
+        'Nasabah';
   }
 
   // ============================================================

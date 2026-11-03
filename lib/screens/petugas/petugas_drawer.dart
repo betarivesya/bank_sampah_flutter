@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../data/petugas_dummy_data.dart';
-
 class PetugasDrawer extends StatelessWidget {
   static const Color darkGreen = Color(0xFF075B4F);
   static const Color primaryGreen = Color(0xFF2E8B72);
@@ -19,10 +17,6 @@ class PetugasDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalPending = PetugasDummyData.penarikan
-        .where((item) => item.status == 'Menunggu')
-        .length;
-
     return Drawer(
       backgroundColor: darkGreen,
       child: SafeArea(
@@ -149,7 +143,6 @@ class PetugasDrawer extends StatelessWidget {
                       icon: Icons.account_balance_wallet_outlined,
                       title: 'Penarikan Saldo',
                       active: selectedMenu == 'penarikan',
-                      badge: totalPending > 0 ? '$totalPending' : null,
                       onTap: () {
                         onMenuSelected('penarikan');
                         Navigator.pop(context);

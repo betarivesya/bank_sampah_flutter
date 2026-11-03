@@ -28,19 +28,23 @@ class SetoranModel {
   });
 
   factory SetoranModel.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic value) => int.tryParse(value?.toString() ?? '') ?? 0;
+    double parseDouble(dynamic value) =>
+        double.tryParse(value?.toString() ?? '') ?? 0;
+
     return SetoranModel(
-      idSetoran: int.parse(json['id_setoran'].toString()),
-      idNasabah: int.parse(json['id_pengguna_nasabah'].toString()),
-      idPetugas: int.parse(json['id_pengguna_petugas'].toString()),
+      idSetoran: parseInt(json['id_setoran']),
+      idNasabah: parseInt(json['id_pengguna_nasabah']),
+      idPetugas: parseInt(json['id_pengguna_petugas']),
       idJenisSampah: json['id_jenis_sampah'] == null
           ? null
-          : int.parse(json['id_jenis_sampah'].toString()),
+          : parseInt(json['id_jenis_sampah']),
       namaNasabah: json['nama_nasabah']?.toString() ?? '-',
       namaSampah: json['nama_sampah']?.toString() ?? '-',
       namaPetugas: json['nama_petugas']?.toString() ?? '-',
-      totalBerat: double.parse(json['total_berat'].toString()),
-      hargaPerKg: double.parse(json['harga_per_kg'].toString()),
-      totalNilai: double.parse(json['total_nilai'].toString()),
+      totalBerat: parseDouble(json['total_berat']),
+      hargaPerKg: parseDouble(json['harga_per_kg']),
+      totalNilai: parseDouble(json['total_nilai']),
       tanggal: json['tgl_setoran']?.toString() ?? '',
       status: json['status']?.toString() ?? '',
     );

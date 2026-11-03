@@ -7,8 +7,42 @@ import 'package:http/http.dart' as http;
 import '../models/jenis_sampah_model.dart';
 import '../models/setoran_model.dart';
 
+class PetugasPage<T> {
+  final List<T> items;
+  final int currentPage;
+  final int lastPage;
+  final int total;
+
+  const PetugasPage({
+    required this.items,
+    required this.currentPage,
+    required this.lastPage,
+    required this.total,
+  });
+
+  bool get hasMore => currentPage < lastPage;
+}
+
 class ApiService {
-  static const String baseUrl = 'http://10.252.30.158:8000/api';
+  static const String baseUrl = 'http://10.10.186.237:8000/api';
+  static String? _authToken;
+  static String? _sessionCookie;
+
+  static Map<String, String> _headers({bool json = false}) {
+    return {
+      'Accept': 'application/json',
+      if (json) 'Content-Type': 'application/json',
+      if (_authToken != null && _authToken!.isNotEmpty)
+        'Authorization': 'Bearer $_authToken',
+      if (_sessionCookie != null && _sessionCookie!.isNotEmpty)
+        'Cookie': _sessionCookie!,
+    };
+  }
+
+  static void clearSession() {
+    _authToken = null;
+    _sessionCookie = null;
+  }
 
   // ==========================================================
   // LOGIN
@@ -19,6 +53,8 @@ class ApiService {
     String password,
   ) async {
     try {
+      clearSession();
+
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
         headers: {
@@ -34,15 +70,35 @@ class ApiService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
+        final token =
+            data['token'] ??
+            data['access_token'] ??
+            (data['data'] is Map
+                ? data['data']['token'] ?? data['data']['access_token']
+                : null);
+        _authToken = token?.toString();
+
+        final setCookie = response.headers['set-cookie'];
+        if (setCookie != null && setCookie.isNotEmpty) {
+          final cookies = RegExp(r'(?:^|,\s*)([A-Za-z0-9_%-]+=[^;,]+)')
+              .allMatches(setCookie)
+              .map((match) => match.group(1)!)
+              .toList();
+          _sessionCookie = cookies.join('; ');
+        }
+
         return {
           'success': true,
           'message': data['message'],
           'user': data['user'],
+          'token': _authToken,
         };
       }
 
+      clearSession();
       return {'success': false, 'message': data['message'] ?? 'Login gagal'};
     } catch (e) {
+      clearSession();
       print('LOGIN ERROR: $e');
 
       return {'success': false, 'message': 'Tidak dapat terhubung ke server'};
@@ -554,7 +610,7 @@ class ApiService {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/petugas/dashboard'),
-        headers: {'Accept': 'application/json'},
+        headers: _headers(),
       );
 
       print('GET PETUGAS DASHBOARD STATUS: ${response.statusCode}');
@@ -578,20 +634,32 @@ class ApiService {
   // ============================================================
   // DATA SETORAN
   // ============================================================
-  static Future<List<SetoranModel>> getSetoran() async {
+  static Future<List<SetoranModel>> getSetoran({int? bulan, int? tahun}) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/petugas/setoran'),
-        headers: {'Accept': 'application/json'},
+      final uri = Uri.parse('$baseUrl/petugas/setoran').replace(
+        queryParameters: {
+          if (bulan != null) 'bulan': '$bulan',
+          if (tahun != null) 'tahun': '$tahun',
+        },
       );
+      final response = await http.get(uri, headers: _headers());
 
       print('GET SETORAN STATUS: ${response.statusCode}');
       print('GET SETORAN RESPONSE: ${response.body}');
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        final dynamic items = decoded is List
+            ? decoded
+            : decoded is Map
+            ? decoded['data']
+            : null;
 
-        return data
+        if (items is! List) {
+          throw Exception('Format respons data setoran tidak sesuai');
+        }
+
+        return items
             .map(
               (item) => SetoranModel.fromJson(Map<String, dynamic>.from(item)),
             )
@@ -605,6 +673,30 @@ class ApiService {
       print('GET SETORAN ERROR: $e');
       rethrow;
     }
+  }
+
+  static Future<PetugasPage<SetoranModel>> getPetugasSetoranPage({
+    int? bulan,
+    int? tahun,
+    int? idNasabah,
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    final uri = Uri.parse('$baseUrl/petugas/setoran').replace(
+      queryParameters: {
+        if (bulan != null) 'bulan': '$bulan',
+        if (tahun != null) 'tahun': '$tahun',
+        if (idNasabah != null) 'id_nasabah': '$idNasabah',
+        'page': '$page',
+        'per_page': '$perPage',
+      },
+    );
+    final response = await http.get(uri, headers: _headers());
+    return _parsePetugasPage<SetoranModel>(
+      response,
+      endpoint: 'setoran',
+      mapItem: (item) => SetoranModel.fromJson(item),
+    );
   }
 
   // ============================================================
@@ -635,10 +727,7 @@ class ApiService {
 
       final response = await http.post(
         uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: _headers(json: true),
         body: jsonEncode(body),
       );
 
@@ -681,7 +770,7 @@ class ApiService {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/petugas/nasabah'),
-        headers: {'Accept': 'application/json', 'Cache-Control': 'no-cache'},
+        headers: {..._headers(), 'Cache-Control': 'no-cache'},
       );
 
       print('GET NASABAH STATUS: ${response.statusCode}');
@@ -715,6 +804,45 @@ class ApiService {
       print('GET NASABAH ERROR: $e');
       rethrow;
     }
+  }
+
+  static Future<PetugasPage<Map<String, dynamic>>> getPetugasNasabahPage({
+    String keyword = '',
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    final uri = Uri.parse('$baseUrl/petugas/nasabah').replace(
+      queryParameters: {
+        if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+        'page': '$page',
+        'per_page': '$perPage',
+      },
+    );
+    final response = await http.get(
+      uri,
+      headers: {..._headers(), 'Cache-Control': 'no-cache'},
+    );
+    return _parsePetugasPage<Map<String, dynamic>>(
+      response,
+      endpoint: 'nasabah',
+      mapItem: (item) => item,
+    );
+  }
+
+  static Future<Map<String, dynamic>> getPetugasNasabahDetail(int id) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/petugas/nasabah/$id'),
+      headers: _headers(),
+    );
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode != 200 || decoded is! Map) {
+      throw Exception(
+        decoded is Map
+            ? decoded['message'] ?? 'Gagal mengambil detail nasabah'
+            : 'Gagal mengambil detail nasabah',
+      );
+    }
+    return Map<String, dynamic>.from(decoded['data'] as Map);
   }
 
   // ============================================================
@@ -820,11 +948,17 @@ class ApiService {
   // DATA PENARIKAN PETUGAS
   // ============================================================
 
-  static Future<List<Map<String, dynamic>>> getPenarikanPetugas() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/petugas/penarikan'),
-      headers: {'Accept': 'application/json'},
+  static Future<List<Map<String, dynamic>>> getPenarikanPetugas({
+    int? bulan,
+    int? tahun,
+  }) async {
+    final uri = Uri.parse('$baseUrl/petugas/penarikan').replace(
+      queryParameters: {
+        if (bulan != null) 'bulan': '$bulan',
+        if (tahun != null) 'tahun': '$tahun',
+      },
     );
+    final response = await http.get(uri, headers: _headers());
 
     print('GET PENARIKAN STATUS: ${response.statusCode}');
     print('GET PENARIKAN RESPONSE: ${response.body}');
@@ -853,6 +987,65 @@ class ApiService {
         .toList();
   }
 
+  static Future<PetugasPage<Map<String, dynamic>>> getPetugasPenarikanPage({
+    int? bulan,
+    int? tahun,
+    String? status,
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    final uri = Uri.parse('$baseUrl/petugas/penarikan').replace(
+      queryParameters: {
+        if (bulan != null) 'bulan': '$bulan',
+        if (tahun != null) 'tahun': '$tahun',
+        if (status != null && status != 'Semua') 'status': status,
+        'page': '$page',
+        'per_page': '$perPage',
+      },
+    );
+    final response = await http.get(uri, headers: _headers());
+    return _parsePetugasPage<Map<String, dynamic>>(
+      response,
+      endpoint: 'penarikan',
+      mapItem: (item) => item,
+    );
+  }
+
+  static PetugasPage<T> _parsePetugasPage<T>(
+    http.Response response, {
+    required String endpoint,
+    required T Function(Map<String, dynamic>) mapItem,
+  }) {
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode != 200 || decoded is! Map) {
+      throw Exception(
+        decoded is Map
+            ? decoded['message'] ?? 'Gagal mengambil data $endpoint'
+            : 'Gagal mengambil data $endpoint',
+      );
+    }
+
+    final data = decoded['data'];
+    if (data is! List) {
+      throw Exception('Format response pagination $endpoint tidak sesuai');
+    }
+
+    final meta = decoded['meta'] is Map
+        ? Map<String, dynamic>.from(decoded['meta'])
+        : <String, dynamic>{};
+    int number(String key, int fallback) =>
+        int.tryParse(meta[key]?.toString() ?? '') ?? fallback;
+
+    return PetugasPage<T>(
+      items: data
+          .map((item) => mapItem(Map<String, dynamic>.from(item as Map)))
+          .toList(),
+      currentPage: number('current_page', 1),
+      lastPage: number('last_page', 1),
+      total: number('total', data.length),
+    );
+  }
+
   // ============================================================
   // CARI PENARIKAN BERDASARKAN KODE VERIFIKASI
   // ============================================================
@@ -864,10 +1057,7 @@ class ApiService {
       queryParameters: {'kode_verifikasi': kodeVerifikasi.trim().toUpperCase()},
     );
 
-    final response = await http.get(
-      uri,
-      headers: {'Accept': 'application/json'},
-    );
+    final response = await http.get(uri, headers: _headers());
 
     print('CARI PENARIKAN STATUS: ${response.statusCode}');
     print('CARI PENARIKAN RESPONSE: ${response.body}');
@@ -905,10 +1095,7 @@ class ApiService {
 
     final response = await http.put(
       Uri.parse('$baseUrl/petugas/penarikan/$idPenarikan/proses'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
+      headers: _headers(json: true),
       body: jsonEncode({'status': status, 'id_petugas': idPetugas}),
     );
 

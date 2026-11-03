@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:bank_sampah_flutter/data/petugas_dummy_data.dart';
-import 'package:bank_sampah_flutter/models/petugas_model.dart';
-import 'package:bank_sampah_flutter/screens/petugas/detail_nasabah_screen.dart';
+import 'package:bank_sampah_flutter/screens/petugas/detail_nasabah_api_screen.dart';
+import 'package:bank_sampah_flutter/services/api_service.dart';
 
 class NasabahScreen extends StatefulWidget {
   const NasabahScreen({super.key});
@@ -12,6 +11,7 @@ class NasabahScreen extends StatefulWidget {
 }
 
 class _NasabahScreenState extends State<NasabahScreen> {
+  static const int _pageSize = 20;
   // ==========================================================
   // WARNA
   // ==========================================================
@@ -28,16 +28,47 @@ class _NasabahScreenState extends State<NasabahScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   String _keyword = '';
+  int _currentPage = 1;
+  int _totalPages = 1;
+  List<Map<String, dynamic>> _nasabah = [];
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
+    _loadNasabah();
 
     _searchController.addListener(() {
       setState(() {
         _keyword = _searchController.text.trim().toLowerCase();
+        _currentPage = 1;
       });
+      _loadNasabah();
     });
+  }
+
+  Future<void> _loadNasabah() async {
+    try {
+      final result = await ApiService.getPetugasNasabahPage(
+        keyword: _keyword,
+        page: _currentPage,
+        perPage: _pageSize,
+      );
+      if (!mounted) return;
+      setState(() {
+        _nasabah = result.items;
+        _totalPages = result.lastPage;
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Gagal mengambil data nasabah.';
+      });
+    }
   }
 
   @override
@@ -49,17 +80,6 @@ class _NasabahScreenState extends State<NasabahScreen> {
   // ==========================================================
   // FILTER NASABAH
   // ==========================================================
-
-  List<DummyNasabah> get _filteredNasabah {
-    if (_keyword.isEmpty) {
-      return PetugasDummyData.nasabah;
-    }
-
-    return PetugasDummyData.nasabah.where((item) {
-      return item.nama.toLowerCase().contains(_keyword) ||
-          item.noHp.toLowerCase().contains(_keyword);
-    }).toList();
-  }
 
   // ==========================================================
   // FORMAT RUPIAH
@@ -86,7 +106,7 @@ class _NasabahScreenState extends State<NasabahScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final list = _filteredNasabah;
+    final list = _nasabah;
 
     return Container(
       color: background,
@@ -218,13 +238,30 @@ class _NasabahScreenState extends State<NasabahScreen> {
           // LIST NASABAH
           // ====================================================
           Expanded(
-            child: list.isEmpty
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_error!),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: _loadNasabah,
+                          child: const Text('Coba Lagi'),
+                        ),
+                      ],
+                    ),
+                  )
+                : list.isEmpty
                 ? const _EmptyState()
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-                    itemCount: list.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemCount: list.length + (_totalPages > 1 ? 1 : 0),
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
+                      if (index == list.length) return _buildPagination();
                       final nasabah = list[index];
 
                       return _NasabahCard(
@@ -235,7 +272,7 @@ class _NasabahScreenState extends State<NasabahScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (_) =>
-                                  DetailNasabahScreen(nasabah: nasabah),
+                                  DetailNasabahApiScreen(nasabah: nasabah),
                             ),
                           );
 
@@ -246,6 +283,36 @@ class _NasabahScreenState extends State<NasabahScreen> {
                       );
                     },
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPagination() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: _currentPage > 1
+                ? () {
+                    _currentPage--;
+                    _loadNasabah();
+                  }
+                : null,
+            icon: const Icon(Icons.chevron_left),
+          ),
+          Text('Halaman $_currentPage dari $_totalPages'),
+          IconButton(
+            onPressed: _currentPage < _totalPages
+                ? () {
+                    _currentPage++;
+                    _loadNasabah();
+                  }
+                : null,
+            icon: const Icon(Icons.chevron_right),
           ),
         ],
       ),
@@ -263,7 +330,7 @@ class _NasabahCard extends StatelessWidget {
   static const Color textDark = Color(0xFF172033);
   static const Color textGrey = Color(0xFF7B8A89);
 
-  final DummyNasabah nasabah;
+  final Map<String, dynamic> nasabah;
   final VoidCallback onTap;
   final String Function(num) formatRupiah;
 
@@ -275,6 +342,11 @@ class _NasabahCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final nama = nasabah['nama']?.toString() ?? 'Nasabah';
+    final noHp =
+        nasabah['no_hp']?.toString() ?? nasabah['no_telp']?.toString() ?? '-';
+    final saldo = _toDouble(nasabah['saldo'] ?? nasabah['saldo_akhir']);
+
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
@@ -325,7 +397,7 @@ class _NasabahCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      nasabah.nama,
+                      nama,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -349,7 +421,7 @@ class _NasabahCard extends StatelessWidget {
 
                         Expanded(
                           child: Text(
-                            nasabah.noHp,
+                            noHp,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: textGrey,
@@ -372,7 +444,7 @@ class _NasabahCard extends StatelessWidget {
                         const SizedBox(width: 5),
 
                         Text(
-                          formatRupiah(nasabah.saldo),
+                          formatRupiah(saldo),
                           style: const TextStyle(
                             color: primaryGreen,
                             fontSize: 12,
@@ -408,6 +480,11 @@ class _NasabahCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  double _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 }
 

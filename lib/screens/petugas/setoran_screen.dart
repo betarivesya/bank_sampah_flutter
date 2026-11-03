@@ -6,15 +6,26 @@ import '../../services/api_service.dart';
 import 'tambah_setoran_screen.dart';
 
 class SetoranScreen extends StatefulWidget {
-  const SetoranScreen({super.key});
+  final int idPetugas;
+
+  const SetoranScreen({super.key, required this.idPetugas});
 
   @override
   State<SetoranScreen> createState() => _SetoranScreenState();
 }
 
 class _SetoranScreenState extends State<SetoranScreen> {
+  static const int _pageSize = 20;
   List<SetoranModel> _setoran = [];
   bool _loading = true;
+  int _currentPage = 1;
+  int _totalPages = 1;
+  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+
+  List<DateTime> get _monthOptions {
+    final now = DateTime(DateTime.now().year, DateTime.now().month);
+    return List.generate(12, (index) => DateTime(now.year, now.month - index));
+  }
 
   @override
   void initState() {
@@ -26,18 +37,25 @@ class _SetoranScreenState extends State<SetoranScreen> {
   // LOAD DATA
   // ============================================================
 
-  Future<void> _loadSetoran() async {
+  Future<void> _loadSetoran({int page = 1}) async {
+    _currentPage = page;
     setState(() {
       _loading = true;
     });
 
     try {
-      final data = await ApiService.getSetoran();
+      final result = await ApiService.getPetugasSetoranPage(
+        bulan: _selectedMonth.month,
+        tahun: _selectedMonth.year,
+        page: page,
+        perPage: _pageSize,
+      );
 
       if (!mounted) return;
 
       setState(() {
-        _setoran = data;
+        _setoran = result.items;
+        _totalPages = result.lastPage;
         _loading = false;
       });
     } catch (e) {
@@ -92,6 +110,8 @@ class _SetoranScreenState extends State<SetoranScreen> {
                 padding: const EdgeInsets.all(20),
                 children: [
                   _buildHeader(),
+                  const SizedBox(height: 12),
+                  _buildMonthSelector(),
                   const SizedBox(height: 20),
                   ..._setoran.map(
                     (item) => _SetoranCard(
@@ -99,6 +119,7 @@ class _SetoranScreenState extends State<SetoranScreen> {
                       tanggal: _formatTanggal(item.tanggal),
                     ),
                   ),
+                  if (_totalPages > 1) _buildPagination(),
                   const SizedBox(height: 80),
                 ],
               ),
@@ -115,7 +136,9 @@ class _SetoranScreenState extends State<SetoranScreen> {
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const TambahSetoranScreen()),
+            MaterialPageRoute(
+              builder: (_) => TambahSetoranScreen(idPetugas: widget.idPetugas),
+            ),
           );
 
           if (result == true) {
@@ -171,6 +194,77 @@ class _SetoranScreenState extends State<SetoranScreen> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE4EAE7)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<DateTime>(
+          isExpanded: true,
+          value: _selectedMonth,
+          icon: const Icon(Icons.calendar_month, color: Color(0xFF075B4F)),
+          items: _monthOptions.map((month) {
+            return DropdownMenuItem(
+              value: month,
+              child: Text('Setoran ${_namaBulan(month.month)} ${month.year}'),
+            );
+          }).toList(),
+          onChanged: (month) {
+            if (month == null) return;
+            setState(() => _selectedMonth = month);
+            _loadSetoran();
+          },
+        ),
+      ),
+    );
+  }
+
+  String _namaBulan(int bulan) {
+    const nama = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    return nama[bulan - 1];
+  }
+
+  Widget _buildPagination() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: _currentPage > 1
+                ? () => _loadSetoran(page: _currentPage - 1)
+                : null,
+            icon: const Icon(Icons.chevron_left),
+          ),
+          Text('Halaman $_currentPage dari $_totalPages'),
+          IconButton(
+            onPressed: _currentPage < _totalPages
+                ? () => _loadSetoran(page: _currentPage + 1)
+                : null,
+            icon: const Icon(Icons.chevron_right),
           ),
         ],
       ),

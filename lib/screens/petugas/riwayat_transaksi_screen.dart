@@ -11,6 +11,7 @@ class RiwayatTransaksiScreen extends StatefulWidget {
 }
 
 class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
+  static const int _pageSize = 20;
   static const Color darkGreen = Color(0xFF075B4F);
   static const Color primaryGreen = Color(0xFF2E8B72);
   static const Color lightGreen = Color(0xFFE8F5F1);
@@ -19,6 +20,13 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   static const Color textGrey = Color(0xFF7B8A89);
 
   String _filter = 'Semua';
+  int _currentPage = 1;
+  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+
+  List<DateTime> get _monthOptions {
+    final now = DateTime(DateTime.now().year, DateTime.now().month);
+    return List.generate(12, (index) => DateTime(now.year, now.month - index));
+  }
 
   List<SetoranModel> _setoran = [];
   List<Map<String, dynamic>> _penarikan = [];
@@ -46,15 +54,30 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
 
     try {
       final hasil = await Future.wait([
-        ApiService.getSetoran(),
-        ApiService.getPenarikanPetugas(),
+        ApiService.getSetoran(
+          bulan: _selectedMonth.month,
+          tahun: _selectedMonth.year,
+        ),
+        ApiService.getPenarikanPetugas(
+          bulan: _selectedMonth.month,
+          tahun: _selectedMonth.year,
+        ),
       ]);
 
       if (!mounted) return;
 
       setState(() {
-        _setoran = hasil[0] as List<SetoranModel>;
-        _penarikan = hasil[1] as List<Map<String, dynamic>>;
+        _setoran = (hasil[0] as List<SetoranModel>)
+            .where(_isSelectedMonth)
+            .toList();
+        _penarikan = (hasil[1] as List<Map<String, dynamic>>).where((item) {
+          final tanggal = DateTime.tryParse(
+            item['tgl_pengajuan']?.toString() ?? '',
+          );
+          return tanggal == null ||
+              (tanggal.year == _selectedMonth.year &&
+                  tanggal.month == _selectedMonth.month);
+        }).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -183,9 +206,19 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     return data;
   }
 
+  List<_RiwayatItem> _getVisibleRiwayat(List<_RiwayatItem> data) {
+    final start = (_currentPage - 1) * _pageSize;
+    if (start >= data.length) return [];
+    final end = (start + _pageSize).clamp(0, data.length);
+    return data.sublist(start, end);
+  }
+
+  int _totalPages(List<_RiwayatItem> data) =>
+      (data.length / _pageSize).ceil().clamp(1, 999999);
+
   @override
   Widget build(BuildContext context) {
-    final riwayat = _getRiwayat();
+    final semuaRiwayat = _getRiwayat();
 
     return Container(
       color: background,
@@ -222,6 +255,8 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                   style: TextStyle(color: Colors.white70, fontSize: 13),
                 ),
                 const SizedBox(height: 18),
+                _buildMonthSelector(),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     _filterButton('Semua'),
@@ -238,17 +273,73 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
           // ============================================================
           // CONTENT
           // ============================================================
-          Expanded(child: _buildContent(riwayat)),
+          Expanded(child: _buildContent(semuaRiwayat)),
         ],
       ),
     );
+  }
+
+  bool _isSelectedMonth(SetoranModel item) {
+    final tanggal = DateTime.tryParse(item.tanggal);
+    return tanggal == null ||
+        (tanggal.year == _selectedMonth.year &&
+            tanggal.month == _selectedMonth.month);
+  }
+
+  Widget _buildMonthSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<DateTime>(
+          isExpanded: true,
+          value: _selectedMonth,
+          dropdownColor: darkGreen,
+          icon: const Icon(Icons.calendar_month, color: Colors.white),
+          style: const TextStyle(color: Colors.white, fontSize: 13),
+          items: _monthOptions.map((month) {
+            return DropdownMenuItem(
+              value: month,
+              child: Text('${_namaBulan(month.month)} ${month.year}'),
+            );
+          }).toList(),
+          onChanged: (month) {
+            if (month == null) return;
+            setState(() => _selectedMonth = month);
+            _loadData();
+          },
+        ),
+      ),
+    );
+  }
+
+  String _namaBulan(int bulan) {
+    const nama = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    return nama[bulan - 1];
   }
 
   // ============================================================
   // BUILD CONTENT
   // ============================================================
 
-  Widget _buildContent(List<_RiwayatItem> riwayat) {
+  Widget _buildContent(List<_RiwayatItem> semuaRiwayat) {
+    final riwayat = _getVisibleRiwayat(semuaRiwayat);
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: primaryGreen),
@@ -335,8 +426,11 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-        itemCount: riwayat.length,
+        itemCount: riwayat.length + (_totalPages(semuaRiwayat) > 1 ? 1 : 0),
         itemBuilder: (context, index) {
+          if (index == riwayat.length) {
+            return _buildPagination(_totalPages(semuaRiwayat));
+          }
           return _transactionCard(riwayat[index]);
         },
       ),
@@ -355,6 +449,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
         onTap: () {
           setState(() {
             _filter = title;
+            _currentPage = 1;
           });
         },
         child: AnimatedContainer(
@@ -374,6 +469,33 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPagination(int totalPages) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: _currentPage > 1
+                ? () => setState(() => _currentPage--)
+                : null,
+            icon: const Icon(Icons.chevron_left, color: Colors.white),
+          ),
+          Text(
+            'Halaman $_currentPage dari $totalPages',
+            style: const TextStyle(color: Colors.white),
+          ),
+          IconButton(
+            onPressed: _currentPage < totalPages
+                ? () => setState(() => _currentPage++)
+                : null,
+            icon: const Icon(Icons.chevron_right, color: Colors.white),
+          ),
+        ],
       ),
     );
   }

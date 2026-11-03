@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../services/api_service.dart';
+import '../../models/setoran_model.dart';
 import '../auth/login_screen.dart';
 
 import 'petugas_dashboard.dart';
@@ -21,6 +23,7 @@ class _PetugasLayoutState extends State<PetugasLayout> {
   static const Color darkGreen = Color(0xFF075B4F);
   static const Color background = Color(0xFFF6F8F7);
   static const Color textDark = Color(0xFF172033);
+  static const Color textGrey = Color(0xFF7B8A89);
 
   String _selectedMenu = 'dashboard';
 
@@ -62,6 +65,8 @@ class _PetugasLayoutState extends State<PetugasLayout> {
               ),
               onPressed: () {
                 Navigator.pop(dialogContext);
+
+                ApiService.clearSession();
 
                 Navigator.pushAndRemoveUntil(
                   context,
@@ -119,10 +124,84 @@ class _PetugasLayoutState extends State<PetugasLayout> {
     );
   }
 
+  Future<void> _showNotifications() async {
+    try {
+      final now = DateTime.now();
+      final hasil = await Future.wait([
+        ApiService.getPetugasSetoranPage(
+          bulan: now.month,
+          tahun: now.year,
+          page: 1,
+          perPage: 5,
+        ),
+        ApiService.getPetugasPenarikanPage(
+          bulan: now.month,
+          tahun: now.year,
+          page: 1,
+          perPage: 5,
+        ),
+      ]);
+
+      final setoran = hasil[0] as PetugasPage<SetoranModel>;
+      final penarikan = hasil[1] as PetugasPage<Map<String, dynamic>>;
+      final aktivitas = <String>[];
+
+      for (final item in setoran.items.take(3)) {
+        aktivitas.add('Setoran ${item.namaNasabah} - ${item.namaSampah}');
+      }
+      for (final item in penarikan.items.take(3)) {
+        aktivitas.add(
+          'Penarikan ${item['nama_nasabah']?.toString() ?? 'nasabah'} - '
+          '${item['status']?.toString() ?? 'menunggu'}',
+        );
+      }
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.notifications_none_rounded, color: darkGreen),
+              SizedBox(width: 10),
+              Text('Aktivitas Terbaru'),
+            ],
+          ),
+          content: aktivitas.isEmpty
+              ? const Text('Belum ada aktivitas terbaru.')
+              : SizedBox(
+                  width: double.maxFinite,
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: aktivitas.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (_, index) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.notifications_active_outlined),
+                      title: Text(aktivitas[index]),
+                    ),
+                  ),
+                ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tutup'),
+            ),
+          ],
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal mengambil notifikasi.')),
+      );
+    }
+  }
+
   Widget _buildBody() {
     switch (_selectedMenu) {
       case 'setoran':
-        return const SetoranScreen();
+        return SetoranScreen(idPetugas: widget.idPetugas);
 
       case 'riwayat':
         return const RiwayatTransaksiScreen();
@@ -200,8 +279,12 @@ class _PetugasLayoutState extends State<PetugasLayout> {
         ),
 
         appBar: AppBar(
-          backgroundColor: darkGreen,
-          foregroundColor: Colors.white,
+          backgroundColor: _selectedMenu == 'dashboard'
+              ? background
+              : darkGreen,
+          foregroundColor: _selectedMenu == 'dashboard'
+              ? textDark
+              : Colors.white,
           elevation: 0,
           titleSpacing: 0,
 
@@ -210,9 +293,9 @@ class _PetugasLayoutState extends State<PetugasLayout> {
             children: [
               Text(
                 _getTitle(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 17,
+                style: TextStyle(
+                  color: _selectedMenu == 'dashboard' ? textDark : Colors.white,
+                  fontSize: _selectedMenu == 'dashboard' ? 22 : 17,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -221,8 +304,10 @@ class _PetugasLayoutState extends State<PetugasLayout> {
 
               Text(
                 _getSubtitle(),
-                style: const TextStyle(
-                  color: Colors.white70,
+                style: TextStyle(
+                  color: _selectedMenu == 'dashboard'
+                      ? textGrey
+                      : Colors.white70,
                   fontSize: 10,
                   fontWeight: FontWeight.normal,
                 ),
@@ -230,11 +315,15 @@ class _PetugasLayoutState extends State<PetugasLayout> {
             ],
           ),
           actions: [
-            if (_selectedMenu == 'dashboard')
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.notifications_none_rounded, size: 25),
+            IconButton(
+              tooltip: 'Aktivitas terbaru',
+              onPressed: _showNotifications,
+              icon: Icon(
+                Icons.notifications_none_rounded,
+                size: 25,
+                color: _selectedMenu == 'dashboard' ? darkGreen : Colors.white,
               ),
+            ),
 
             const SizedBox(width: 4),
           ],
