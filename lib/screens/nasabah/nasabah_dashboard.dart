@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models/setoran_model.dart';
 import '../../services/api_service.dart';
 
+import 'nasabah_header.dart';
 import 'nasabah_bottom_bar.dart';
 import 'riwayat_transaksi_screen.dart';
 import 'penarikan_screen.dart';
@@ -200,55 +201,38 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
       // Mengambil data nasabah, setoran, penarikan, dan profil secara bersamaan.
       // Endpoint profil digunakan untuk memperoleh foto_profil_url.
       final hasil = await Future.wait([
-        ApiService.getNasabah(),
-        ApiService.getSetoran(),
-        ApiService.getRiwayatPenarikanNasabah(widget.idNasabah),
         ApiService.getProfilNasabah(widget.idNasabah),
+        ApiService.getRiwayatSetoranNasabah(widget.idNasabah),
+        ApiService.getRiwayatPenarikanNasabah(widget.idNasabah),
       ]);
 
-      final daftarNasabah = hasil[0] as List<Map<String, dynamic>>;
+      final profilNasabah = hasil[0] as Map<String, dynamic>;
       final semuaSetoran = hasil[1] as List<SetoranModel>;
       final semuaPenarikan = hasil[2] as List<Map<String, dynamic>>;
-      final profilNasabah = hasil[3] as Map<String, dynamic>;
 
       // Mengambil alamat foto yang dikirim oleh Laravel.
       final dynamic fotoApi = profilNasabah['foto_profil_url'];
       final fotoUrl = fotoApi?.toString();
 
-      // Mencari data nasabah yang ID-nya sesuai dengan pengguna yang login.
-      Map<String, dynamic>? nasabah;
-
-      for (final item in daftarNasabah) {
-        final id = int.tryParse(
-          (item['id_pengguna_nasabah'] ?? item['id_nasabah'] ?? item['id'])
-              .toString(),
-        );
-
-        if (id == widget.idNasabah) {
-          nasabah = item;
-          break;
-        }
-      }
-
       // Mengambil transaksi setoran milik nasabah yang sedang login.
-      final setoranNasabah = semuaSetoran
-          .where((item) => item.idNasabah == widget.idNasabah)
-          .toList();
+      final setoranNasabah = semuaSetoran;
 
       // Mengurutkan setoran dari tanggal terbaru.
       setoranNasabah.sort((a, b) => b.tanggal.compareTo(a.tanggal));
 
       // Mengurutkan riwayat penarikan dari yang terbaru.
       semuaPenarikan.sort((a, b) {
-        final tanggalA =
-            (a['created_at'] ?? a['tgl_penarikan'] ?? a['tanggal'] ?? '')
-                .toString();
+        final tanggalA = (a['tgl_pengajuan'] ?? '').toString();
+        final tanggalB = (b['tgl_pengajuan'] ?? '').toString();
 
-        final tanggalB =
-            (b['created_at'] ?? b['tgl_penarikan'] ?? b['tanggal'] ?? '')
-                .toString();
+        final perbandingan = tanggalB.compareTo(tanggalA);
 
-        return tanggalB.compareTo(tanggalA);
+        if (perbandingan != 0) return perbandingan;
+
+        final idA = int.tryParse(a['id_penarikan']?.toString() ?? '') ?? 0;
+        final idB = int.tryParse(b['id_penarikan']?.toString() ?? '') ?? 0;
+
+        return idB.compareTo(idA);
       });
 
       if (!mounted) return;
@@ -256,7 +240,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
       setState(() {
         // Menggabungkan data daftar nasabah dengan data profil.
         // Data profil ditambahkan agar foto dan field profil tersedia.
-        _dataNasabah = {...?nasabah, ...profilNasabah};
+        _dataNasabah = profilNasabah;
 
         _setoranSaya = setoranNasabah;
         _penarikanSaya = semuaPenarikan;
@@ -340,9 +324,16 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
   // =========================================================
 
   void _onItemTapped(int index) {
+    final indexSebelumnya = _selectedIndex;
+
     setState(() {
       _selectedIndex = index;
     });
+
+    // Muat ulang dashboard saat kembali dari halaman Penarikan
+    if (indexSebelumnya == 2 && index == 0) {
+      _muatDashboard();
+    }
   }
 
   // Membuka halaman notifikasi dan memperbarui jumlah setelah kembali.
@@ -422,7 +413,10 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
         return RiwayatTransaksiScreen(idNasabah: widget.idNasabah);
 
       case 2:
-        return PenarikanScreen(idNasabah: widget.idNasabah);
+        return PenarikanScreen(
+          key: UniqueKey(), // Membuat halaman penarikan selalu dimuat ulang.
+          idNasabah: widget.idNasabah,
+        );
 
       case 3:
         return ProfilScreen(idNasabah: widget.idNasabah);
@@ -440,7 +434,11 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     return SafeArea(
       child: Column(
         children: [
-          _buildHeader(),
+          NasabahHeader(
+            jumlahNotifikasi: _jumlahNotifikasiBelumDibaca,
+            onNotifikasiTap: _showNotifications,
+            onLogoutTap: _logout,
+          ),
           Expanded(
             child: RefreshIndicator(
               // Tarik layar ke bawah untuk memuat ulang data.
@@ -461,7 +459,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                     _buildHargaSampahShortcut(),
                     const SizedBox(height: 24),
                     _buildSectionHeader(
-                      title: 'Transaksi Terbaru',
+                      title: 'Transaksi Setoran Terbaru',
                       onTap: () {
                         setState(() {
                           _selectedIndex = 1;
@@ -482,117 +480,6 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
           ),
         ],
       ),
-    );
-  }
-
-  // =========================================================
-  // HEADER APLIKASI
-  // =========================================================
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5F0),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.account_balance_rounded,
-              color: Color(0xFF167A63),
-              size: 25,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Bank Sampah',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF172033),
-                  ),
-                ),
-                Text(
-                  'Griya Ayu',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF167A63),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _buildHeaderButton(
-            icon: Icons.notifications_none_rounded,
-            onTap: _showNotifications,
-            notificationCount: _jumlahNotifikasiBelumDibaca,
-          ),
-          const SizedBox(width: 8),
-          _buildHeaderButton(icon: Icons.logout_rounded, onTap: _logout),
-        ],
-      ),
-    );
-  }
-
-  // Tombol ikon pada header, termasuk badge jumlah notifikasi.
-  Widget _buildHeaderButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    int notificationCount = 0,
-  }) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Material(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE8ECEA)),
-              ),
-              child: Icon(icon, color: const Color(0xFF172033), size: 21),
-            ),
-          ),
-        ),
-        if (notificationCount > 0)
-          Positioned(
-            top: -5,
-            right: -5,
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 19, minHeight: 19),
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF8A3D),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white, width: 1.5),
-              ),
-              child: Text(
-                notificationCount > 99 ? '99+' : notificationCount.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 
@@ -988,8 +875,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
               children: [
                 for (int i = 0; i < transaksi.length; i++) ...[
                   _buildTransactionItem(
-                    code:
-                        'ST-${transaksi[i].idSetoran.toString().padLeft(5, '0')}',
+                    code: transaksi[i].namaSampah,
                     date: _formatTanggalDashboard(transaksi[i].tanggal),
                     weight: '${transaksi[i].totalBerat.toStringAsFixed(2)} kg',
                     amount: transaksi[i].totalNilai,
@@ -1173,12 +1059,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
 
     final status = (penarikan?['status'] ?? 'Menunggu').toString();
 
-    final tanggal =
-        (penarikan?['created_at'] ??
-                penarikan?['tgl_penarikan'] ??
-                penarikan?['tanggal'] ??
-                '')
-            .toString();
+    final tanggal = (penarikan?['tgl_pengajuan'] ?? '').toString();
 
     return Container(
       width: double.infinity,

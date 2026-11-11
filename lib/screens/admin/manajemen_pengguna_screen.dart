@@ -1151,7 +1151,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
   Widget _buildUserCard(Map<String, dynamic> user) {
     final role = user['role']?.toString() ?? '';
     final status = user['status']?.toString() ?? 'Nonaktif';
-
+    final nama = user['nama']?.toString() ?? '-';
     final isActive = status == 'Aktif';
 
     Color roleColor;
@@ -1174,38 +1174,38 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: Colors.grey.withOpacity(0.10)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ==================================================
-            // ICON ROLE
-            // ==================================================
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
 
+        // ==================================================
+        // ICON ROLE
+        // ==================================================
+        child: Row(
+          children: [
             Container(
-              width: 46,
-              height: 46,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: roleColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: roleColor.withOpacity(0.10),
+                shape: BoxShape.circle,
               ),
-              child: Icon(roleIcon, color: roleColor),
+              child: Icon(roleIcon, color: roleColor, size: 21),
             ),
 
-            const SizedBox(width: 12),
+            const SizedBox(width: 11),
 
             // ==================================================
             // INFORMASI PENGGUNA
@@ -1215,85 +1215,75 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user['nama']?.toString() ?? '-',
+                    nama,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                       color: textDark,
                     ),
                   ),
 
                   const SizedBox(height: 4),
 
-                  Text(
-                    user['email']?.toString() ?? '-',
-                    style: const TextStyle(fontSize: 12, color: textGrey),
-                  ),
-
-                  const SizedBox(height: 3),
-
-                  Text(
-                    user['telepon']?.toString() ?? '-',
-                    style: const TextStyle(fontSize: 12, color: textGrey),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      // ==================================================
-                      // ROLE
-                      // ==================================================
-
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: roleColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          role,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: roleColor,
-                          ),
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: roleColor.withOpacity(0.09),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      role,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: roleColor,
                       ),
-
-                      // ==================================================
-                      // STATUS
-                      // ==================================================
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isActive
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          status,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: isActive ? Colors.green : Colors.red,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ),
+
+            const SizedBox(height: 6),
+
+            // ==================================================
+            // STATUS
+            // ==================================================
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? Colors.green.withOpacity(0.08)
+                    : Colors.red.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.circle,
+                    size: 7,
+                    color: isActive ? Colors.green : Colors.red,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    status,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: isActive ? Colors.green : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 2),
 
             // ==================================================
             // MENU AKSI
@@ -1301,12 +1291,21 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
             if (user['protected'] == true)
               IconButton(
                 tooltip: 'Edit Admin Utama',
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                padding: EdgeInsets.zero,
                 onPressed: () => showEditUserDialog(user),
-                icon: const Icon(Icons.edit_outlined, color: darkGreen),
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  color: darkGreen,
+                  size: 19,
+                ),
               )
             else
               PopupMenuButton<String>(
                 tooltip: 'Aksi Pengguna',
+                padding: EdgeInsets.zero,
+                iconSize: 21,
                 onSelected: (value) {
                   if (value == 'edit') {
                     showEditUserDialog(user);
@@ -1319,7 +1318,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                     value: 'edit',
                     child: Row(
                       children: [
-                        Icon(Icons.edit_outlined, size: 20),
+                        Icon(Icons.edit_outlined, size: 19),
                         SizedBox(width: 8),
                         Text('Edit'),
                       ],
@@ -1329,7 +1328,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                        Icon(Icons.delete_outline, size: 19, color: Colors.red),
                         SizedBox(width: 8),
                         Text('Hapus', style: TextStyle(color: Colors.red)),
                       ],

@@ -38,16 +38,12 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
 
     try {
       final hasil = await Future.wait([
-        ApiService.getSetoran(),
+        ApiService.getRiwayatSetoranNasabah(widget.idNasabah),
         ApiService.getRiwayatPenarikanNasabah(widget.idNasabah),
       ]);
 
-      final semuaSetoran = hasil[0] as List<SetoranModel>;
-
       // Hanya tampilkan setoran milik nasabah yang sedang login.
-      final setoranNasabah = semuaSetoran
-          .where((item) => item.idNasabah == widget.idNasabah)
-          .toList();
+      final setoranNasabah = hasil[0] as List<SetoranModel>;
 
       final riwayatPenarikan = hasil[1] as List<Map<String, dynamic>>;
 
@@ -73,21 +69,24 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   }
 
   String _statusPenarikan(Map<String, dynamic> item) {
-    final status = (item['status'] ?? 'pending').toString().toLowerCase();
+    final status = (item['status'] ?? '').toString().trim().toLowerCase();
 
-    if (status == 'disetujui' || status == 'approved') {
-      return 'Disetujui';
+    if (status == 'disetujui' || status == 'approved') return 'Disetujui';
+    if (status == 'ditolak' || status == 'rejected') return 'Ditolak';
+    if (status == 'selesai' || status == 'completed') return 'Selesai';
+    if (['dibatalkan', 'cancelled', 'canceled'].contains(status)) {
+      return 'Dibatalkan';
+    }
+    if (['pending', 'menunggu', 'menunggu verifikasi'].contains(status)) {
+      return 'Menunggu';
     }
 
-    if (status == 'ditolak' || status == 'rejected') {
-      return 'Ditolak';
-    }
-
-    return 'Menunggu';
+    return status.isEmpty ? 'Tidak diketahui' : item['status'].toString();
   }
 
   bool _penarikanBerhasil(Map<String, dynamic> item) {
-    return _statusPenarikan(item) == 'Disetujui';
+    final status = _statusPenarikan(item);
+    return status == 'Disetujui' || status == 'Selesai';
   }
 
   List<Map<String, dynamic>> get _semuaTransaksi {
@@ -198,8 +197,11 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       case 'gagal':
         return Colors.red;
       case 'menunggu':
+      case 'menunggu verifikasi':
       case 'pending':
         return Colors.orange;
+      case 'dibatalkan':
+        return Colors.grey;
       default:
         return Colors.blueGrey;
     }
@@ -208,12 +210,16 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   String _labelStatus(String status) {
     final nilai = status.toLowerCase();
 
-    if (nilai == 'pending' || nilai == 'menunggu') {
+    if (nilai == 'pending' ||
+        nilai == 'menunggu' ||
+        nilai == 'menunggu verifikasi') {
       return 'Menunggu';
     }
 
     if (nilai == 'approved') return 'Disetujui';
     if (nilai == 'rejected') return 'Ditolak';
+    if (nilai == 'cancelled' || nilai == 'canceled') return 'Dibatalkan';
+    if (nilai == 'completed') return 'Selesai';
 
     if (status.isEmpty) return 'Selesai';
 
@@ -472,11 +478,19 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              '${setoran ? '+' : '-'}${_rupiah(nominal)}',
+              '${setoran
+                  ? '+'
+                  : (status == 'Disetujui' || status == 'Selesai')
+                  ? '-'
+                  : ''}${_rupiah(nominal)}',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: setoran ? Colors.green : Colors.orange,
+                color: setoran
+                    ? Colors.green
+                    : (status == 'Disetujui' || status == 'Selesai')
+                    ? Colors.orange
+                    : Colors.grey,
               ),
             ),
           ],

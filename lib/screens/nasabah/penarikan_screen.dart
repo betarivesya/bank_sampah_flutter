@@ -20,6 +20,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
   bool konfirmasiPenarikan = false;
   bool sedangMemuat = true;
   bool sedangMengirim = false;
+  bool sedangMembatalkan = false;
 
   List<Map<String, dynamic>> pengajuan = [];
 
@@ -59,7 +60,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
   }
 
   String statusLabel(dynamic value) {
-    final status = (value ?? '').toString().toLowerCase();
+    final status = (value ?? '').toString().trim().toLowerCase();
 
     switch (status) {
       case 'pending':
@@ -78,6 +79,11 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
       case 'selesai':
       case 'completed':
         return 'Selesai';
+
+      case 'dibatalkan':
+      case 'cancelled':
+      case 'canceled':
+        return 'Dibatalkan';
 
       default:
         return status.isEmpty ? 'Tidak diketahui' : value.toString();
@@ -145,31 +151,31 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
 
     try {
       final hasil = await Future.wait([
-        ApiService.getNasabah(),
+        ApiService.getProfilNasabah(widget.idNasabah),
         ApiService.getRiwayatPenarikanNasabah(widget.idNasabah),
       ]);
 
-      final daftarNasabah = List<Map<String, dynamic>>.from(hasil[0] as List);
+      final nasabah = hasil[0] as Map<String, dynamic>;
 
-      final daftarPengajuan = List<Map<String, dynamic>>.from(hasil[1] as List);
+      final daftarPengajuan = hasil[1] as List<Map<String, dynamic>>;
 
-      final nasabah = daftarNasabah.firstWhere((item) {
-        final id =
-            item['id_pengguna_nasabah'] ?? item['id_nasabah'] ?? item['id'];
-
-        return id?.toString() == widget.idNasabah.toString();
-      }, orElse: () => <String, dynamic>{});
-
-      if (nasabah.isEmpty) {
-        throw Exception('Data nasabah tidak ditemukan.');
-      }
-
+      // Mengambil saldo langsung dari profil nasabah.
       final saldoServer =
           double.tryParse((nasabah['saldo'] ?? 0).toString()) ?? 0;
 
-      // Saldo pengajuan pending belum dipotong server.
+      // Menghitung saldo yang masih tertahan pada pengajuan pending.
       final tertahan = daftarPengajuan
-          .where((item) => item['status'].toString().toLowerCase() == 'pending')
+          .where((item) {
+            final status = (item['status'] ?? '')
+                .toString()
+                .trim()
+                .toLowerCase();
+            return [
+              'pending',
+              'menunggu',
+              'menunggu verifikasi',
+            ].contains(status);
+          })
           .fold<double>(
             0,
             (total, item) =>
@@ -353,6 +359,73 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
     } finally {
       if (mounted) {
         setState(() => sedangMengirim = false);
+      }
+    }
+  }
+
+  Future<void> batalkanPengajuan(Map<String, dynamic> item) async {
+    final idPenarikan = int.tryParse(item['id_penarikan']?.toString() ?? '');
+
+    if (idPenarikan == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID pengajuan penarikan tidak valid.')),
+      );
+      return;
+    }
+
+    final yakin = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Batalkan Pengajuan'),
+        content: const Text('Yakin ingin membatalkan pengajuan penarikan ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Tidak'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Ya, Batalkan'),
+          ),
+        ],
+      ),
+    );
+
+    if (yakin != true || !mounted) return;
+
+    setState(() => sedangMembatalkan = true);
+
+    try {
+      final berhasil = await ApiService.batalkanPenarikanNasabah(
+        idNasabah: widget.idNasabah,
+        idPenarikan: idPenarikan,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            berhasil
+                ? 'Pengajuan berhasil dibatalkan.'
+                : 'Pengajuan gagal dibatalkan.',
+          ),
+        ),
+      );
+
+      if (berhasil) {
+        await muatData();
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal membatalkan pengajuan: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => sedangMembatalkan = false);
       }
     }
   }
@@ -596,7 +669,12 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                           item['kode_penarikan'] ??
                           '-';
 
-                      final pending = status.toLowerCase() == 'pending';
+                      final statusNormal = status.trim().toLowerCase();
+                      final bisaDibatalkan = [
+                        'pending',
+                        'menunggu',
+                        'menunggu verifikasi',
+                      ].contains(statusNormal);
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -657,6 +735,26 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
+                            if (bisaDibatalkan) ...[
+                              const SizedBox(height: 10),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: OutlinedButton.icon(
+                                  onPressed: sedangMembatalkan
+                                      ? null
+                                      : () => batalkanPengajuan(item),
+                                  icon: const Icon(
+                                    Icons.cancel_outlined,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Batalkan Pengajuan'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                    side: const BorderSide(color: Colors.red),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       );

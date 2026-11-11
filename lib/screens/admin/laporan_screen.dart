@@ -46,6 +46,20 @@ class _LaporanScreenState extends State<LaporanScreen> {
     try {
       final data = await ApiService.getSetoran();
 
+      // Memeriksa jumlah data
+      debugPrint('Jumlah SETORAN API: ${data.length}');
+
+      // Memeriksa hasil data
+      for (final item in data) {
+        debugPrint(
+          'ID: ${item.idSetoran}, '
+          'Tanggal: ${item.tanggal}, '
+          'Berat: ${item.totalBerat}, '
+          'Nominal: ${item.totalNilai}, '
+          'Nasabah: ${item.namaNasabah}, ',
+        );
+      }
+
       if (!mounted) return;
 
       setState(() {
@@ -188,6 +202,18 @@ class _LaporanScreenState extends State<LaporanScreen> {
   Future<void> _exportExcel() async {
     final data = _setoranTerfilter;
 
+    for (final setoran in data) {
+      debugPrint('========== DATA EXPORT ==========');
+      debugPrint('ID Setoran: ${setoran.idSetoran}');
+      debugPrint('Tanggal: ${setoran.tanggal}');
+      debugPrint('Nasabah: ${setoran.namaNasabah}');
+      debugPrint('Jenis Sampah: ${setoran.namaSampah}');
+      debugPrint('Berat: ${setoran.totalBerat}');
+      debugPrint('Nominal: ${setoran.totalNilai}');
+      debugPrint('Petugas: ${setoran.namaPetugas}');
+      debugPrint('Status: ${setoran.status}');
+    }
+
     if (data.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tidak ada data untuk diekspor.')),
@@ -198,8 +224,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
     try {
       final excel = Excel.createExcel();
 
-      final sheet = excel['Sheet1'];
-      excel.rename('Sheet1', 'Laporan Setoran');
+      final sheet = excel['Laporan Setoran'];
 
       sheet.appendRow([
         TextCellValue('ID Setoran'),
@@ -223,6 +248,13 @@ class _LaporanScreenState extends State<LaporanScreen> {
           TextCellValue(setoran.namaPetugas),
           TextCellValue(setoran.status.isEmpty ? '-' : setoran.status),
         ]);
+      }
+
+      // Memeriksa nilai sel setelah seluruh baris Excel dibuat.
+      for (int i = 0; i < sheet.maxRows; i++) {
+        debugPrint(
+          'BARIS EXCEL $i: ${sheet.row(i).map((cell) => cell?.value).toList()}',
+        );
       }
 
       debugPrint('Jumlah data terfilter: ${data.length}');
@@ -249,6 +281,9 @@ class _LaporanScreenState extends State<LaporanScreen> {
 
       final file = File('${direktori.path}/$namaFile');
       await file.writeAsBytes(bytes, flush: true);
+
+      debugPrint('Lokasi file Excel: ${file.path}');
+      debugPrint('Ukuran file Excel: ${await file.length()} bytes');
 
       if (!mounted) return;
 

@@ -130,14 +130,17 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   Future<void> _loadAktivitas() async {
     try {
       final sekarang = DateTime.now();
-      final hasilSetoran = await ApiService.getSetoran(
+
+      // Ambil data setoran
+      final halamanSetoran = await ApiService.getPetugasSetoranPage(
         bulan: sekarang.month,
         tahun: sekarang.year,
+        page: 1,
+        perPage: 20,
       );
-      final hasilPenarikan = await ApiService.getPenarikanPetugas(
-        bulan: sekarang.month,
-        tahun: sekarang.year,
-      );
+
+      // Ambil list SetoranModel
+      final hasilSetoran = halamanSetoran.items;
 
       final List<Map<String, dynamic>> data = [];
 
@@ -152,32 +155,6 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
           'icon': Icons.recycling_rounded,
           'warna': primaryGreen,
         });
-      }
-
-      // Aktivitas Penarikan
-      for (final item in hasilPenarikan) {
-        data.add({
-          'nama': item['nama_nasabah']?.toString() ?? 'Nasabah',
-          'jenis': 'Penarikan',
-          'detail': 'Penarikan Saldo',
-          'nominal': double.tryParse(item['nominal']?.toString() ?? '0') ?? 0,
-          'tanggal':
-              DateTime.tryParse(item['tgl_pengajuan']?.toString() ?? '') ??
-              DateTime(2000),
-          'icon': Icons.account_balance_wallet_rounded,
-          'warna': Colors.orange,
-        });
-      }
-
-      if (!hasPendingFromDashboard) {
-        final pending = hasilPenarikan.where((item) {
-          final status = item['status']?.toString().toLowerCase();
-          return status == 'pending' ||
-              status == 'diajukan' ||
-              status == 'menunggu' ||
-              status == 'menunggu_verifikasi';
-        }).length;
-        if (mounted) setState(() => totalPending = pending);
       }
 
       // Urutkan dari transaksi paling baru
@@ -472,8 +449,8 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
             ],
           ),
           _chartCard(
-            title: 'Ringkasan Aktivitas',
-            subtitle: 'Jumlah aktivitas hari ini',
+            title: 'Komposisi Jenis Sampah',
+            subtitle: 'Total berat berdasarkan jenis',
             values: [
               setoranHariIni.toDouble(),
               penarikanHariIni.toDouble(),
@@ -701,7 +678,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                 Expanded(
                   child: statistikCard(
                     icon: Icons.people_alt_outlined,
-                    title: 'Nasabah',
+                    title: 'Nasabah Aktif',
                     value: isLoading ? '...' : '$totalNasabah',
                   ),
                 ),
@@ -711,7 +688,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                 Expanded(
                   child: statistikCard(
                     icon: Icons.account_balance_wallet_outlined,
-                    title: 'Total Saldo',
+                    title: 'Setoran Hari Ini',
                     value: isLoading ? '...' : formatRupiah(totalSaldo),
                   ),
                 ),
@@ -725,7 +702,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                 Expanded(
                   child: statistikCard(
                     icon: Icons.scale_outlined,
-                    title: 'Total Sampah',
+                    title: 'Sampah Tekumpul',
                     value: isLoading
                         ? '...'
                         : '${totalSampah.toStringAsFixed(1)} Kg',
@@ -737,7 +714,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                 Expanded(
                   child: statistikCard(
                     icon: Icons.pending_actions_outlined,
-                    title: 'Pending',
+                    title: 'Penarikan Pending',
                     value: isLoading ? '...' : '$totalPending',
                   ),
                 ),
@@ -800,7 +777,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
               children: [
                 const Expanded(
                   child: Text(
-                    'Aktivitas Terbaru',
+                    'Transaksi Setoran Terbaru',
                     style: TextStyle(
                       color: textDark,
                       fontSize: 18,

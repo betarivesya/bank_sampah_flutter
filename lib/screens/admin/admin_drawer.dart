@@ -35,12 +35,19 @@ class AdminDrawer extends StatelessWidget {
                     height: 52,
                     decoration: BoxDecoration(
                       color: primaryGreen,
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.12),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: const Icon(
-                      Icons.recycling_rounded,
+                      Icons.eco_rounded,
                       color: Colors.white,
-                      size: 29,
+                      size: 31,
                     ),
                   ),
                   const SizedBox(width: 13),
@@ -49,21 +56,27 @@ class AdminDrawer extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Bank Sampah',
+                          'SIRAYA',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        SizedBox(height: 4),
+                        Text(
+                          'Bank Sampah',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+
                         Text(
                           'Griya Ayu',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                       ],
                     ),

@@ -275,7 +275,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                   borderRadius: BorderRadius.circular(11),
                 ),
                 child: const Icon(
-                  Icons.recycling_rounded,
+                  Icons.eco_rounded,
                   color: Colors.white,
                   size: 23,
                 ),
@@ -283,13 +283,30 @@ class _AdminLayoutState extends State<AdminLayout> {
 
               const SizedBox(width: 10),
 
-              const Text(
-                'Griya Ayu',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'SIRAYA',
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Bank Sampah Griya Ayu',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
