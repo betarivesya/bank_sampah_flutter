@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/jenis_sampah_model.dart';
 import '../models/setoran_model.dart';
@@ -24,7 +25,7 @@ class PetugasPage<T> {
 }
 
 class ApiService {
-  static const String baseUrl = 'http://10.113.26.158:8000/api';
+  static const String baseUrl = 'http://127.0.0.1:8000/api';
 
   static String? _authToken;
   static String? _sessionCookie;
@@ -141,6 +142,62 @@ class ApiService {
       return {'success': false, 'message': 'Tidak dapat terhubung ke server'};
     }
   }
+
+  // ==========================================================
+  // LOGIN GOOGLE
+  // ==========================================================
+
+  static Future<Map<String, dynamic>> loginGoogle(
+    String idToken,
+  ) async {
+    try {
+      clearSession();
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/login/google'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'id_token': idToken,
+        }),
+      );
+
+      print('GOOGLE LOGIN STATUS: ${response.statusCode}');
+      print('GOOGLE LOGIN RESPONSE: ${response.body}');
+
+      final data = _decodeMap(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        _authToken = data['token']?.toString();
+
+        return {
+          'success': true,
+          'message': data['message'],
+          'user': data['user'],
+          'token': _authToken,
+        };
+      }
+
+      clearSession();
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Login Google gagal',
+      };
+    } catch (e) {
+      clearSession();
+
+      print('GOOGLE LOGIN ERROR: $e');
+
+      return {
+        'success': false,
+        'message': 'Tidak dapat terhubung ke server',
+      };
+    }
+  }
+
 
   // ==========================================================
   // DASHBOARD ADMIN
@@ -499,6 +556,9 @@ class ApiService {
     );
 
     final data = _decodeMap(response.body);
+
+    debugPrint('PETUGAS DASHBOARD STATUS: ${response.statusCode}');
+    debugPrint('PETUGAS DASHBOARD RESPONSE: ${response.body}');
 
     if (response.statusCode == 200) {
       return Map<String, dynamic>.from(data['data'] ?? {});
@@ -1004,11 +1064,20 @@ class ApiService {
   // PROFIL NASABAH
   // ==========================================================
 
-  static Future<Map<String, dynamic>> getProfilNasabah(int idNasabah) async {
+  static Future<Map<String, dynamic>> getProfilNasabah(
+    int idNasabah,
+  ) async {
     final response = await http.get(
       Uri.parse('$baseUrl/nasabah/$idNasabah/profil'),
       headers: {..._headers(), 'Cache-Control': 'no-cache'},
     );
+
+    print('========== PROFIL NASABAH ==========');
+    print('ID NASABAH: $idNasabah');
+    print('TOKEN TERSEDIA: ${_authToken != null && _authToken!.isNotEmpty}');
+    print('PROFIL STATUS: ${response.statusCode}');
+    print('PROFIL RESPONSE: ${response.body}');
+    print('====================================');
 
     final decoded = _decodeMap(response.body);
 
@@ -1016,7 +1085,9 @@ class ApiService {
       return Map<String, dynamic>.from(decoded['data']);
     }
 
-    throw Exception(decoded['message'] ?? 'Gagal mengambil profil nasabah.');
+    throw Exception(
+      decoded['message'] ?? 'Gagal mengambil profil nasabah.',
+    );
   }
 
   // UPLOAD FOTO PROFIL NASABAH

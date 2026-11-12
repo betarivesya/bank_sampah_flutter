@@ -433,6 +433,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 700;
+
         final cards = [
           _chartCard(
             title: 'Setoran Sampah 7 Hari Terakhir',
@@ -460,18 +461,29 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
           ),
         ];
 
-        return Flex(
-          direction: narrow ? Axis.vertical : Axis.horizontal,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        if (narrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              cards[0],
+              const SizedBox(height: 14),
+              cards[1],
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(flex: narrow ? 0 : 1, child: cards[0]),
-            SizedBox(width: narrow ? 0 : 14, height: narrow ? 14 : 0),
-            Expanded(flex: narrow ? 0 : 1, child: cards[1]),
+            Expanded(child: cards[0]),
+            const SizedBox(width: 14),
+            Expanded(child: cards[1]),
           ],
         );
       },
     );
   }
+
 
   Widget _chartCard({
     required String title,
