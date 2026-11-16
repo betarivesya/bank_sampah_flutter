@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../../app_styles.dart';
@@ -21,11 +23,6 @@ class _SetoranScreenState extends State<SetoranScreen> {
   int _currentPage = 1;
   int _totalPages = 1;
   DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
-
-  List<DateTime> get _monthOptions {
-    final now = DateTime(DateTime.now().year, DateTime.now().month);
-    return List.generate(12, (index) => DateTime(now.year, now.month - index));
-  }
 
   @override
   void initState() {
@@ -99,30 +96,38 @@ class _SetoranScreenState extends State<SetoranScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8F7),
       body: RefreshIndicator(
-        onRefresh: _loadSetoran,
-        child: _loading
-            ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF075B4F)),
+        onRefresh: () => _loadSetoran(page: 1),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 12),
+
+            _buildMonthSelector(),
+            const SizedBox(height: 20),
+
+            if (_loading)
+              const Padding(
+                padding: EdgeInsetsGeometry.symmetric(vertical: 50),
+                child: Center(
+                  child: CircularProgressIndicator(color: Color(0xFF075B4F)),
+                ),
               )
-            : _setoran.isEmpty
-            ? _buildEmpty()
-            : ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 12),
-                  _buildMonthSelector(),
-                  const SizedBox(height: 20),
-                  ..._setoran.map(
-                    (item) => _SetoranCard(
-                      setoran: item,
-                      tanggal: _formatTanggal(item.tanggal),
-                    ),
-                  ),
-                  if (_totalPages > 1) _buildPagination(),
-                  const SizedBox(height: 80),
-                ],
+            else if (_setoran.isEmpty)
+              _buildEmptyContent()
+            else ...[
+              ..._setoran.map(
+                (item) => _SetoranCard(
+                  setoran: item,
+                  tanggal: _formatTanggal(item.tanggal),
+                ),
               ),
+              if (_totalPages > 1) _buildPagination(),
+              const SizedBox(height: 80),
+            ],
+          ],
+        ),
       ),
 
       // ============================================================
@@ -142,7 +147,7 @@ class _SetoranScreenState extends State<SetoranScreen> {
           );
 
           if (result == true) {
-            _loadSetoran();
+            _loadSetoran(page: 1);
           }
         },
       ),
@@ -201,32 +206,164 @@ class _SetoranScreenState extends State<SetoranScreen> {
   }
 
   Widget _buildMonthSelector() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE4EAE7)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<DateTime>(
-          isExpanded: true,
-          value: _selectedMonth,
-          icon: const Icon(Icons.calendar_month, color: Color(0xFF075B4F)),
-          items: _monthOptions.map((month) {
-            return DropdownMenuItem(
-              value: month,
-              child: Text('Setoran ${_namaBulan(month.month)} ${month.year}'),
-            );
-          }).toList(),
-          onChanged: (month) {
-            if (month == null) return;
-            setState(() => _selectedMonth = month);
-            _loadSetoran();
-          },
+    return InkWell(
+      onTap: _pilihBulanSetoran,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE4EAE7)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${_namaBulan(_selectedMonth.month)} '
+              '${_selectedMonth.year}',
+              style: const TextStyle(
+                color: Color(0xFF075B4F),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.calendar_month_outlined,
+              size: 18,
+              color: Color(0xFF075B4F),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Future<void> _pilihBulanSetoran() async {
+    int bulanDipilh = _selectedMonth.month;
+    int tahunDipilih = _selectedMonth.year;
+
+    final sekarang = DateTime.now();
+
+    final hasil = await showDialog<DateTime>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadiusGeometry.circular(18),
+              ),
+              title: const Text(
+                'Pilih Bulan dan Tahun',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF075B4F),
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<int>(
+                    value: bulanDipilh,
+                    decoration: const InputDecoration(
+                      labelText: 'Bulan',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: List.generate(12, (index) {
+                      return DropdownMenuItem(
+                        value: index + 1,
+                        child: Text(_namaBulan(index + 1)),
+                      );
+                    }),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          bulanDipilh = value;
+
+                          if (tahunDipilih == sekarang.year &&
+                              bulanDipilh == sekarang.month) {
+                            bulanDipilh = sekarang.month;
+                          }
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 15),
+                  DropdownButtonFormField<int>(
+                    value: tahunDipilih,
+                    decoration: const InputDecoration(
+                      labelText: 'Tahun',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: List.generate(sekarang.year - 2020 + 1, (index) {
+                      final tahun = sekarang.year - index;
+
+                      return DropdownMenuItem(
+                        value: tahun,
+                        child: Text('$tahun'),
+                      );
+                    }),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          tahunDipilih = value;
+
+                          if (tahunDipilih == sekarang.year &&
+                              bulanDipilh == sekarang.month) {
+                            bulanDipilh = sekarang.month;
+                          }
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                  },
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF075B4F),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(
+                      dialogContext,
+                      DateTime(tahunDipilih, bulanDipilh),
+                    );
+                  },
+                  child: const Text('Pilih'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (hasil == null || !mounted) return;
+
+    if (hasil.year == _selectedMonth.year &&
+        hasil.month == _selectedMonth.month) {
+      return;
+    }
+
+    setState(() {
+      _selectedMonth = hasil;
+      _currentPage = 1;
+    });
+
+    await _loadSetoran(page: 1);
   }
 
   String _namaBulan(int bulan) {
@@ -275,29 +412,25 @@ class _SetoranScreenState extends State<SetoranScreen> {
   // EMPTY
   // ============================================================
 
-  Widget _buildEmpty() {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(20),
-      children: [
-        const SizedBox(height: 100),
-        const Icon(Icons.inbox_outlined, size: 70, color: Colors.grey),
-        const SizedBox(height: 16),
-        const Center(
-          child: Text(
+  Widget _buildEmptyContent() {
+    return const Padding(
+      padding: EdgeInsetsGeometry.symmetric(vertical: 45),
+      child: Column(
+        children: [
+          Icon(Icons.inbox_outlined, size: 70, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
             'Belum ada data setoran',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-        ),
-        const SizedBox(height: 8),
-        const Center(
-          child: Text(
-            'Tambahkan setoran baru untuk nasabah.',
+          SizedBox(height: 8),
+          Text(
+            'Belum ada riwayat setoran pada bulan ini.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

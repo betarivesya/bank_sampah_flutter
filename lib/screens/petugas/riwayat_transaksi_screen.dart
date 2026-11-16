@@ -23,11 +23,6 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   int _currentPage = 1;
   DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
 
-  List<DateTime> get _monthOptions {
-    final now = DateTime(DateTime.now().year, DateTime.now().month);
-    return List.generate(12, (index) => DateTime(now.year, now.month - index));
-  }
-
   List<SetoranModel> _setoran = [];
   List<Map<String, dynamic>> _penarikan = [];
 
@@ -50,14 +45,33 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _currentPage = 1;
     });
 
     try {
+      Future<List<SetoranModel>> ambilSemuaSetoran() async {
+        final List<SetoranModel> semuaSetoran = [];
+        int halaman = 1;
+        bool masihAda = true;
+
+        while (masihAda) {
+          final hasil = await ApiService.getPetugasSetoranPage(
+            bulan: _selectedMonth.month,
+            tahun: _selectedMonth.year,
+            page: halaman,
+            perPage: 20,
+          );
+
+          semuaSetoran.addAll(hasil.items);
+          masihAda = hasil.hasMore;
+          halaman++;
+        }
+
+        return semuaSetoran;
+      }
+
       final hasil = await Future.wait([
-        ApiService.getSetoran(
-          bulan: _selectedMonth.month,
-          tahun: _selectedMonth.year,
-        ),
+        ambilSemuaSetoran(),
         ApiService.getPenarikanPetugas(
           bulan: _selectedMonth.month,
           tahun: _selectedMonth.year,
@@ -70,14 +84,17 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
         _setoran = (hasil[0] as List<SetoranModel>)
             .where(_isSelectedMonth)
             .toList();
+
         _penarikan = (hasil[1] as List<Map<String, dynamic>>).where((item) {
           final tanggal = DateTime.tryParse(
             item['tgl_pengajuan']?.toString() ?? '',
           );
+
           return tanggal == null ||
               (tanggal.year == _selectedMonth.year &&
                   tanggal.month == _selectedMonth.month);
         }).toList();
+
         _isLoading = false;
       });
     } catch (e) {
@@ -287,33 +304,155 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   }
 
   Widget _buildMonthSelector() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<DateTime>(
-          isExpanded: true,
-          value: _selectedMonth,
-          dropdownColor: darkGreen,
-          icon: const Icon(Icons.calendar_month, color: Colors.white),
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-          items: _monthOptions.map((month) {
-            return DropdownMenuItem(
-              value: month,
-              child: Text('${_namaBulan(month.month)} ${month.year}'),
-            );
-          }).toList(),
-          onChanged: (month) {
-            if (month == null) return;
-            setState(() => _selectedMonth = month);
-            _loadData();
-          },
+    return InkWell(
+      onTap: _pilihBulan,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${_namaBulan(_selectedMonth.month)} ${_selectedMonth.year}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.calendar_month_outlined,
+              color: Colors.white,
+              size: 19,
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Future<void> _pilihBulan() async {
+    int bulanDipilih = _selectedMonth.month;
+    int tahunDipilih = _selectedMonth.year;
+
+    final sekarang = DateTime.now();
+
+    final hasil = await showDialog<DateTime>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              title: const Text(
+                'Pilih Bulan dan Tahun',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: darkGreen,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<int>(
+                    value: bulanDipilih,
+                    decoration: const InputDecoration(
+                      labelText: 'Bulan',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: List.generate(12, (index) {
+                      return DropdownMenuItem(
+                        value: index + 1,
+                        child: Text(_namaBulan(index + 1)),
+                      );
+                    }),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          bulanDipilih = value;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 15),
+                  DropdownButtonFormField<int>(
+                    value: tahunDipilih,
+                    decoration: const InputDecoration(
+                      labelText: 'Tahun',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: List.generate(sekarang.year - 2020 + 1, (index) {
+                      final tahun = sekarang.year - index;
+
+                      return DropdownMenuItem(
+                        value: tahun,
+                        child: Text('$tahun'),
+                      );
+                    }),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          tahunDipilih = value;
+
+                          if (tahunDipilih == sekarang.year &&
+                              bulanDipilih > sekarang.month) {
+                            bulanDipilih = sekarang.month;
+                          }
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                  },
+                  child: const Text('Batal', style: TextStyle(color: textGrey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: darkGreen,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(
+                      dialogContext,
+                      DateTime(tahunDipilih, bulanDipilih),
+                    );
+                  },
+                  child: const Text('Pilih'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (hasil == null || !mounted) return;
+
+    if (hasil.year == _selectedMonth.year &&
+        hasil.month == _selectedMonth.month) {
+      return;
+    }
+
+    setState(() {
+      _selectedMonth = hasil;
+      _currentPage = 1;
+    });
+
+    await _loadData();
   }
 
   String _namaBulan(int bulan) {

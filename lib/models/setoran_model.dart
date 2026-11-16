@@ -52,7 +52,8 @@ class SetoranModel {
     final petugas = relasi(json['petugas']);
 
     // Mengambil daftar rincian sampah dari relasi detail_setoran.
-    final dynamic detailJson = json['detail_setoran'] ?? json['detailSetoran'];
+    final dynamic detailJson =
+        json['jenis_sampah'] ?? json['detail_setoran'] ?? json['detailSetoran'];
 
     final List<Map<String, dynamic>> detail = detailJson is List
         ? detailJson
@@ -97,8 +98,17 @@ class SetoranModel {
 
     return SetoranModel(
       idSetoran: id(json['id_setoran'] ?? json['id']),
-      idNasabah: id(json['id_pengguna_nasabah']),
-      idPetugas: id(json['id_pengguna_petugas']),
+      idNasabah: id(
+        json['id_pengguna_nasabah'] ??
+            nasabah['id_pengguna_nasabah'] ??
+            nasabah['id'],
+      ),
+
+      idPetugas: id(
+        json['id_pengguna_petugas'] ??
+            petugas['id_pengguna_petugas'] ??
+            petugas['id'],
+      ),
       idJenisSampah: detail.isNotEmpty
           ? id(detail.first['id_jenis_sampah'])
           : json['id_jenis_sampah'] == null

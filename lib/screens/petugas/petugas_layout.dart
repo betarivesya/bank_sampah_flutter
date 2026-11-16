@@ -1,9 +1,11 @@
+import 'package:bank_sampah_flutter/app_styles.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/api_service.dart';
 import '../../models/setoran_model.dart';
 import '../auth/login_screen.dart';
 
+import 'notifikasi_petugas.dart';
 import 'petugas_dashboard.dart';
 import 'petugas_drawer.dart';
 import 'setoran_screen.dart';
@@ -23,7 +25,6 @@ class _PetugasLayoutState extends State<PetugasLayout> {
   static const Color darkGreen = Color(0xFF075B4F);
   static const Color background = Color(0xFFF6F8F7);
   static const Color textDark = Color(0xFF172033);
-  static const Color textGrey = Color(0xFF7B8A89);
 
   String _selectedMenu = 'dashboard';
 
@@ -32,6 +33,10 @@ class _PetugasLayoutState extends State<PetugasLayout> {
       _selectedMenu = menu;
     });
   }
+
+  // ==========================================================
+  // LOGOUT
+  // ==========================================================
 
   void _logout() {
     showDialog(
@@ -57,7 +62,7 @@ class _PetugasLayoutState extends State<PetugasLayout> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -81,6 +86,10 @@ class _PetugasLayoutState extends State<PetugasLayout> {
       },
     );
   }
+
+  // ==========================================================
+  // KONFIRMASI KELUAR DENGAN TOMBOL BACK
+  // ==========================================================
 
   void _showExitConfirmation() {
     showDialog(
@@ -114,7 +123,7 @@ class _PetugasLayoutState extends State<PetugasLayout> {
               ),
               onPressed: () {
                 Navigator.pop(dialogContext);
-                Navigator.pop(context, true); // Keluar dari aplikasi
+                Navigator.pop(context, true);
               },
               child: const Text('Keluar'),
             ),
@@ -124,79 +133,9 @@ class _PetugasLayoutState extends State<PetugasLayout> {
     );
   }
 
-  Future<void> _showNotifications() async {
-    try {
-      final now = DateTime.now();
-      final hasil = await Future.wait([
-        ApiService.getPetugasSetoranPage(
-          bulan: now.month,
-          tahun: now.year,
-          page: 1,
-          perPage: 5,
-        ),
-        ApiService.getPetugasPenarikanPage(
-          bulan: now.month,
-          tahun: now.year,
-          page: 1,
-          perPage: 5,
-        ),
-      ]);
-
-      final setoran = hasil[0] as PetugasPage<SetoranModel>;
-      final penarikan = hasil[1] as PetugasPage<Map<String, dynamic>>;
-      final aktivitas = <String>[];
-
-      for (final item in setoran.items.take(3)) {
-        aktivitas.add('Setoran ${item.namaNasabah} - ${item.namaSampah}');
-      }
-      for (final item in penarikan.items.take(3)) {
-        aktivitas.add(
-          'Penarikan ${item['nama_nasabah']?.toString() ?? 'nasabah'} - '
-          '${item['status']?.toString() ?? 'menunggu'}',
-        );
-      }
-
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.notifications_none_rounded, color: darkGreen),
-              SizedBox(width: 10),
-              Text('Aktivitas Terbaru'),
-            ],
-          ),
-          content: aktivitas.isEmpty
-              ? const Text('Belum ada aktivitas terbaru.')
-              : SizedBox(
-                  width: double.maxFinite,
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: aktivitas.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (_, index) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.notifications_active_outlined),
-                      title: Text(aktivitas[index]),
-                    ),
-                  ),
-                ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Tutup'),
-            ),
-          ],
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal mengambil notifikasi.')),
-      );
-    }
-  }
+  // ==========================================================
+  // BODY SESUAI MENU
+  // ==========================================================
 
   Widget _buildBody() {
     switch (_selectedMenu) {
@@ -215,39 +154,9 @@ class _PetugasLayoutState extends State<PetugasLayout> {
     }
   }
 
-  String _getTitle() {
-    switch (_selectedMenu) {
-      case 'setoran':
-        return 'Setor Sampah';
-
-      case 'riwayat':
-        return 'Riwayat Transaksi';
-
-      case 'penarikan':
-        return 'Penarikan Saldo';
-
-      case 'dashboard':
-      default:
-        return 'Dashboard Petugas';
-    }
-  }
-
-  String _getSubtitle() {
-    switch (_selectedMenu) {
-      case 'setoran':
-        return 'Input setoran sampah nasabah';
-
-      case 'riwayat':
-        return 'Riwayat aktivitas transaksi';
-
-      case 'penarikan':
-        return 'Verifikasi pengajuan penarikan';
-
-      case 'dashboard':
-      default:
-        return 'Bank Sampah Griya Ayu';
-    }
-  }
+  // ==========================================================
+  // BUILD
+  // ==========================================================
 
   @override
   Widget build(BuildContext context) {
@@ -256,8 +165,6 @@ class _PetugasLayoutState extends State<PetugasLayout> {
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
 
-        // Kalau sedang bukan di Dashboard,
-        // tombol Back kembali ke Dashboard.
         if (_selectedMenu != 'dashboard') {
           setState(() {
             _selectedMenu = 'dashboard';
@@ -265,70 +172,94 @@ class _PetugasLayoutState extends State<PetugasLayout> {
           return;
         }
 
-        // Kalau sudah di Dashboard,
-        // tampilkan konfirmasi keluar.
         _showExitConfirmation();
       },
       child: Scaffold(
         backgroundColor: background,
 
+        // ======================================================
+        // DRAWER
+        // ======================================================
         drawer: PetugasDrawer(
           selectedMenu: _selectedMenu,
           onMenuSelected: _selectMenu,
           onLogout: _logout,
         ),
 
+        // ======================================================
+        // APP BAR
+        // ======================================================
         appBar: AppBar(
-          backgroundColor: _selectedMenu == 'dashboard'
-              ? background
-              : darkGreen,
-          foregroundColor: _selectedMenu == 'dashboard'
-              ? textDark
-              : Colors.white,
+          backgroundColor: darkGreen,
+          foregroundColor: Colors.white,
           elevation: 0,
           titleSpacing: 0,
 
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          title: Row(
             children: [
-              Text(
-                _getTitle(),
-                style: TextStyle(
-                  color: _selectedMenu == 'dashboard' ? textDark : Colors.white,
-                  fontSize: _selectedMenu == 'dashboard' ? 22 : 17,
-                  fontWeight: FontWeight.bold,
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2E8B72),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: const Icon(
+                  Icons.eco_rounded,
+                  color: Colors.white,
+                  size: 23,
                 ),
               ),
 
-              const SizedBox(height: 2),
+              const SizedBox(width: 10),
 
-              Text(
-                _getSubtitle(),
-                style: TextStyle(
-                  color: _selectedMenu == 'dashboard'
-                      ? textGrey
-                      : Colors.white70,
-                  fontSize: 10,
-                  fontWeight: FontWeight.normal,
-                ),
+              const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'SIRAYA',
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Bank Sampah Griya Ayu',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+
           actions: [
             IconButton(
-              tooltip: 'Aktivitas terbaru',
-              onPressed: _showNotifications,
-              icon: Icon(
-                Icons.notifications_none_rounded,
-                size: 25,
-                color: _selectedMenu == 'dashboard' ? darkGreen : Colors.white,
-              ),
+              tooltip: 'Notifikasi',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NotifikasiPetugas(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.notifications_none_outlined, size: 25),
             ),
-
-            const SizedBox(width: 4),
           ],
         ),
 
+        // ======================================================
+        // BODY
+        // ======================================================
         body: _buildBody(),
       ),
     );

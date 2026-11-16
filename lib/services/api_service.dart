@@ -492,11 +492,13 @@ class ApiService {
   // DASHBOARD PETUGAS
   // ==========================================================
 
-  static Future<Map<String, dynamic>> getPetugasDashboard() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/petugas/dashboard'),
-      headers: _headers(),
-    );
+  static Future<Map<String, dynamic>> getPetugasDashboard({
+    String? bulan,
+  }) async {
+    final uri = Uri.parse('$baseUrl/petugas/dashboard')
+        .replace(queryParameters: {if (bulan != null) 'bulan': bulan});
+
+    final response = await http.get(uri, headers: _headers());
 
     final data = _decodeMap(response.body);
 

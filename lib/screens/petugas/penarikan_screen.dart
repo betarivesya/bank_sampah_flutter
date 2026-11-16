@@ -1,3 +1,4 @@
+import 'package:bank_sampah_flutter/screens/petugas/petugas_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:bank_sampah_flutter/services/api_service.dart';
 
@@ -25,12 +26,6 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
   String _filterStatus = 'Semua';
   int _currentPage = 1;
   int _totalPages = 1;
-  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
-
-  List<DateTime> get _monthOptions {
-    final now = DateTime(DateTime.now().year, DateTime.now().month);
-    return List.generate(12, (index) => DateTime(now.year, now.month - index));
-  }
 
   static const Color hijau = Color(0xFF166534);
   static const Color hijauMuda = Color(0xFFDCFCE7);
@@ -52,8 +47,6 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
     _currentPage = page;
     try {
       final result = await ApiService.getPetugasPenarikanPage(
-        bulan: _selectedMonth.month,
-        tahun: _selectedMonth.year,
         status: _filterStatus,
         page: page,
         perPage: _pageSize,
@@ -382,8 +375,6 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
           children: [
             _buildHeader(),
             const SizedBox(height: 20),
-            _buildMonthSelector(),
-            const SizedBox(height: 20),
             _buildFormValidasi(),
             if (_pesan != null) ...[const SizedBox(height: 12), _buildPesan()],
             if (_pengajuan != null) ...[
@@ -403,7 +394,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF166534), Color(0xFF15803D)],
+          colors: [Color(0xFF075B4F), Color(0xFF075B4F)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -484,7 +475,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                   : const Icon(Icons.search),
               label: Text(_loading ? 'Memvalidasi...' : 'Validasi Pengajuan'),
               style: FilledButton.styleFrom(
-                backgroundColor: hijau,
+                backgroundColor: PetugasDrawer.darkGreen,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -495,47 +486,6 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
         ],
       ),
     );
-  }
-
-  Widget _buildMonthSelector() {
-    return _kartu(
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<DateTime>(
-          isExpanded: true,
-          value: _selectedMonth,
-          icon: const Icon(Icons.calendar_month, color: hijau),
-          items: _monthOptions.map((month) {
-            return DropdownMenuItem(
-              value: month,
-              child: Text('Penarikan ${_namaBulan(month.month)} ${month.year}'),
-            );
-          }).toList(),
-          onChanged: (month) {
-            if (month == null) return;
-            setState(() => _selectedMonth = month);
-            _muatDaftarPenarikan();
-          },
-        ),
-      ),
-    );
-  }
-
-  String _namaBulan(int bulan) {
-    const nama = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
-    ];
-    return nama[bulan - 1];
   }
 
   Widget _buildPesan() {

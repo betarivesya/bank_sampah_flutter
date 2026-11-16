@@ -23,7 +23,7 @@ class PetugasDrawer extends StatelessWidget {
         child: Column(
           children: [
             // ==================================================
-            // HEADER
+            // HEADER DRAWER
             // ==================================================
 
             Padding(
@@ -35,35 +35,49 @@ class PetugasDrawer extends StatelessWidget {
                     height: 52,
                     decoration: BoxDecoration(
                       color: primaryGreen,
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.12),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: const Icon(
-                      Icons.recycling_rounded,
+                      Icons.eco_rounded,
                       color: Colors.white,
-                      size: 29,
+                      size: 31,
                     ),
                   ),
+
                   const SizedBox(width: 13),
+
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Bank Sampah',
+                          'SIRAYA',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        SizedBox(height: 4),
+                        Text(
+                          'Bank Sampah',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         Text(
                           'Griya Ayu',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                       ],
                     ),
@@ -75,7 +89,7 @@ class PetugasDrawer extends StatelessWidget {
             Container(height: 1, color: Colors.white24),
 
             // ==================================================
-            // DAFTAR MENU YANG BISA DI-SCROLL
+            // DAFTAR MENU
             // ==================================================
             Expanded(
               child: SingleChildScrollView(
@@ -86,7 +100,6 @@ class PetugasDrawer extends StatelessWidget {
                   children: [
                     const SizedBox(height: 18),
 
-                    // LABEL MENU
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 20),
                       child: Align(
@@ -105,48 +118,32 @@ class PetugasDrawer extends StatelessWidget {
 
                     const SizedBox(height: 9),
 
-                    // DASHBOARD
                     _drawerMenu(
+                      context: context,
                       icon: Icons.home_rounded,
                       title: 'Dashboard',
-                      active: selectedMenu == 'dashboard',
-                      onTap: () {
-                        onMenuSelected('dashboard');
-                        Navigator.pop(context);
-                      },
+                      menuKey: 'dashboard',
                     ),
 
-                    // SETOR SAMPAH
                     _drawerMenu(
+                      context: context,
                       icon: Icons.recycling_outlined,
                       title: 'Setor Sampah',
-                      active: selectedMenu == 'setoran',
-                      onTap: () {
-                        onMenuSelected('setoran');
-                        Navigator.pop(context);
-                      },
+                      menuKey: 'setoran',
                     ),
 
-                    // RIWAYAT TRANSAKSI
                     _drawerMenu(
+                      context: context,
                       icon: Icons.receipt_long_outlined,
                       title: 'Riwayat Transaksi',
-                      active: selectedMenu == 'riwayat',
-                      onTap: () {
-                        onMenuSelected('riwayat');
-                        Navigator.pop(context);
-                      },
+                      menuKey: 'riwayat',
                     ),
 
-                    // PENARIKAN SALDO
                     _drawerMenu(
+                      context: context,
                       icon: Icons.account_balance_wallet_outlined,
                       title: 'Penarikan Saldo',
-                      active: selectedMenu == 'penarikan',
-                      onTap: () {
-                        onMenuSelected('penarikan');
-                        Navigator.pop(context);
-                      },
+                      menuKey: 'penarikan',
                     ),
                   ],
                 ),
@@ -155,7 +152,6 @@ class PetugasDrawer extends StatelessWidget {
 
             // ==================================================
             // PROFILE PETUGAS DAN LOGOUT
-            // TETAP DI BAGIAN BAWAH DRAWER
             // ==================================================
             Container(
               margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -166,7 +162,6 @@ class PetugasDrawer extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  // AVATAR
                   Container(
                     width: 45,
                     height: 45,
@@ -188,7 +183,6 @@ class PetugasDrawer extends StatelessWidget {
 
                   const SizedBox(width: 11),
 
-                  // NAMA PETUGAS
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,10 +204,12 @@ class PetugasDrawer extends StatelessWidget {
                     ),
                   ),
 
-                  // LOGOUT
                   InkWell(
                     borderRadius: BorderRadius.circular(11),
-                    onTap: onLogout,
+                    onTap: () {
+                      Navigator.pop(context);
+                      onLogout();
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(9),
                       decoration: BoxDecoration(
@@ -241,12 +237,13 @@ class PetugasDrawer extends StatelessWidget {
   // ==========================================================
 
   Widget _drawerMenu({
+    required BuildContext context,
     required IconData icon,
     required String title,
-    required VoidCallback onTap,
-    bool active = false,
-    String? badge,
+    required String menuKey,
   }) {
+    final bool active = selectedMenu == menuKey;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: Material(
@@ -254,7 +251,10 @@ class PetugasDrawer extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
+          onTap: () {
+            Navigator.pop(context);
+            onMenuSelected(menuKey);
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
             child: Row(
@@ -264,7 +264,9 @@ class PetugasDrawer extends StatelessWidget {
                   color: active ? Colors.white : Colors.white70,
                   size: 21,
                 ),
+
                 const SizedBox(width: 13),
+
                 Expanded(
                   child: Text(
                     title,
@@ -275,25 +277,6 @@ class PetugasDrawer extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (badge != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF716B),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      badge,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
