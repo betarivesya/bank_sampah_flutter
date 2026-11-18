@@ -95,12 +95,13 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     for (final item in _setoran) {
       hasil.add({
         'jenis': 'Setoran',
+        'data': item,
         'judul': item.namaSampah,
         'tanggal': item.tanggal,
         'nominal': item.totalNilai,
         'status': item.status,
         'keterangan':
-            '${item.totalBerat.toStringAsFixed(2)} kg • ${item.namaPetugas}',
+            '${(item.totalBerat / 1000).toStringAsFixed(2)} kg • ${item.namaPetugas}',
         'urutan': _tanggal(item.tanggal),
       });
     }
@@ -398,103 +399,366 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     final status = _labelStatus(item['status']?.toString() ?? '');
     final setoran = jenis == 'Setoran';
 
+    final warna = setoran ? Colors.green : Colors.orange;
+
     return Card(
       elevation: 1,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: (setoran ? Colors.green : Colors.orange).withValues(
-                  alpha: 0.12,
+      margin: const EdgeInsets.only(bottom: 9),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: setoran
+            ? () {
+                final data = item['data'];
+                if (data is SetoranModel) {
+                  _bukaDetailSetoran(data);
+                }
+              }
+            : null,
+        child: Padding(
+          padding: const EdgeInsetsGeometry.symmetric(
+            horizontal: 12,
+            vertical: 11,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 39,
+                height: 39,
+                decoration: BoxDecoration(
+                  color: warna.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(11),
                 ),
-                borderRadius: BorderRadius.circular(12),
+                child: Icon(
+                  setoran
+                      ? Icons.recycling
+                      : Icons.account_balance_wallet_outlined,
+                  color: warna,
+                  size: 21,
+                ),
               ),
-              child: Icon(
-                setoran
-                    ? Icons.recycling
-                    : Icons.account_balance_wallet_outlined,
-                color: setoran ? Colors.green : Colors.orange,
+              const SizedBox(width: 10),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item['judul']?.toString() ?? jenis,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Tooltip(
+                          message: 'Status: $status',
+                          child: Icon(
+                            _ikonStatus(status),
+                            color: _warnaStatus(status),
+                            size: 17,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      item['keterangan']?.toString() ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _formatTanggal(item['tanggal']?.toString() ?? ''),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.black45,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+
+              const SizedBox(width: 8),
+
+              Text(
+                '${setoran
+                    ? '+'
+                    : (status == 'Disetujui' || status == 'Selesai')
+                    ? '-'
+                    : ''}${_rupiah(nominal)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: setoran
+                      ? Colors.green
+                      : (status == 'Disetujui' || status == 'Selesai')
+                      ? Colors.orange
+                      : Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _ikonStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'selesai':
+      case 'disetujui':
+        return Icons.check_circle;
+      case 'menunggu':
+      case 'pending':
+        return Icons.schedule;
+      case 'ditolak':
+        return Icons.cancel;
+      case 'dibatalkan':
+        return Icons.remove_circle;
+      default:
+        return Icons.info_outline;
+    }
+  }
+
+  void _bukaDetailSetoran(SetoranModel setoran) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.72,
+          minChildSize: 0.45,
+          maxChildSize: 0.92,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(10, 12, 20, 28),
                 children: [
-                  Text(
-                    item['judul']?.toString() ?? jenis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    jenis,
-                    style: TextStyle(
-                      color: setoran ? Colors.green : Colors.orange,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item['keterangan']?.toString() ?? '',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatTanggal(item['tanggal']?.toString() ?? ''),
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _warnaStatus(status).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      status,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: _warnaStatus(status),
-                        fontWeight: FontWeight.w600,
+                  Center(
+                    child: Container(
+                      width: 45,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
+
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'Detail Setoran',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  const Text(
+                    'Informasi transaksi setoran Anda',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, color: Colors.black54),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  _bagianDetail(
+                    judul: 'Infomasi Transaksi',
+                    child: Column(
+                      children: [
+                        _barisDetail('ID Transaksi', '#${setoran.idSetoran}'),
+                        _barisDetail(
+                          'Tanggal Setoran',
+                          _formatTanggal(setoran.tanggal),
+                        ),
+                        _barisDetail('Petugas', setoran.namaPetugas),
+                        _barisDetail('Status', _labelStatus(setoran.status)),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  _bagianDetail(
+                    judul: 'Detail Sampah',
+                    child: Column(
+                      children: [
+                        if (setoran.rincian.isEmpty)
+                          const Padding(
+                            padding: EdgeInsetsGeometry.symmetric(vertical: 12),
+                            child: Text(
+                              'Rincian sampah tidak tersedia.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          )
+                        else
+                          ...setoran.rincian.map((detail) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    detail.namaSampah,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 7),
+                                  _barisDetail(
+                                    'Berat',
+                                    '${detail.totalBerat.toStringAsFixed(0)} gram',
+                                  ),
+                                  _barisDetail(
+                                    'Harga / Kg',
+                                    _rupiah(detail.hargaPerKg),
+                                  ),
+                                  _barisDetail(
+                                    'Subtotal',
+                                    _rupiah(detail.totalNilai),
+                                    warna: Colors.green.shade700,
+                                  ),
+                                  const Divider(height: 18),
+                                ],
+                              ),
+                            );
+                          }),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: Colors.green.withValues(alpha: 0.15),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _barisDetail(
+                          'Total Berat',
+                          '${setoran.totalBerat.toStringAsFixed(0)} gram',
+                        ),
+                        const SizedBox(height: 8),
+                        _barisDetail(
+                          'Total Pendapatan',
+                          _rupiah(setoran.totalNilai),
+                          warna: Colors.green.shade800,
+                          tebal: true,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadiusGeometry.circular(12),
+                      ),
+                    ),
+                    child: const Text('Tutup'),
+                  ),
                 ],
               ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _bagianDetail({required String judul, required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            judul,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _barisDetail(
+    String label,
+    String nilai, {
+    Color? warna,
+    bool tebal = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Colors.black54),
             ),
-            const SizedBox(width: 8),
-            Text(
-              '${setoran
-                  ? '+'
-                  : (status == 'Disetujui' || status == 'Selesai')
-                  ? '-'
-                  : ''}${_rupiah(nominal)}',
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              nilai,
+              textAlign: TextAlign.right,
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: setoran
-                    ? Colors.green
-                    : (status == 'Disetujui' || status == 'Selesai')
-                    ? Colors.orange
-                    : Colors.grey,
+                fontSize: 12,
+                fontWeight: tebal ? FontWeight.bold : FontWeight.w600,
+                color: warna ?? AppColors.textPrimary,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

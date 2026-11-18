@@ -25,7 +25,7 @@ class PetugasPage<T> {
 }
 
 class ApiService {
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
+  static const String baseUrl = 'http://10.113.26.158:8000/api';
 
   static String? _authToken;
   static String? _sessionCookie;
@@ -147,9 +147,7 @@ class ApiService {
   // LOGIN GOOGLE
   // ==========================================================
 
-  static Future<Map<String, dynamic>> loginGoogle(
-    String idToken,
-  ) async {
+  static Future<Map<String, dynamic>> loginGoogle(String idToken) async {
     try {
       clearSession();
 
@@ -159,9 +157,7 @@ class ApiService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({
-          'id_token': idToken,
-        }),
+        body: jsonEncode({'id_token': idToken}),
       );
 
       print('GOOGLE LOGIN STATUS: ${response.statusCode}');
@@ -191,13 +187,9 @@ class ApiService {
 
       print('GOOGLE LOGIN ERROR: $e');
 
-      return {
-        'success': false,
-        'message': 'Tidak dapat terhubung ke server',
-      };
+      return {'success': false, 'message': 'Tidak dapat terhubung ke server'};
     }
   }
-
 
   // ==========================================================
   // DASHBOARD ADMIN
@@ -850,6 +842,42 @@ class ApiService {
     throw Exception(_errorMessage(data, 'Gagal membatalkan penarikan'));
   }
 
+  // EDIT PENARIKAN NASABAH
+  static Future<Map<String, dynamic>> updatePenarikanNasabah({
+    required int idNasabah,
+    required int idPenarikan,
+    required double nominal,
+  }) async {
+    if (_authToken == null || _authToken!.isEmpty) {
+      throw Exception('Sesi login berakhir. Silahkan login kembali');
+    }
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/nasabah/$idNasabah/penarikan/$idPenarikan'),
+      headers: _headers(json: true),
+      body: jsonEncode({'nominal': nominal}),
+    );
+
+    print('EDIT PENARIKAN STATUS: ${response.statusCode}');
+    print('EDIT PENARIKAN RESPONSE: ${response.body}');
+
+    final data = _decodeMap(response.body);
+
+    if (response.statusCode == 200) {
+      return {
+        'success': true,
+        'message':
+            data['message'] ?? 'Pengajuan penarikan berhasil diperbarui.',
+        'data': data['data'],
+      };
+    }
+
+    return {
+      'success': false,
+      'message': _errorMessage(data, 'Gagal mengubah nominal penarikan'),
+    };
+  }
+
   // ==========================================================
   // RIWAYAT SETORAN NASABAH
   // ==========================================================
@@ -1066,9 +1094,7 @@ class ApiService {
   // PROFIL NASABAH
   // ==========================================================
 
-  static Future<Map<String, dynamic>> getProfilNasabah(
-    int idNasabah,
-  ) async {
+  static Future<Map<String, dynamic>> getProfilNasabah(int idNasabah) async {
     final response = await http.get(
       Uri.parse('$baseUrl/nasabah/$idNasabah/profil'),
       headers: {..._headers(), 'Cache-Control': 'no-cache'},
@@ -1087,9 +1113,7 @@ class ApiService {
       return Map<String, dynamic>.from(decoded['data']);
     }
 
-    throw Exception(
-      decoded['message'] ?? 'Gagal mengambil profil nasabah.',
-    );
+    throw Exception(decoded['message'] ?? 'Gagal mengambil profil nasabah.');
   }
 
   // UPLOAD FOTO PROFIL NASABAH

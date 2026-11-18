@@ -1,10 +1,10 @@
-
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:google_sign_in_web/web_only.dart' as google_web;
+
+import '../../widgets/google_sign_in_button.dart';
 
 import '../../app_styles.dart';
 import '../../services/api_service.dart';
@@ -28,8 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final PageController _bannerController = PageController();
   static Future<void>? _inisialisasiGoogle;
 
-  StreamSubscription<GoogleSignInAuthenticationEvent>?
-      _googleSubscription;
+  StreamSubscription<GoogleSignInAuthenticationEvent>? _googleSubscription;
 
   int _currentBanner = 0;
   bool obscurePassword = true;
@@ -71,55 +70,50 @@ class _LoginScreenState extends State<LoginScreen> {
     _siapkanGoogleSignIn();
   }
 
-Future<void> _siapkanGoogleSignIn() async {
-  try {
-    _inisialisasiGoogle ??= GoogleSignIn.instance.initialize();
+  Future<void> _siapkanGoogleSignIn() async {
+    try {
+      _inisialisasiGoogle ??= GoogleSignIn.instance.initialize();
 
-    await _inisialisasiGoogle!.timeout(
-      const Duration(seconds: 10),
-    );
+      await _inisialisasiGoogle!.timeout(const Duration(seconds: 10));
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    await _googleSubscription?.cancel();
+      await _googleSubscription?.cancel();
 
-    _googleSubscription =
-        GoogleSignIn.instance.authenticationEvents.listen(
-      _tanganiEventGoogle,
-      onError: _tanganiErrorGoogle,
-    );
-
-    setState(() {
-      _googleSiap = true;
-    });
-  } on TimeoutException {
-    debugPrint('Google Sign-In timeout saat inisialisasi.');
-
-    if (mounted) {
-      setState(() {
-        _googleSiap = false;
-      });
-
-      _tampilkanPesan(
-        'Google Sign-In terlalu lama disiapkan. Silakan muat ulang aplikasi.',
+      _googleSubscription = GoogleSignIn.instance.authenticationEvents.listen(
+        _tanganiEventGoogle,
+        onError: _tanganiErrorGoogle,
       );
-    }
-  } catch (e) {
-    debugPrint('Inisialisasi Google Sign-In gagal: $e');
 
-    if (mounted) {
       setState(() {
-        _googleSiap = false;
+        _googleSiap = true;
       });
+    } on TimeoutException {
+      debugPrint('Google Sign-In timeout saat inisialisasi.');
 
-      _tampilkanPesan(
-        'Google Sign-In gagal disiapkan. Silakan muat ulang halaman.',
-      );
+      if (mounted) {
+        setState(() {
+          _googleSiap = false;
+        });
+
+        _tampilkanPesan(
+          'Google Sign-In terlalu lama disiapkan. Silakan muat ulang aplikasi.',
+        );
+      }
+    } catch (e) {
+      debugPrint('Inisialisasi Google Sign-In gagal: $e');
+
+      if (mounted) {
+        setState(() {
+          _googleSiap = false;
+        });
+
+        _tampilkanPesan(
+          'Google Sign-In gagal disiapkan. Silakan muat ulang halaman.',
+        );
+      }
     }
   }
-}
-
-
 
   Future<void> _tanganiEventGoogle(
     GoogleSignInAuthenticationEvent event,
@@ -179,9 +173,7 @@ Future<void> _siapkanGoogleSignIn() async {
       if (!mounted) return;
 
       if (result['success'] != true) {
-        _tampilkanPesan(
-          result['message']?.toString() ?? 'Login Google gagal.',
-        );
+        _tampilkanPesan(result['message']?.toString() ?? 'Login Google gagal.');
         return;
       }
 
@@ -221,9 +213,7 @@ Future<void> _siapkanGoogleSignIn() async {
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
+        return const Center(child: CircularProgressIndicator());
       },
     );
 
@@ -235,9 +225,7 @@ Future<void> _siapkanGoogleSignIn() async {
       Navigator.of(context, rootNavigator: true).pop();
 
       if (result['success'] != true) {
-        _tampilkanPesan(
-          result['message']?.toString() ?? 'Login gagal.',
-        );
+        _tampilkanPesan(result['message']?.toString() ?? 'Login gagal.');
         return;
       }
 
@@ -258,9 +246,7 @@ Future<void> _siapkanGoogleSignIn() async {
     }
   }
 
-  Future<void> _arahKeDashboard(
-    Map<String, dynamic> user,
-  ) async {
+  Future<void> _arahKeDashboard(Map<String, dynamic> user) async {
     if (!mounted) return;
 
     final role = user['role']?.toString().toLowerCase();
@@ -268,38 +254,27 @@ Future<void> _siapkanGoogleSignIn() async {
     if (role == 'admin') {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const AdminLayout(),
-        ),
+        MaterialPageRoute(builder: (context) => const AdminLayout()),
       );
     } else if (role == 'petugas') {
       final idPetugas = int.tryParse(
-        (user['id'] ??
-                user['id_pengguna'] ??
-                user['id_petugas'] ??
-                '')
+        (user['id'] ?? user['id_pengguna'] ?? user['id_petugas'] ?? '')
             .toString(),
       );
 
       if (idPetugas == null) {
-        _tampilkanPesan(
-          'ID petugas tidak ditemukan dari respons login.',
-        );
+        _tampilkanPesan('ID petugas tidak ditemukan dari respons login.');
         return;
       }
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => PetugasLayout(
-            idPetugas: idPetugas,
-          ),
+          builder: (context) => PetugasLayout(idPetugas: idPetugas),
         ),
       );
     } else if (role == 'nasabah') {
-      final idNasabah = int.tryParse(
-        (user['id_nasabah'] ?? '').toString(),
-      );
+      final idNasabah = int.tryParse((user['id_nasabah'] ?? '').toString());
 
       if (idNasabah == null) {
         _tampilkanPesan('Profil nasabah tidak ditemukan.');
@@ -309,9 +284,7 @@ Future<void> _siapkanGoogleSignIn() async {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => NasabahDashboard(
-            idNasabah: idNasabah,
-          ),
+          builder: (context) => NasabahDashboard(idNasabah: idNasabah),
         ),
       );
     } else {
@@ -324,9 +297,7 @@ Future<void> _siapkanGoogleSignIn() async {
 
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(pesan)),
-      );
+      ..showSnackBar(SnackBar(content: Text(pesan)));
   }
 
   @override
@@ -361,10 +332,7 @@ Future<void> _siapkanGoogleSignIn() async {
                           return Stack(
                             fit: StackFit.expand,
                             children: [
-                              Image.asset(
-                                banner.asset,
-                                fit: BoxFit.cover,
-                              ),
+                              Image.asset(banner.asset, fit: BoxFit.cover),
                               Positioned.fill(
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
@@ -383,8 +351,7 @@ Future<void> _siapkanGoogleSignIn() async {
                               ),
                               Center(
                                 child: Column(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Container(
                                       width: 75,
@@ -393,8 +360,7 @@ Future<void> _siapkanGoogleSignIn() async {
                                         color: Colors.white.withValues(
                                           alpha: 0.15,
                                         ),
-                                        borderRadius:
-                                            BorderRadius.circular(20),
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: const Icon(
                                         Icons.recycling,
@@ -436,13 +402,10 @@ Future<void> _siapkanGoogleSignIn() async {
                         children: List.generate(
                           _bannerItems.length,
                           (index) => AnimatedContainer(
-                            duration:
-                                const Duration(milliseconds: 250),
+                            duration: const Duration(milliseconds: 250),
                             width: _currentBanner == index ? 18 : 8,
                             height: 8,
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                            ),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
                             decoration: BoxDecoration(
                               color: _currentBanner == index
                                   ? Colors.white
@@ -474,10 +437,7 @@ Future<void> _siapkanGoogleSignIn() async {
                     const SizedBox(height: 7),
                     const Text(
                       'Silahkan masuk untuk melanjutkan.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                     const SizedBox(height: 30),
 
@@ -492,8 +452,7 @@ Future<void> _siapkanGoogleSignIn() async {
                     TextField(
                       controller: usernameController,
                       decoration: const InputDecoration(
-                        hintText:
-                            'Masukkan username atau nomor anggota',
+                        hintText: 'Masukkan username atau nomor anggota',
                         prefixIcon: Icon(Icons.person_outline),
                       ),
                     ),
@@ -555,10 +514,7 @@ Future<void> _siapkanGoogleSignIn() async {
                           padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
                             'atau masuk dengan',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 13,
-                            ),
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
                           ),
                         ),
                         Expanded(child: Divider()),
@@ -578,44 +534,37 @@ Future<void> _siapkanGoogleSignIn() async {
                               ],
                             )
                           : !_googleSiap
-                              ? const Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    ),
-                                    SizedBox(width: 10),
-                                    Text('Menyiapkan Google Sign-In...'),
-                                  ],
-                                )
-                              : kIsWeb
-                                  ? google_web.renderButton()
-                                  : SizedBox(
-                                      width: double.infinity,
-                                      height: 48,
-                                      child: OutlinedButton.icon(
-                                        onPressed: _loginGoogleAndroid,
-                                        icon: const Icon(
-                                          Icons.g_mobiledata,
-                                          size: 30,
-                                        ),
-                                        label: const Text(
-                                          'Masuk dengan Google',
-                                        ),
-                                      ),
-                                    ),
+                          ? const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Text('Menyiapkan Google Sign-In...'),
+                              ],
+                            )
+                          : kIsWeb
+                          ? buildGoogleSignInButton()
+                          : SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: OutlinedButton.icon(
+                                onPressed: _loginGoogleAndroid,
+                                icon: const Icon(Icons.g_mobiledata, size: 30),
+                                label: const Text('Masuk dengan Google'),
+                              ),
+                            ),
                     ),
 
                     const SizedBox(height: 18),
 
                     Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         TextButton(
                           onPressed: () {
@@ -629,9 +578,7 @@ Future<void> _siapkanGoogleSignIn() async {
                           },
                           child: const Text(
                             'Lupa Password?',
-                            style: TextStyle(
-                              color: Color(0xFF159447),
-                            ),
+                            style: TextStyle(color: Color(0xFF159447)),
                           ),
                         ),
                         TextButton(
@@ -639,8 +586,7 @@ Future<void> _siapkanGoogleSignIn() async {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    const RegisterScreen(),
+                                builder: (context) => const RegisterScreen(),
                               ),
                             );
                           },
@@ -660,10 +606,7 @@ Future<void> _siapkanGoogleSignIn() async {
                     const Center(
                       child: Text(
                         'Bank Sampah Griya Ayu',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ),
                   ],
