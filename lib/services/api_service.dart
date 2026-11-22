@@ -4,9 +4,11 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/jenis_sampah_model.dart';
 import '../models/setoran_model.dart';
+import '../models/laporan_penyerahan_induk_model.dart';
 
 class PetugasPage<T> {
   final List<T> items;
@@ -25,7 +27,7 @@ class PetugasPage<T> {
 }
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.1.5:8000/api';
+  static const String baseUrl = 'http://10.113.26.158:8000/api';
 
   static String? _authToken;
   static String? _sessionCookie;
@@ -138,6 +140,54 @@ class ApiService {
     } catch (e) {
       clearSession();
       print('LOGIN ERROR: $e');
+
+      return {'success': false, 'message': 'Tidak dapat terhubung ke server'};
+    }
+  }
+
+  // ==========================================================
+  // LOGIN GOOGLE
+  // ==========================================================
+
+  static Future<Map<String, dynamic>> loginGoogle(String idToken) async {
+    try {
+      clearSession();
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/login/google'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'id_token': idToken}),
+      );
+
+      print('GOOGLE LOGIN STATUS: ${response.statusCode}');
+      print('GOOGLE LOGIN RESPONSE: ${response.body}');
+
+      final data = _decodeMap(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        _authToken = data['token']?.toString();
+
+        return {
+          'success': true,
+          'message': data['message'],
+          'user': data['user'],
+          'token': _authToken,
+        };
+      }
+
+      clearSession();
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Login Google gagal',
+      };
+    } catch (e) {
+      clearSession();
+
+      print('GOOGLE LOGIN ERROR: $e');
 
       return {'success': false, 'message': 'Tidak dapat terhubung ke server'};
     }
@@ -264,6 +314,10 @@ class ApiService {
       },
     );
 
+    debugPrint('JENIS SAMPAH URL: ${response.request?.url}');
+    debugPrint('JENIS SAMPAH STATUS: ${response.statusCode}');
+    debugPrint('JENIS SAMPAH RESPONSE: ${response.body}');
+
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
 
@@ -348,16 +402,37 @@ class ApiService {
   // ==========================================================
 
   static Future<List<dynamic>> getHargaSampah() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/harga-sampah'),
-      headers: _headers(),
-    );
+    final url = Uri.parse('$baseUrl/harga-sampah');
 
-    if (response.statusCode != 200) {
-      throw Exception('Gagal mengambil harga sampah');
+    try {
+      debugPrint('===== DEBUG HARGA SAMPAH =====');
+      debugPrint('URL: $url');
+      debugPrint('Token tersedia: ${_authToken != null}');
+
+      final response = await http.get(url, headers: _headers());
+
+      debugPrint('STATUS CODE: ${response.statusCode}');
+      debugPrint('RESPONSE BODY: ${response.body}');
+
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is List) {
+        return decoded;
+      }
+
+      if (decoded is Map && decoded['data'] is List) {
+        return decoded['data'];
+      }
+
+      throw Exception('Format respons harga sampah tidak sesuai.');
+    } catch (e) {
+      debugPrint('ERROR GET HARGA SAMPAH: $e');
+      rethrow;
     }
-
-    return jsonDecode(response.body);
   }
 
   static Future<bool> tambahHargaSampah(
@@ -579,13 +654,18 @@ class ApiService {
   // DASHBOARD PETUGAS
   // ==========================================================
 
-  static Future<Map<String, dynamic>> getPetugasDashboard() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/petugas/dashboard'),
-      headers: _headers(),
-    );
+  static Future<Map<String, dynamic>> getPetugasDashboard({
+    String? bulan,
+  }) async {
+    final uri = Uri.parse('$baseUrl/petugas/dashboard')
+        .replace(queryParameters: {if (bulan != null) 'bulan': bulan});
+
+    final response = await http.get(uri, headers: _headers());
 
     final data = _decodeMap(response.body);
+
+    debugPrint('PETUGAS DASHBOARD STATUS: ${response.statusCode}');
+    debugPrint('PETUGAS DASHBOARD RESPONSE: ${response.body}');
 
     if (response.statusCode == 200) {
       return Map<String, dynamic>.from(data['data'] ?? {});
@@ -606,7 +686,13 @@ class ApiService {
       },
     );
 
+    print('TOKEN TERSEDIA: ${_authToken != null && _authToken!.isNotEmpty}');
+    print('PANJANG TOKEN: ${_authToken?.length ?? 0}');
+
     final response = await http.get(uri, headers: _headers());
+
+    print('LAPORAN STATUS: ${response.statusCode}');
+    print('LAPORAN RESPONSE: ${response.body}');
 
     final decoded = jsonDecode(response.body);
 
@@ -629,7 +715,12 @@ class ApiService {
     }
 
     return items
-        .map((item) => SetoranModel.fromJson(Map<String, dynamic>.from(item)))
+        .map(
+          (item) => SetoranModel.fromJson(
+            Map<String, dynamic>.from(item),
+            beratDalamKg: true,
+          ),
+        )
         .toList();
   }
 
@@ -666,11 +757,10 @@ class ApiService {
   }) async {
     final body = {
       'id_pengguna_nasabah': idNasabah,
-      'id_pengguna_petugas': idPetugas,
       'items': items.map((item) {
         return {
           'id_jenis_sampah': item['id_jenis_sampah'],
-          'total_berat': item['total_berat'],
+          'berat_gram': item['berat_gram'],
         };
       }).toList(),
     };
@@ -692,6 +782,189 @@ class ApiService {
     }
 
     throw Exception(_errorMessage(data, 'Gagal menyimpan setoran'));
+  }
+
+  // ==========================================================
+  // LAPORAN PENYERAHAN KE BANK SAMPAH INDUK
+  // ==========================================================
+
+  static String _laporanIndukUrl([int? idLaporan]) {
+    final path = '$baseUrl/laporan-penyerahan-induk';
+
+    if (idLaporan == null) return path;
+
+    return '$path/$idLaporan';
+  }
+
+  // AMBIL DAFTAR LAPORAN PENYERAHAN
+  static Future<List<LaporanPenyerahanIndukModel>>
+  getLaporanPenyerahanInduk() async {
+    final response = await http.get(
+      Uri.parse(_laporanIndukUrl()),
+      headers: _headers(),
+    );
+
+    final data = _decodeMap(response.body);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        _errorMessage(data, 'Gagal mengambil daftar laporan penyerahan'),
+      );
+    }
+
+    final dynamic items = data['data'];
+
+    if (items is! List) {
+      throw Exception('Format daftar laporan penyerahan tidak sesuai.');
+    }
+
+    return items
+        .whereType<Map>()
+        .map(
+          (item) => LaporanPenyerahanIndukModel.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
+        .toList();
+  }
+
+  // AMBIL DATA UNTUK FORM BUAT LAPORAN
+  static Future<List<Map<String, dynamic>>>
+  getDataBuatLaporanPenyerahan() async {
+    final response = await http.get(
+      Uri.parse('${_laporanIndukUrl()}/data-buat'),
+      headers: _headers(),
+    );
+
+    final data = _decodeMap(response.body);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        _errorMessage(data, 'Gagal mengambil data untuk laporan penyerahan'),
+      );
+    }
+
+    final dynamic items = data['data'];
+
+    if (items is! List) {
+      throw Exception('Format data pembuatan laporan tidak sesuai.');
+    }
+
+    return items
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  // SIMPAN DRAFT LAPORAN PENYERAHAN
+  static Future<Map<String, dynamic>> simpanDraftLaporanPenyerahan({
+    required String tanggalLaporan,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    final response = await http.post(
+      Uri.parse(_laporanIndukUrl()),
+      headers: _headers(json: true),
+      body: jsonEncode({'tanggal_laporan': tanggalLaporan, 'items': items}),
+    );
+
+    final data = _decodeMap(response.body);
+
+    if (response.statusCode == 201) {
+      return data;
+    }
+
+    throw Exception(
+      _errorMessage(data, 'Gagal menyimpan draft laporan penyerahan'),
+    );
+  }
+
+  // AMBIL DETAIL LAPORAN PENYERAHAN
+  static Future<LaporanPenyerahanIndukModel> getDetailLaporanPenyerahan(
+    int idLaporan,
+  ) async {
+    final response = await http.get(
+      Uri.parse(_laporanIndukUrl(idLaporan)),
+      headers: _headers(),
+    );
+
+    final data = _decodeMap(response.body);
+
+    if (response.statusCode != 200) {
+      throw Exception(_errorMessage(data, 'Gagal mengambil detail laporan'));
+    }
+
+    final dynamic item = data['data'];
+
+    if (item is! Map) {
+      throw Exception('Format detail laporan tidak sesuai.');
+    }
+
+    return LaporanPenyerahanIndukModel.fromJson(
+      Map<String, dynamic>.from(item),
+    );
+  }
+
+  // PERBARUI DRAFT LAPORAN PENYERAHAN
+  static Future<Map<String, dynamic>> updateDraftLaporanPenyerahan({
+    required int idLaporan,
+    required String tanggalLaporan,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    final response = await http.put(
+      Uri.parse(_laporanIndukUrl(idLaporan)),
+      headers: _headers(json: true),
+      body: jsonEncode({'tanggal_laporan': tanggalLaporan, 'items': items}),
+    );
+
+    final data = _decodeMap(response.body);
+
+    if (response.statusCode == 200) {
+      return data;
+    }
+
+    throw Exception(
+      _errorMessage(data, 'Gagal memperbarui draft laporan penyerahan'),
+    );
+  }
+
+  // HAPUS DRAFT LAPORAN PENYERAHAN
+  static Future<bool> hapusDraftLaporanPenyerahan(int idLaporan) async {
+    final response = await http.delete(
+      Uri.parse(_laporanIndukUrl(idLaporan)),
+      headers: _headers(),
+    );
+
+    final data = _decodeMap(response.body);
+
+    if (response.statusCode == 200) {
+      return true;
+    }
+
+    throw Exception(
+      _errorMessage(data, 'Gagal menghapus draft laporan penyerahan'),
+    );
+  }
+
+  // UBAH STATUS LAPORAN PENYERAHAN
+  static Future<Map<String, dynamic>> ubahStatusLaporanPenyerahan({
+    required int id,
+    required String status,
+  }) async {
+    final response = await http.patch(
+      Uri.parse('${_laporanIndukUrl(id)}/status'),
+      headers: _headers(json: true),
+      body: jsonEncode({'status': status}),
+    );
+
+    final data = _decodeMap(response.body);
+
+    if (response.statusCode == 200) {
+      return data;
+    }
+
+    throw Exception(
+      _errorMessage(data, 'Gagal mengubah status laporan penyerahan'),
+    );
   }
 
   // ==========================================================
@@ -875,6 +1148,42 @@ class ApiService {
     throw Exception(_errorMessage(data, 'Gagal membatalkan penarikan'));
   }
 
+  // EDIT PENARIKAN NASABAH
+  static Future<Map<String, dynamic>> updatePenarikanNasabah({
+    required int idNasabah,
+    required int idPenarikan,
+    required double nominal,
+  }) async {
+    if (_authToken == null || _authToken!.isEmpty) {
+      throw Exception('Sesi login berakhir. Silahkan login kembali');
+    }
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/nasabah/$idNasabah/penarikan/$idPenarikan'),
+      headers: _headers(json: true),
+      body: jsonEncode({'nominal': nominal}),
+    );
+
+    print('EDIT PENARIKAN STATUS: ${response.statusCode}');
+    print('EDIT PENARIKAN RESPONSE: ${response.body}');
+
+    final data = _decodeMap(response.body);
+
+    if (response.statusCode == 200) {
+      return {
+        'success': true,
+        'message':
+            data['message'] ?? 'Pengajuan penarikan berhasil diperbarui.',
+        'data': data['data'],
+      };
+    }
+
+    return {
+      'success': false,
+      'message': _errorMessage(data, 'Gagal mengubah nominal penarikan'),
+    };
+  }
+
   // ==========================================================
   // RIWAYAT SETORAN NASABAH
   // ==========================================================
@@ -962,6 +1271,8 @@ class ApiService {
     int? bulan,
     int? tahun,
     String? status,
+    String? dariTanggal,
+    String? sampaiTanggal,
     int page = 1,
     int perPage = 20,
   }) async {
@@ -970,12 +1281,16 @@ class ApiService {
         if (bulan != null) 'bulan': '$bulan',
         if (tahun != null) 'tahun': '$tahun',
         if (status != null && status != 'Semua') 'status': status,
+        if (dariTanggal != null) 'tanggal_mulai': dariTanggal,
+        if (sampaiTanggal != null) 'tanggal_akhir': sampaiTanggal,
         'page': '$page',
         'per_page': '$perPage',
       },
     );
 
     final response = await http.get(uri, headers: _headers());
+
+    print('URL FILTER PENARIKAN: $uri');
 
     return _parsePetugasPage<Map<String, dynamic>>(
       response,
@@ -1017,15 +1332,21 @@ class ApiService {
     required int idPenarikan,
     required int idPetugas,
     required String status,
+    required String kodeVerifikasi,
   }) async {
     if (status != 'Disetujui' && status != 'Ditolak') {
       throw ArgumentError('Status penarikan tidak valid.');
     }
 
+    final body = <String, dynamic>{
+      'status': status,
+      if (status == 'Disetujui') 'kode_verifikasi': kodeVerifikasi.trim(),
+    };
+
     final response = await http.put(
       Uri.parse('$baseUrl/petugas/penarikan/$idPenarikan/proses'),
       headers: _headers(json: true),
-      body: jsonEncode({'status': status}),
+      body: jsonEncode(body),
     );
 
     print('PROSES PENARIKAN STATUS: ${response.statusCode}');
@@ -1043,7 +1364,6 @@ class ApiService {
 
     throw Exception(_errorMessage(data, 'Gagal memproses penarikan.'));
   }
-
   // ==========================================================
   // HELPER PAGINATION PETUGAS
   // ==========================================================
@@ -1096,6 +1416,13 @@ class ApiService {
       Uri.parse('$baseUrl/nasabah/$idNasabah/profil'),
       headers: {..._headers(), 'Cache-Control': 'no-cache'},
     );
+
+    print('========== PROFIL NASABAH ==========');
+    print('ID NASABAH: $idNasabah');
+    print('TOKEN TERSEDIA: ${_authToken != null && _authToken!.isNotEmpty}');
+    print('PROFIL STATUS: ${response.statusCode}');
+    print('PROFIL RESPONSE: ${response.body}');
+    print('====================================');
 
     final decoded = _decodeMap(response.body);
 

@@ -21,6 +21,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
   bool sedangMemuat = true;
   bool sedangMengirim = false;
   bool sedangMembatalkan = false;
+  bool sedangMengedit = false;
 
   List<Map<String, dynamic>> pengajuan = [];
 
@@ -430,6 +431,134 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
     }
   }
 
+  Future<void> editPengajuan(Map<String, dynamic> item) async {
+    final idPenarikan = int.tryParse(item['id_penarikan']?.toString() ?? '');
+
+    if (idPenarikan == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID pengajuan penarikan tidak valid.')),
+      );
+      return;
+    }
+
+    final nominalLama = double.tryParse((item['nominal'] ?? 0).toString()) ?? 0;
+
+    final controller = TextEditingController(
+      text: nominalLama.toStringAsFixed(0),
+    );
+
+    final hasilEdit = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Edit Nominal Penarikan'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Masukkan nominal penarikan baru.'),
+              const SizedBox(height: 14),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  prefixText: 'Rp ',
+                  hintText: 'Masukkan nominal',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Minimal penarikan Rp1.000.',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                final teks = controller.text
+                    .replaceAll('.', '')
+                    .replaceAll(',', '')
+                    .replaceAll(RegExp(r'\s+'), '');
+
+                final nominal = int.tryParse(teks);
+
+                if (nominal == null || nominal < 1000) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(
+                      content: Text('Minimal penarikan adalah Rp1.000.'),
+                    ),
+                  );
+                  return;
+                }
+
+                Navigator.pop(dialogContext, nominal);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Simpan Perubahan'),
+            ),
+          ],
+        );
+      },
+    );
+
+    controller.dispose();
+
+    if (hasilEdit == null || !mounted) return;
+
+    setState(() => sedangMengedit = true);
+
+    try {
+      final hasil = await ApiService.updatePenarikanNasabah(
+        idNasabah: widget.idNasabah,
+        idPenarikan: idPenarikan,
+        nominal: hasilEdit.toDouble(),
+      );
+
+      if (!mounted) return;
+
+      if (hasil['success'] != true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              hasil['message'] ?? 'Gagal mengubah nominal penarikan.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      await muatData();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            hasil['message'] ?? 'Nominal penarikan berhasil diubah.',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengubah nominal penarikan: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => sedangMengedit = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final saldoTersedia = (saldo - saldoTertahan).clamp(0, double.infinity);
@@ -444,13 +573,6 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: sedangMemuat ? null : muatData,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Muat ulang',
-          ),
-        ],
       ),
       body: sedangMemuat
           ? const Center(child: CircularProgressIndicator())
@@ -736,25 +858,44 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                               ),
                             ),
                             if (bisaDibatalkan) ...[
-                              const SizedBox(height: 10),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: OutlinedButton.icon(
-                                  onPressed: sedangMembatalkan
-                                      ? null
-                                      : () => batalkanPengajuan(item),
-                                  icon: const Icon(
-                                    Icons.cancel_outlined,
-                                    size: 18,
-                                  ),
-                                  label: const Text('Batalkan Pengajuan'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Color(0xFFB42318),
-                                    side: const BorderSide(
-                                      color: Color(0xFFB42318),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed:
+                                        sedangMengedit || sedangMembatalkan
+                                        ? null
+                                        : () => editPengajuan(item),
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Edit'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.primary,
+                                      side: const BorderSide(
+                                        color: AppColors.primary,
+                                      ),
                                     ),
                                   ),
-                                ),
+                                  const SizedBox(width: 8),
+                                  OutlinedButton.icon(
+                                    onPressed:
+                                        sedangMembatalkan || sedangMengedit
+                                        ? null
+                                        : () => batalkanPengajuan(item),
+                                    icon: const Icon(
+                                      Icons.cancel_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Batalkan'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                      side: const BorderSide(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ],

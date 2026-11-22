@@ -23,11 +23,6 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   int _currentPage = 1;
   DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
 
-  List<DateTime> get _monthOptions {
-    final now = DateTime(DateTime.now().year, DateTime.now().month);
-    return List.generate(12, (index) => DateTime(now.year, now.month - index));
-  }
-
   List<SetoranModel> _setoran = [];
   List<Map<String, dynamic>> _penarikan = [];
 
@@ -50,14 +45,33 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _currentPage = 1;
     });
 
     try {
+      Future<List<SetoranModel>> ambilSemuaSetoran() async {
+        final List<SetoranModel> semuaSetoran = [];
+        int halaman = 1;
+        bool masihAda = true;
+
+        while (masihAda) {
+          final hasil = await ApiService.getPetugasSetoranPage(
+            bulan: _selectedMonth.month,
+            tahun: _selectedMonth.year,
+            page: halaman,
+            perPage: 20,
+          );
+
+          semuaSetoran.addAll(hasil.items);
+          masihAda = hasil.hasMore;
+          halaman++;
+        }
+
+        return semuaSetoran;
+      }
+
       final hasil = await Future.wait([
-        ApiService.getSetoran(
-          bulan: _selectedMonth.month,
-          tahun: _selectedMonth.year,
-        ),
+        ambilSemuaSetoran(),
         ApiService.getPenarikanPetugas(
           bulan: _selectedMonth.month,
           tahun: _selectedMonth.year,
@@ -70,14 +84,17 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
         _setoran = (hasil[0] as List<SetoranModel>)
             .where(_isSelectedMonth)
             .toList();
+
         _penarikan = (hasil[1] as List<Map<String, dynamic>>).where((item) {
           final tanggal = DateTime.tryParse(
             item['tgl_pengajuan']?.toString() ?? '',
           );
+
           return tanggal == null ||
               (tanggal.year == _selectedMonth.year &&
                   tanggal.month == _selectedMonth.month);
         }).toList();
+
         _isLoading = false;
       });
     } catch (e) {
@@ -230,33 +247,84 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
 
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
             decoration: const BoxDecoration(
               color: darkGreen,
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
               ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Riwayat Transaksi',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 21,
-                    fontWeight: FontWeight.bold,
-                  ),
+                // Judul dan jumlah transaksi
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Riwayat Transaksi',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 19,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Daftar transaksi setoran dan penarikan nasabah',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.receipt_long_rounded,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${semuaRiwayat.length} transaksi',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 5),
-                const Text(
-                  'Lihat seluruh aktivitas transaksi nasabah',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                const SizedBox(height: 18),
+
+                const SizedBox(height: 14),
+
+                // Filter bulan dan tahun
                 _buildMonthSelector(),
-                const SizedBox(height: 12),
+
+                const SizedBox(height: 10),
+
+                // Filter jenis transaksi
                 Row(
                   children: [
                     _filterButton('Semua'),
@@ -287,33 +355,155 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   }
 
   Widget _buildMonthSelector() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<DateTime>(
-          isExpanded: true,
-          value: _selectedMonth,
-          dropdownColor: darkGreen,
-          icon: const Icon(Icons.calendar_month, color: Colors.white),
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-          items: _monthOptions.map((month) {
-            return DropdownMenuItem(
-              value: month,
-              child: Text('${_namaBulan(month.month)} ${month.year}'),
-            );
-          }).toList(),
-          onChanged: (month) {
-            if (month == null) return;
-            setState(() => _selectedMonth = month);
-            _loadData();
-          },
+    return InkWell(
+      onTap: _pilihBulan,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${_namaBulan(_selectedMonth.month)} ${_selectedMonth.year}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.calendar_month_outlined,
+              color: Colors.white,
+              size: 19,
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Future<void> _pilihBulan() async {
+    int bulanDipilih = _selectedMonth.month;
+    int tahunDipilih = _selectedMonth.year;
+
+    final sekarang = DateTime.now();
+
+    final hasil = await showDialog<DateTime>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              title: const Text(
+                'Pilih Bulan dan Tahun',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: darkGreen,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<int>(
+                    value: bulanDipilih,
+                    decoration: const InputDecoration(
+                      labelText: 'Bulan',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: List.generate(12, (index) {
+                      return DropdownMenuItem(
+                        value: index + 1,
+                        child: Text(_namaBulan(index + 1)),
+                      );
+                    }),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          bulanDipilih = value;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 15),
+                  DropdownButtonFormField<int>(
+                    value: tahunDipilih,
+                    decoration: const InputDecoration(
+                      labelText: 'Tahun',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: List.generate(sekarang.year - 2020 + 1, (index) {
+                      final tahun = sekarang.year - index;
+
+                      return DropdownMenuItem(
+                        value: tahun,
+                        child: Text('$tahun'),
+                      );
+                    }),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          tahunDipilih = value;
+
+                          if (tahunDipilih == sekarang.year &&
+                              bulanDipilih > sekarang.month) {
+                            bulanDipilih = sekarang.month;
+                          }
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                  },
+                  child: const Text('Batal', style: TextStyle(color: textGrey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: darkGreen,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(
+                      dialogContext,
+                      DateTime(tahunDipilih, bulanDipilih),
+                    );
+                  },
+                  child: const Text('Pilih'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (hasil == null || !mounted) return;
+
+    if (hasil.year == _selectedMonth.year &&
+        hasil.month == _selectedMonth.month) {
+      return;
+    }
+
+    setState(() {
+      _selectedMonth = hasil;
+      _currentPage = 1;
+    });
+
+    await _loadData();
   }
 
   String _namaBulan(int bulan) {
@@ -429,7 +619,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       onRefresh: _loadData,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         itemCount: riwayat.length + (_totalPages(semuaRiwayat) > 1 ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == riwayat.length) {
@@ -513,7 +703,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -522,8 +712,8 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               color: item.warna.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(14),

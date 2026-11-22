@@ -45,8 +45,9 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
                   ? (jenis['nama_sampah'] ?? 'Jenis sampah').toString()
                   : (harga['nama_sampah'] ?? 'Jenis sampah').toString(),
               'harga':
-                  double.tryParse((harga['harga_per_kg'] ?? 0).toString()) ??
-                  0.0,
+                  (double.tryParse((harga['harga_per_kg'] ?? 0).toString()) ??
+                      0.0) /
+                  1000,
               'status': harga['status'],
             };
           })
@@ -85,13 +86,17 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
   }
 
   String formatRupiah(num value) {
-    final angka = value.round().toString();
-    final formatted = angka.replaceAllMapped(
+    final angka = value.toStringAsFixed(2);
+    final bagian = angka.split('.');
+
+    final bilanganBulat = bagian.first.replaceAllMapped(
       RegExp(r'\B(?=(\d{3})+(?!\d))'),
       (_) => '.',
     );
 
-    return 'Rp $formatted';
+    final desimal = bagian.length > 1 ? bagian[1] : '00';
+
+    return 'Rp $bilanganBulat,$desimal';
   }
 
   @override
@@ -300,7 +305,7 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
                       ),
                       const SizedBox(height: 5),
                       const Text(
-                        'Harga per kilogram',
+                        'Harga per gram',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFF7C8D89),
@@ -325,7 +330,7 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      '/ kg',
+                      '/ gram',
                       style: TextStyle(
                         fontSize: 11,
                         color: Color(0xFF7C8D89),

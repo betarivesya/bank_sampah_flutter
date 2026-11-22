@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -73,6 +74,12 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
 
   // Menghitung jumlah transaksi setoran.
   int get totalSetoran => _setoranSaya.length;
+
+  // Statistik Setoran tahun
+  int get tahunAktif => DateTime.now().year;
+
+  // Target berat setiap jenis sampah
+  static const double targetSetoranPerJenis = 500000;
 
   // Menjumlahkan seluruh berat sampah yang pernah disetorkan.
   double get totalSampah =>
@@ -439,6 +446,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             onNotifikasiTap: _showNotifications,
             onLogoutTap: _logout,
           ),
+          const SizedBox(height: 15),
           Expanded(
             child: RefreshIndicator(
               // Tarik layar ke bawah untuk memuat ulang data.
@@ -450,11 +458,13 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildProfileCard(),
-                    const SizedBox(height: 16),
+                    _buildProfileGreeting(),
+                    const SizedBox(height: 25),
                     _buildBalanceCard(),
                     const SizedBox(height: 16),
                     _buildStatistics(),
+                    const SizedBox(height: 18),
+                    _buildStatistikSetoranTahunan(),
                     const SizedBox(height: 18),
                     _buildHargaSampahShortcut(),
                     const SizedBox(height: 24),
@@ -484,63 +494,37 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
   }
 
   // =========================================================
-  // KARTU PROFIL NASABAH
+  // SELAMAT DATANG NASABAH
   // =========================================================
 
-  Widget _buildProfileCard() {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: () async {
-        // Membuka halaman profil untuk melihat atau mengubah data nasabah.
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ProfilScreen(idNasabah: widget.idNasabah),
-          ),
-        );
-
-        // Setelah kembali dari halaman profil, ambil data terbaru.
-        // Ini membuat foto yang baru diganti dapat muncul di dashboard.
-        if (mounted) {
-          await _muatDashboard();
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFEDF1EF)),
-        ),
-        child: Row(
-          children: [
-            // Foto profil dari server atau inisial jika belum ada foto.
-            _buildFotoNasabah(ukuran: 48),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    namaNasabah,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF17332E),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    nomorAnggota,
-                    style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-                  ),
-                ],
+  Widget _buildProfileGreeting() {
+    return Row(
+      children: [
+        _buildFotoNasabah(ukuran: 48),
+        const SizedBox(width: 18),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Selamat Datang,',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFF71847F)),
-          ],
+              const SizedBox(height: 3),
+              Text(
+                namaNasabah,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF172033),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -551,7 +535,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
   Widget _buildBalanceCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -573,8 +557,8 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
           Row(
             children: [
               Container(
-                width: 34,
-                height: 34,
+                width: 30,
+                height: 30,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
@@ -582,7 +566,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                 child: const Icon(
                   Icons.account_balance_wallet_outlined,
                   color: Colors.white,
-                  size: 18,
+                  size: 16,
                 ),
               ),
               const SizedBox(width: 10),
@@ -596,12 +580,12 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           Text(
             _formatRupiah(saldo),
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -610,7 +594,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             'Saldo yang tersedia',
             style: TextStyle(color: Colors.white70, fontSize: 12),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
@@ -644,45 +628,40 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
   // =========================================================
 
   Widget _buildStatistics() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.45,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildStatisticCard(
-          title: 'Total Setoran',
-          value: '$totalSetoran',
-          subtitle: 'Seluruh transaksi setoran',
-          icon: Icons.recycling_rounded,
-          iconColor: const Color(0xFF23619A),
-          backgroundColor: const Color(0xFFE2F0FF),
+        Expanded(
+          child: _buildStatisticCard(
+            title: 'Total Setoran',
+            value: '$totalSetoran',
+            subtitle: 'Transaksi',
+            icon: Icons.recycling_rounded,
+            iconColor: const Color(0xFF3B82F6),
+            backgroundColor: const Color(0xFFEFF5FF),
+          ),
         ),
-        _buildStatisticCard(
-          title: 'Total Sampah',
-          value: '${totalSampah.toStringAsFixed(2)} kg',
-          subtitle: 'Total berat sampah',
-          icon: Icons.delete_outline_rounded,
-          iconColor: const Color(0xFFD88916),
-          backgroundColor: const Color(0xFFFFF2DC),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildStatisticCard(
+            title: 'Total Sampah',
+            value: '$totalSampah',
+            subtitle: 'Berat Sampah',
+            icon: Icons.delete_outline_rounded,
+            iconColor: const Color(0xFFF28C28),
+            backgroundColor: const Color(0xFFFFF4E7),
+          ),
         ),
-        _buildStatisticCard(
-          title: 'Total Pendapatan',
-          value: _formatRupiah(totalPendapatan),
-          subtitle: 'Hasil seluruh setoran',
-          icon: Icons.payments_outlined,
-          iconColor: const Color(0xFF2D765D),
-          backgroundColor: const Color(0xFFF0F8F5),
-        ),
-        _buildStatisticCard(
-          title: 'Tahun Aktif',
-          value: '2026',
-          subtitle: 'Statistik tahun ini',
-          icon: Icons.calendar_month_outlined,
-          iconColor: const Color(0xFFD88916),
-          backgroundColor: const Color(0xFFFFF2DC),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildStatisticCard(
+            title: 'Total Pendapatan',
+            value: _formatRupiah(totalPendapatan),
+            subtitle: 'Hasil Setoran',
+            icon: Icons.payment_outlined,
+            iconColor: const Color(0xFF16805F),
+            backgroundColor: const Color(0xFFEAF7F1),
+          ),
         ),
       ],
     );
@@ -698,11 +677,12 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
     required Color backgroundColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(15),
+      height: 125,
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFDFE6E3)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE8ECEA)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -712,33 +692,42 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
               Expanded(
                 child: Text(
                   title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF6B7280),
+                    fontSize: 10,
+                    color: Colors.grey.shade600,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
+              const SizedBox(width: 3),
               Container(
-                width: 32,
-                height: 32,
+                width: 25,
+                height: 25,
                 decoration: BoxDecoration(
                   color: backgroundColor,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, size: 17, color: iconColor),
+                child: Icon(icon, size: 14, color: iconColor),
               ),
             ],
           ),
           const Spacer(),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF17332E),
+          SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF172033),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 3),
@@ -751,6 +740,150 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
         ],
       ),
     );
+  }
+
+  // =========================================================
+  // STATISTIK SETORAN TAHUNAN
+  // =========================================================
+
+  Widget _buildStatistikSetoranTahunan() {
+    final Map<String, double> statistikJenisSampah = {};
+
+    // Ambil data setoran pada tahun berjalan.
+    for (final setoran in _setoranSaya) {
+      final tanggal = DateTime.tryParse(setoran.tanggal);
+
+      if (tanggal == null || tanggal.year != tahunAktif) {
+        continue;
+      }
+
+      // Hitung berat berdasarkan rincian setiap jenis sampah.
+      for (final detail in setoran.rincian) {
+        final namaJenis = detail.namaSampah.trim();
+
+        if (namaJenis.isEmpty || namaJenis == '-') {
+          continue;
+        }
+
+        statistikJenisSampah[namaJenis] =
+            (statistikJenisSampah[namaJenis] ?? 0) + detail.totalBerat;
+      }
+    }
+
+    // Urutkan dari berat setoran terbesar.
+    final daftarStatistik = statistikJenisSampah.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Judul statistik.
+          Text(
+            'Statistik Setoran $tahunAktif',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 14),
+
+          // Jika belum ada data setoran.
+          if (daftarStatistik.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Text(
+                  'Belum ada data setoran tahun ini.',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+              ),
+            )
+          else
+            // Daftar jenis sampah yang bisa di-scroll.
+            SizedBox(
+              height: 220,
+              child: Scrollbar(
+                child: ListView.separated(
+                  itemCount: daftarStatistik.length,
+                  padding: const EdgeInsets.only(right: 8),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 14),
+                  itemBuilder: (context, index) {
+                    final item = daftarStatistik[index];
+
+                    final progress = (item.value / targetSetoranPerJenis).clamp(
+                      0.0,
+                      1.0,
+                    );
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.key,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${_formatAngka(item.value)} / '
+                              '${_formatAngka(targetSetoranPerJenis)} gram',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 7),
+
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 8,
+                            backgroundColor: Colors.grey.shade200,
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Colors.green,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // Format angka dengan titik sebagai pemisah ribuan.
+  String _formatAngka(double value) {
+    return value
+        .toStringAsFixed(0)
+        .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.');
   }
 
   // =========================================================
@@ -877,7 +1010,8 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                   _buildTransactionItem(
                     code: transaksi[i].namaSampah,
                     date: _formatTanggalDashboard(transaksi[i].tanggal),
-                    weight: '${transaksi[i].totalBerat.toStringAsFixed(2)} kg',
+                    weight:
+                        '${transaksi[i].totalBerat.toStringAsFixed(2)} gram',
                     amount: transaksi[i].totalNilai,
                     status: transaksi[i].status,
                   ),

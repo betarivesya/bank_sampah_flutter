@@ -79,13 +79,21 @@ class AppDecorations {
   );
 }
 
-String rupiah(num value) {
+String rupiah(num value, {bool desimal = false}) {
   final tanda = value < 0 ? '-' : '';
-  final angka = value.abs().toStringAsFixed(0);
-  final hasil = angka.replaceAllMapped(
+  final angka = desimal
+      ? value.abs().toStringAsFixed(2)
+      : value.abs().toStringAsFixed(0);
+
+  final bagian = angka.split('.');
+  final hasil = bagian[0].replaceAllMapped(
     RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
     (Match match) => '${match[1]}.',
   );
+
+  if (desimal) {
+    return '${tanda}Rp$hasil,${bagian[1]}';
+  }
 
   return '${tanda}Rp$hasil';
 }

@@ -7,44 +7,68 @@ class PetugasDashboard extends StatefulWidget {
 
   const PetugasDashboard({super.key, required this.onMenuSelected});
 
+  // ============================================================
+  // WARNA DASHBOARD
+  // ============================================================
+
+  static const Color darkGreen = Color(0xFF075B4F);
+  static const Color primaryGreen = Color(0xFF2E8B72);
+  static const Color background = Color(0xFFF5F7F8);
+  static const Color textDark = Color(0xFF24413D);
+  static const Color textGrey = Color(0xFF7B8A89);
+
   @override
   State<PetugasDashboard> createState() => _PetugasDashboardState();
 }
 
 class _PetugasDashboardState extends State<PetugasDashboard> {
   // ============================================================
-  // WARNA APLIKASI
-  // ============================================================
-
-  static const Color darkGreen = Color(0xFF0D463F);
-  static const Color primaryGreen = Color(0xFF2C8069);
-  static const Color lightGreen = Color(0xFFE8F7F1);
-
-  static const Color textDark = Color(0xFF253735);
-  static const Color textGrey = Color(0xFF71847F);
-
-  // ============================================================
   // DATA DASHBOARD
   // ============================================================
 
   bool isLoading = true;
+  bool isLoadingAktivitas = true;
 
   int totalNasabah = 0;
-  int totalSetoran = 0;
-  int totalPenarikan = 0;
   int setoranHariIni = 0;
-  int penarikanHariIni = 0;
-
-  double totalSaldo = 0;
-  double totalSampah = 0;
-
   int totalPending = 0;
 
+  double kasBankSampah = 0;
+  double totalSaldoNasabah = 0;
+  double totalSampah = 0;
+
   List<dynamic> aktivitasTerbaru = [];
-  bool isLoadingAktivitas = true;
-  bool hasPendingFromDashboard = false;
-  final bool _tampilkanHero = false;
-  final bool _tampilkanMenuCepat = false;
+  List<dynamic> dataSetoran7Hari = [];
+  List<dynamic> dataKomposisiSampah = [];
+
+  DateTime _bulanKomposisi = DateTime.now();
+
+  // ============================================================
+  // HELPER FORMAT DATA
+  // ============================================================
+
+  String _formatBulanApi(DateTime tanggal) {
+    return '${tanggal.year}-${tanggal.month.toString().padLeft(2, '0')}';
+  }
+
+  String _namaBulan(int bulan) {
+    const daftarBulan = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+
+    return daftarBulan[bulan - 1];
+  }
 
   int _toInt(dynamic value) {
     if (value is num) return value.toInt();
@@ -57,24 +81,41 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   }
 
   // ============================================================
+  // FORMAT ANGKA
+  // ============================================================
+
+  String _formatAngka(num value) {
+    final angka = value.round().toString();
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < angka.length; i++) {
+      if (i > 0 && (angka.length - i) % 3 == 0) {
+        buffer.write('.');
+      }
+
+      buffer.write(angka[i]);
+    }
+
+    return buffer.toString();
+  }
+
+  // ============================================================
   // FORMAT RUPIAH
   // ============================================================
 
   String formatRupiah(num value) {
-    final number = value.round().toString();
-    final result = StringBuffer();
+    final text = value.round().toString();
+    final buffer = StringBuffer();
 
-    for (int i = 0; i < number.length; i++) {
-      final position = number.length - i;
-
-      result.write(number[i]);
-
-      if (position > 1 && position % 3 == 1) {
-        result.write('.');
+    for (int i = 0; i < text.length; i++) {
+      if (i > 0 && (text.length - i) % 3 == 0) {
+        buffer.write('.');
       }
+
+      buffer.write(text[i]);
     }
 
-    return 'Rp ${result.toString()}';
+    return 'Rp${buffer.toString()}';
   }
 
   // ============================================================
@@ -89,25 +130,29 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
         });
       }
 
-      final data = await ApiService.getPetugasDashboard();
+      final data = await ApiService.getPetugasDashboard(
+        bulan: _formatBulanApi(_bulanKomposisi),
+      );
 
       if (!mounted) return;
 
       setState(() {
         totalNasabah = _toInt(data['total_nasabah']);
-        totalSetoran = _toInt(data['total_setoran']);
-        totalPenarikan = _toInt(data['total_penarikan']);
+
+        kasBankSampah = _toDouble(data['kas_bank_sampah']);
+
+        totalSaldoNasabah = _toDouble(data['total_saldo_nasabah']);
+
         setoranHariIni = _toInt(data['setoran_hari_ini']);
-        penarikanHariIni = _toInt(data['penarikan_hari_ini']);
-        totalSaldo = _toDouble(data['total_saldo'] ?? data['saldo']);
-        totalSampah = _toDouble(
-          data['total_sampah'] ?? data['total_sampah_terkumpul'],
-        );
-        hasPendingFromDashboard =
-            data.containsKey('total_pending') ||
-            data.containsKey('penarikan_pending');
-        totalPending = _toInt(
-          data['total_pending'] ?? data['penarikan_pending'],
+
+        totalSampah = _toDouble(data['berat_sampah_hari_ini']) * 1000;
+
+        totalPending = _toInt(data['total_pending']);
+
+        dataSetoran7Hari = List<dynamic>.from(data['setoran_7_hari'] ?? []);
+
+        dataKomposisiSampah = List<dynamic>.from(
+          data['komposisi_sampah'] ?? [],
         );
 
         isLoading = false;
@@ -127,11 +172,14 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
     }
   }
 
+  // ============================================================
+  // LOAD AKTIVITAS TERBARU
+  // ============================================================
+
   Future<void> _loadAktivitas() async {
     try {
       final sekarang = DateTime.now();
 
-      // Ambil data setoran
       final halamanSetoran = await ApiService.getPetugasSetoranPage(
         bulan: sekarang.month,
         tahun: sekarang.year,
@@ -139,12 +187,10 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
         perPage: 20,
       );
 
-      // Ambil list SetoranModel
       final hasilSetoran = halamanSetoran.items;
 
       final List<Map<String, dynamic>> data = [];
 
-      // Aktivitas Setoran
       for (final item in hasilSetoran) {
         data.add({
           'nama': item.namaNasabah,
@@ -153,11 +199,11 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
           'nominal': item.totalNilai,
           'tanggal': DateTime.tryParse(item.tanggal) ?? DateTime(2000),
           'icon': Icons.recycling_rounded,
-          'warna': primaryGreen,
+          'warna': PetugasDashboard.primaryGreen,
         });
       }
 
-      // Urutkan dari transaksi paling baru
+      // Urutkan dari transaksi terbaru
       data.sort((a, b) {
         return (b['tanggal'] as DateTime).compareTo(a['tanggal'] as DateTime);
       });
@@ -181,210 +227,683 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   }
 
   // ============================================================
-  // NOTIFIKASI
+  // LOAD KOMPOSISI SAMPAH
   // ============================================================
 
-  void tampilkanNotifikasi() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.notifications_none_rounded, color: darkGreen),
-              SizedBox(width: 10),
-              Text('Notifikasi'),
-            ],
-          ),
-          content: Text(
-            totalPending == 0
-                ? 'Tidak ada pengajuan penarikan yang menunggu.'
-                : 'Ada $totalPending pengajuan penarikan '
-                      'yang perlu diverifikasi.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Tutup'),
-            ),
-          ],
+  Future<void> _loadKomposisiSampah() async {
+    try {
+      final data = await ApiService.getPetugasDashboard(
+        bulan: _formatBulanApi(_bulanKomposisi),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        dataKomposisiSampah = List<dynamic>.from(
+          data['komposisi_sampah'] ?? [],
         );
-      },
+      });
+    } catch (e) {
+      debugPrint('KOMPOSISI SAMPAH ERROR: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal memperbarui komposisi jenis sampah.'),
+        ),
+      );
+    }
+  }
+
+  // ============================================================
+  // HEADER DASHBOARD
+  // ============================================================
+
+  Widget _buildDashboardHeader() {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Dashboard Petugas',
+          style: TextStyle(
+            color: Color(0xFF172033),
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          'Ringkasan aktivitas Bank Sampah Griya Ayu',
+          style: TextStyle(color: PetugasDashboard.darkGreen, fontSize: 12),
+        ),
+      ],
     );
   }
 
   // ============================================================
-  // STATISTIK CARD
+  // JUDUL SECTION
   // ============================================================
 
-  Widget statistikCard({
-    required IconData icon,
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        color: PetugasDashboard.textDark,
+        fontSize: 17,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  // ============================================================
+  // STATISTIK DASHBOARD
+  // ============================================================
+
+  Widget _buildStatistics() {
+    return GridView.count(
+      crossAxisCount: 2,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: 1.55,
+      children: [
+        _statisticCard(
+          title: 'Kas Bank Sampah',
+          value: isLoading ? '...' : formatRupiah(kasBankSampah),
+          icon: Icons.account_balance_outlined,
+        ),
+
+        _statisticCard(
+          title: 'Total Saldo Nasabah',
+          value: isLoading ? '...' : formatRupiah(totalSaldoNasabah),
+          icon: Icons.account_balance_wallet_outlined,
+        ),
+
+        _statisticCard(
+          title: 'Total Nasabah',
+          value: isLoading ? '...' : '$totalNasabah',
+          icon: Icons.people_outline_rounded,
+        ),
+
+        _statisticCard(
+          title: 'Setoran Hari Ini',
+          value: isLoading ? '...' : '$setoranHariIni',
+          icon: Icons.inventory_2_outlined,
+        ),
+
+        _statisticCard(
+          title: 'Sampah Terkumpul Hari Ini',
+          value: isLoading ? '...' : '${_formatAngka(totalSampah)} gram',
+          icon: Icons.recycling_rounded,
+        ),
+
+        _statisticCard(
+          title: 'Penarikan Pending',
+          value: isLoading ? '...' : '$totalPending',
+          icon: Icons.pending_actions_outlined,
+        ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // STATISTIC CARD
+  // ============================================================
+
+  Widget _statisticCard({
     required String title,
     required String value,
+    required IconData icon,
   }) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(17),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0D000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: lightGreen,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: darkGreen, size: 22),
+          Row(
+            children: [
+              Container(
+                width: 35,
+                height: 35,
+                decoration: BoxDecoration(
+                  color: PetugasDashboard.primaryGreen.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: PetugasDashboard.primaryGreen,
+                  size: 19,
+                ),
+              ),
+
+              const Spacer(),
+
+              const Icon(
+                Icons.more_horiz_rounded,
+                color: Colors.grey,
+                size: 18,
+              ),
+            ],
           ),
 
-          const SizedBox(height: 10),
-
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: textGrey,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-
-          const SizedBox(height: 5),
+          const Spacer(),
 
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              color: textDark,
+              color: PetugasDashboard.textDark,
               fontSize: 17,
               fontWeight: FontWeight.bold,
             ),
           ),
+
+          const SizedBox(height: 3),
+
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: PetugasDashboard.textGrey,
+              fontSize: 11,
+            ),
+          ),
         ],
       ),
     );
   }
 
   // ============================================================
-  // MENU CEPAT
+  // GRAFIK DASHBOARD
   // ============================================================
 
-  Widget menuCepat({
-    required IconData icon,
+  Widget _buildDashboardCharts() {
+    final valuesSetoran = dataSetoran7Hari.map<double>((item) {
+      return _toDouble(item['total_berat']);
+    }).toList();
+
+    final labelsSetoran = dataSetoran7Hari.map<String>((item) {
+      final tanggal = DateTime.tryParse(item['tanggal']?.toString() ?? '');
+
+      if (tanggal == null) return '-';
+
+      return '${tanggal.day} ${_namaBulan(tanggal.month).substring(0, 3)}';
+    }).toList();
+
+    final valuesKomposisi = dataKomposisiSampah.map<double>((item) {
+      return _toDouble(item['total_berat']);
+    }).toList();
+
+    final labelsKomposisi = dataKomposisiSampah.map<String>((item) {
+      return item['nama_sampah']?.toString() ?? 'Lainnya';
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _lineChartCard(
+          title: 'Setoran Sampah 7 Hari Terakhir',
+          subtitle: 'Total berat sampah (kg)',
+          values: valuesSetoran,
+          labels: labelsSetoran,
+        ),
+
+        const SizedBox(height: 16),
+
+        _horizontalChartCard(
+          title: 'Komposisi Jenis Sampah',
+          subtitle: 'Berat berdasarkan jenis sampah (kg)',
+          values: valuesKomposisi,
+          labels: labelsKomposisi,
+          headerAction: InkWell(
+            onTap: _pilihBulanKomposisi,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFFDCE5E2)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${_namaBulan(_bulanKomposisi.month)} '
+                    '${_bulanKomposisi.year}',
+                    style: const TextStyle(
+                      color: PetugasDashboard.darkGreen,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.calendar_month_outlined,
+                    size: 15,
+                    color: PetugasDashboard.darkGreen,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // CHART CARD
+  // ============================================================
+
+  Widget _lineChartCard({
     required String title,
     required String subtitle,
-    required VoidCallback onTap,
+    required List<double> values,
+    required List<String> labels,
   }) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(17),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(17),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: lightGreen,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: darkGreen, size: 25),
-              ),
-
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: textDark,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: PetugasDashboard.textDark,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: PetugasDashboard.textDark,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 210,
+            width: double.infinity,
+            child: values.isEmpty || !values.any((v) => v > 0)
+                ? const Center(
+                    child: Text(
+                      'Belum ada data pada periode ini.',
+                      style: TextStyle(
+                        color: PetugasDashboard.textGrey,
+                        fontSize: 12,
                       ),
                     ),
+                  )
+                : CustomPaint(
+                    painter: _LineChartPainter(values: values, labels: labels),
+                    child: const SizedBox.expand(),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                    const SizedBox(height: 4),
-
-                    Text(
-                      subtitle,
-                      style: const TextStyle(color: textGrey, fontSize: 11),
+  Widget _horizontalChartCard({
+    required String title,
+    required String subtitle,
+    required List<double> values,
+    required List<String> labels,
+    Widget? headerAction,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: PetugasDashboard.textDark,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (headerAction != null) headerAction,
+            ],
+          ),
+          const SizedBox(height: 5),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: PetugasDashboard.textDark,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 18),
+          if (values.isEmpty || !values.any((v) => v > 0))
+            const SizedBox(
+              height: 130,
+              child: Center(
+                child: Text(
+                  'Belum ada data pada periode ini.',
+                  style: TextStyle(
+                    color: PetugasDashboard.textGrey,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: 250,
+              width: double.infinity,
+              child: Scrollbar(
+                child: SingleChildScrollView(
+                  child: SizedBox(
+                    height: (values.length * 43 + 30).toDouble() < 250
+                        ? 250
+                        : (values.length * 43 + 30).toDouble(),
+                    width: double.infinity,
+                    child: CustomPaint(
+                      painter: _HorizontalChartPainter(
+                        values: values,
+                        labels: labels,
+                      ),
+                      child: const SizedBox.expand(),
                     ),
-                  ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // PILIH BULAN KOMPOSISI SAMPAH
+  // ============================================================
+
+  Future<void> _pilihBulanKomposisi() async {
+    int bulanDipilih = _bulanKomposisi.month;
+    int tahunDipilih = _bulanKomposisi.year;
+
+    final sekarang = DateTime.now();
+
+    final hasil = await showDialog<DateTime>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              title: const Text(
+                'Pilih Bulan dan Tahun',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: PetugasDashboard.darkGreen,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<int>(
+                    value: bulanDipilih,
+                    decoration: const InputDecoration(
+                      labelText: 'Bulan',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: List.generate(12, (index) {
+                      return DropdownMenuItem(
+                        value: index + 1,
+                        child: Text(_namaBulan(index + 1)),
+                      );
+                    }),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          bulanDipilih = value;
+                        });
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  DropdownButtonFormField<int>(
+                    value: tahunDipilih,
+                    decoration: const InputDecoration(
+                      labelText: 'Tahun',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: List.generate(sekarang.year - 2020 + 1, (index) {
+                      final tahun = sekarang.year - index;
+
+                      return DropdownMenuItem(
+                        value: tahun,
+                        child: Text('$tahun'),
+                      );
+                    }),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          tahunDipilih = value;
+
+                          if (tahunDipilih == sekarang.year &&
+                              bulanDipilih > sekarang.month) {
+                            bulanDipilih = sekarang.month;
+                          }
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                  },
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(color: PetugasDashboard.textGrey),
+                  ),
+                ),
+
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PetugasDashboard.darkGreen,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(
+                      dialogContext,
+                      DateTime(tahunDipilih, bulanDipilih),
+                    );
+                  },
+                  child: const Text('Pilih'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (hasil == null || !mounted) return;
+
+    if (hasil.year == _bulanKomposisi.year &&
+        hasil.month == _bulanKomposisi.month) {
+      return;
+    }
+
+    setState(() {
+      _bulanKomposisi = hasil;
+    });
+
+    await _loadKomposisiSampah();
+  }
+
+  // ============================================================
+  // TRANSAKSI TERBARU
+  // ============================================================
+
+  Widget _buildLatestTransactions() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Transaksi Setoran Terbaru',
+                  style: TextStyle(
+                    color: PetugasDashboard.textDark,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
 
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: textGrey,
-                size: 24,
+              GestureDetector(
+                onTap: () {
+                  widget.onMenuSelected('riwayat');
+                },
+                child: const Text(
+                  'Lihat Semua',
+                  style: TextStyle(
+                    color: PetugasDashboard.darkGreen,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
-        ),
+
+          const SizedBox(height: 14),
+
+          if (isLoadingAktivitas)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(15),
+                child: CircularProgressIndicator(
+                  color: PetugasDashboard.darkGreen,
+                ),
+              ),
+            )
+          else if (aktivitasTerbaru.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(15),
+              child: Center(
+                child: Text(
+                  'Belum ada transaksi.',
+                  style: TextStyle(
+                    color: PetugasDashboard.textGrey,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            )
+          else
+            ...aktivitasTerbaru.map((item) {
+              return _transactionItem(Map<String, dynamic>.from(item));
+            }),
+        ],
       ),
     );
   }
 
   // ============================================================
-  // AKTIVITAS CARD
+  // TRANSAKSI ITEM
   // ============================================================
 
-  Widget aktivitasCard({
-    required String nama,
-    required String jenis,
-    required String berat,
-    required String nominal,
-  }) {
+  Widget _transactionItem(Map<String, dynamic> item) {
+    final nominal = _toDouble(item['nominal']);
+    final tanggal = item['tanggal'] as DateTime;
+
+    final tanggalFormat =
+        '${tanggal.day.toString().padLeft(2, '0')}/'
+        '${tanggal.month.toString().padLeft(2, '0')}/'
+        '${tanggal.year}';
+
     return Container(
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
+        color: const Color(0xFFF8FAF9),
+        borderRadius: BorderRadius.circular(13),
       ),
       child: Row(
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: lightGreen,
-              borderRadius: BorderRadius.circular(12),
+              color: PetugasDashboard.primaryGreen.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(11),
             ),
             child: const Icon(
-              Icons.recycling_rounded,
-              color: darkGreen,
+              Icons.recycling_outlined,
+              color: PetugasDashboard.primaryGreen,
               size: 21,
             ),
           ),
@@ -396,9 +915,9 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  nama,
+                  item['nama']?.toString() ?? '-',
                   style: const TextStyle(
-                    color: textDark,
+                    color: PetugasDashboard.textDark,
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -407,151 +926,59 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                 const SizedBox(height: 3),
 
                 Text(
-                  '$jenis • $berat',
-                  style: const TextStyle(color: textGrey, fontSize: 10),
+                  item['detail']?.toString() ?? '-',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: PetugasDashboard.textGrey,
+                    fontSize: 10,
+                  ),
+                ),
+
+                const SizedBox(height: 3),
+
+                Text(
+                  tanggalFormat,
+                  style: const TextStyle(
+                    color: PetugasDashboard.textGrey,
+                    fontSize: 10,
+                  ),
                 ),
               ],
             ),
           ),
 
-          Text(
-            nominal,
-            style: const TextStyle(
-              color: darkGreen,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+          const SizedBox(width: 8),
 
-  Widget _buildDashboardCharts() {
-    final values = <double>[0, 0, 0, 0, 0, 0, totalSampah];
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                formatRupiah(nominal),
+                style: const TextStyle(
+                  color: PetugasDashboard.textDark,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 5),
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 700;
-        final cards = [
-          _chartCard(
-            title: 'Setoran Sampah 7 Hari Terakhir',
-            subtitle: 'Total berat sampah',
-            values: values,
-            labels: const [
-              '-6h',
-              '-5h',
-              '-4h',
-              '-3h',
-              '-2h',
-              '-1h',
-              'Hari ini',
-            ],
-          ),
-          _chartCard(
-            title: 'Komposisi Jenis Sampah',
-            subtitle: 'Total berat berdasarkan jenis',
-            values: [
-              setoranHariIni.toDouble(),
-              penarikanHariIni.toDouble(),
-              totalPending.toDouble(),
-            ],
-            labels: const ['Setoran', 'Penarikan', 'Pending'],
-          ),
-        ];
-
-        return Flex(
-          direction: narrow ? Axis.vertical : Axis.horizontal,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(flex: narrow ? 0 : 1, child: cards[0]),
-            SizedBox(width: narrow ? 0 : 14, height: narrow ? 14 : 0),
-            Expanded(flex: narrow ? 0 : 1, child: cards[1]),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _chartCard({
-    required String title,
-    required String subtitle,
-    required List<double> values,
-    required List<String> labels,
-  }) {
-    final maximum = values.fold<double>(
-      0,
-      (max, value) => value > max ? value : max,
-    );
-    final safeMaximum = maximum == 0 ? 1 : maximum;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: textDark,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(subtitle, style: const TextStyle(color: textGrey, fontSize: 11)),
-          const SizedBox(height: 18),
-          SizedBox(
-            height: 145,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(values.length, (index) {
-                final height = (values[index] / safeMaximum).clamp(0.04, 1.0);
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.bottomCenter,
-                            child: FractionallySizedBox(
-                              heightFactor: height,
-                              child: Container(
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: primaryGreen,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 7),
-                        Text(
-                          labels[index],
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: textGrey, fontSize: 9),
-                        ),
-                      ],
-                    ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Setoran',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
                   ),
-                );
-              }),
-            ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -565,6 +992,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   @override
   void initState() {
     super.initState();
+
     _loadDashboard();
     _loadAktivitas();
   }
@@ -575,390 +1003,285 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      color: darkGreen,
-      onRefresh: () async {
-        await Future.wait([_loadDashboard(), _loadAktivitas()]);
-      },
+    return Container(
+      color: PetugasDashboard.background,
+      child: RefreshIndicator(
+        color: PetugasDashboard.darkGreen,
+        onRefresh: () async {
+          await Future.wait([_loadDashboard(), _loadAktivitas()]);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ==================================================
+              // HEADER DASHBOARD
+              // ==================================================
 
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
+              _buildDashboardHeader(),
 
-        padding: const EdgeInsets.fromLTRB(15, 16, 15, 25),
-
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ==================================================
-            // HERO
-            // ==================================================
-
-            if (_tampilkanHero)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [darkGreen, primaryGreen],
-                  ),
-                  borderRadius: BorderRadius.circular(21),
-                ),
-
-                child: Row(
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-
-                      child: const Icon(
-                        Icons.person_outline_rounded,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-
-                    const SizedBox(width: 13),
-
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Halo, Petugas 👋',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 19,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          SizedBox(height: 5),
-
-                          Text(
-                            'Siap melayani aktivitas Bank Sampah hari ini?',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 11,
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            const SizedBox(height: 22),
-
-            // ==================================================
-            // RINGKASAN
-            // ==================================================
-            const Text(
-              'Ringkasan Hari Ini',
-              style: TextStyle(
-                color: textDark,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 11),
-
-            Row(
-              children: [
-                Expanded(
-                  child: statistikCard(
-                    icon: Icons.people_alt_outlined,
-                    title: 'Nasabah Aktif',
-                    value: isLoading ? '...' : '$totalNasabah',
-                  ),
-                ),
-
-                const SizedBox(width: 10),
-
-                Expanded(
-                  child: statistikCard(
-                    icon: Icons.account_balance_wallet_outlined,
-                    title: 'Setoran Hari Ini',
-                    value: isLoading ? '...' : formatRupiah(totalSaldo),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-
-            Row(
-              children: [
-                Expanded(
-                  child: statistikCard(
-                    icon: Icons.scale_outlined,
-                    title: 'Sampah Tekumpul',
-                    value: isLoading
-                        ? '...'
-                        : '${totalSampah.toStringAsFixed(1)} Kg',
-                  ),
-                ),
-
-                const SizedBox(width: 10),
-
-                Expanded(
-                  child: statistikCard(
-                    icon: Icons.pending_actions_outlined,
-                    title: 'Penarikan Pending',
-                    value: isLoading ? '...' : '$totalPending',
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // ==================================================
-            // MENU UTAMA
-            // ==================================================
-            if (_tampilkanMenuCepat) ...[
-              const Text(
-                'Menu Utama',
-                style: TextStyle(
-                  color: textDark,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 11),
+              const SizedBox(height: 18),
 
               // ==================================================
-              // PENARIKAN
+              // STATISTIK
               // ==================================================
-              menuCepat(
-                icon: Icons.account_balance_wallet_outlined,
-                title: 'Penarikan Saldo',
-                subtitle: 'Verifikasi pengajuan penarikan',
-                onTap: () {
-                  widget.onMenuSelected('penarikan');
-                },
-              ),
+              _buildStatistics(),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 22),
 
               // ==================================================
-              // SETOR SAMPAH
+              // GRAFIK
               // ==================================================
-              menuCepat(
-                icon: Icons.recycling_outlined,
-                title: 'Setor Sampah',
-                subtitle: 'Input dan catat setoran sampah',
-                onTap: () {
-                  widget.onMenuSelected('setoran');
-                },
-              ),
+              _buildDashboardCharts(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
+
+              // ==================================================
+              // TRANSAKSI TERBARU
+              // ==================================================
+              _buildLatestTransactions(),
+
+              const SizedBox(height: 20),
             ],
-
-            // ==================================================
-            _buildDashboardCharts(),
-            const SizedBox(height: 24),
-
-            // AKTIVITAS TERBARU
-            // ==================================================
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Transaksi Setoran Terbaru',
-                    style: TextStyle(
-                      color: textDark,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-
-                GestureDetector(
-                  onTap: () {
-                    widget.onMenuSelected('riwayat');
-                  },
-                  child: const Text(
-                    'Lihat Semua',
-                    style: TextStyle(
-                      color: darkGreen,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 9),
-
-            // ==================================================
-            // AKTIVITAS TERBARU
-            // ==================================================
-            if (isLoadingAktivitas)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator(color: darkGreen),
-                ),
-              )
-            else if (aktivitasTerbaru.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(25),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(17),
-                ),
-                child: const Column(
-                  children: [
-                    Icon(Icons.history_rounded, color: textGrey, size: 38),
-                    SizedBox(height: 8),
-                    Text(
-                      'Belum ada aktivitas transaksi,',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: textGrey, fontSize: 12),
-                    ),
-                  ],
-                ),
-              )
-            else
-              Column(
-                children: aktivitasTerbaru.map((item) {
-                  final jenis = item['jenis'] as String;
-                  final nominal = (item['nominal'] as num?)?.toDouble() ?? 0;
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 9),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0A000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: (item['warna'] as Color).withValues(
-                                alpha: 0.12,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              item['icon'] as IconData,
-                              color: item['warna'] as Color,
-                              size: 21,
-                            ),
-                          ),
-                          const SizedBox(width: 11),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item['nama']?.toString() ?? 'Nasabah',
-                                  style: const TextStyle(
-                                    color: textDark,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  '$jenis • ${item['detail']}',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: textGrey,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '${jenis == 'Setoran' ? '+' : '-'}${formatRupiah(nominal)}',
-                            style: TextStyle(
-                              color: jenis == 'Setoran'
-                                  ? darkGreen
-                                  : Color(0xFFD88916),
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-
-            // ==================================================
-            // INFO
-            // ==================================================
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(15),
-
-              decoration: BoxDecoration(
-                color: lightGreen,
-                borderRadius: BorderRadius.circular(17),
-              ),
-
-              child: const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.info_outline_rounded, color: darkGreen, size: 22),
-
-                  SizedBox(width: 10),
-
-                  Expanded(
-                    child: Text(
-                      'Petugas dapat melayani setoran sampah '
-                      'dan memverifikasi pengajuan penarikan '
-                      'saldo nasabah.',
-                      style: TextStyle(
-                        color: textGrey,
-                        fontSize: 11,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
+class _LineChartPainter extends CustomPainter {
+  final List<double> values;
+  final List<String> labels;
+
+  _LineChartPainter({required this.values, required this.labels});
+
+  static const Color green = Color(0xFF2E8B72);
+  static const Color grey = Color(0xFF7B8A89);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+
+    const left = 32.0;
+    const right = 8.0;
+    const top = 12.0;
+    const bottom = 27.0;
+
+    final chartWidth = size.width - left - right;
+    final chartHeight = size.height - top - bottom;
+
+    final maximum = values.reduce((a, b) => a > b ? a : b);
+    final maxValue = maximum <= 0 ? 1.0 : maximum * 1.2;
+
+    final gridPaint = Paint()
+      ..color = const Color(0xFFE8ECEA)
+      ..strokeWidth = 1;
+
+    final linePaint = Paint()
+      ..color = green
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final fillPaint = Paint()
+      ..color = green.withValues(alpha: 0.12)
+      ..style = PaintingStyle.fill;
+
+    final points = <Offset>[];
+
+    for (int i = 0; i < values.length; i++) {
+      final x = values.length == 1
+          ? left + chartWidth / 2
+          : left + (chartWidth * i / (values.length - 1));
+
+      final y = top + chartHeight - (values[i] / maxValue * chartHeight);
+
+      points.add(Offset(x, y));
+    }
+
+    // Garis grid dan label sumbu Y
+    for (int i = 0; i <= 4; i++) {
+      final y = top + chartHeight * i / 4;
+
+      canvas.drawLine(
+        Offset(left, y),
+        Offset(size.width - right, y),
+        gridPaint,
+      );
+
+      final angka = (maxValue * (4 - i) / 4).toStringAsFixed(1);
+
+      final text = TextPainter(
+        text: TextSpan(
+          text: angka,
+          style: const TextStyle(color: grey, fontSize: 9),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      text.paint(canvas, Offset(left - text.width - 5, y - text.height / 2));
+    }
+
+    // Area di bawah garis
+    if (points.length >= 2) {
+      final fillPath = Path()..moveTo(points.first.dx, top + chartHeight);
+
+      fillPath.lineTo(points.first.dx, points.first.dy);
+
+      for (int i = 1; i < points.length; i++) {
+        fillPath.lineTo(points[i].dx, points[i].dy);
+      }
+
+      fillPath
+        ..lineTo(points.last.dx, top + chartHeight)
+        ..close();
+
+      canvas.drawPath(fillPath, fillPaint);
+    }
+
+    // Garis grafik
+    if (points.length >= 2) {
+      final linePath = Path()..moveTo(points.first.dx, points.first.dy);
+
+      for (int i = 1; i < points.length; i++) {
+        linePath.lineTo(points[i].dx, points[i].dy);
+      }
+
+      canvas.drawPath(linePath, linePaint);
+    }
+
+    // Titik data dan label tanggal
+    for (int i = 0; i < points.length; i++) {
+      canvas.drawCircle(points[i], 3.5, Paint()..color = green);
+
+      canvas.drawCircle(points[i], 1.7, Paint()..color = Colors.white);
+
+      final label = i < labels.length ? labels[i] : '-';
+
+      final text = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: const TextStyle(color: grey, fontSize: 9),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: chartWidth / values.length + 10);
+
+      text.paint(
+        canvas,
+        Offset(points[i].dx - text.width / 2, top + chartHeight + 8),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LineChartPainter oldDelegate) {
+    return oldDelegate.values != values || oldDelegate.labels != labels;
+  }
+}
+
 // ============================================================
-// ALIAS
+// HORIZONTAL BAR CHART
+// ============================================================
+
+class _HorizontalChartPainter extends CustomPainter {
+  final List<double> values;
+  final List<String> labels;
+
+  _HorizontalChartPainter({required this.values, required this.labels});
+
+  static const Color green = Color(0xFF2E8B72);
+  static const Color grey = Color(0xFF7B8A89);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+
+    const left = 85.0;
+    const right = 8.0;
+    const top = 5.0;
+    const bottom = 22.0;
+
+    final chartWidth = size.width - left - right;
+    final chartHeight = size.height - top - bottom;
+
+    final maximum = values.reduce((a, b) => a > b ? a : b);
+    final maxValue = maximum <= 0 ? 1.0 : maximum * 1.15;
+
+    final gridPaint = Paint()
+      ..color = const Color(0xFFE8ECEA)
+      ..strokeWidth = 1;
+
+    final barPaint = Paint()
+      ..color = green
+      ..style = PaintingStyle.fill;
+
+    // Grid dan label sumbu X
+    const jumlahGrid = 4;
+
+    for (int i = 0; i <= jumlahGrid; i++) {
+      final x = left + chartWidth * i / jumlahGrid;
+
+      canvas.drawLine(Offset(x, top), Offset(x, top + chartHeight), gridPaint);
+
+      final angka = (maxValue * i / jumlahGrid).toStringAsFixed(1);
+
+      final text = TextPainter(
+        text: TextSpan(
+          text: angka,
+          style: const TextStyle(color: grey, fontSize: 9),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      text.paint(canvas, Offset(x - text.width / 2, top + chartHeight + 5));
+    }
+
+    final rowHeight = chartHeight / values.length;
+    final barHeight = rowHeight * 0.48;
+
+    for (int i = 0; i < values.length; i++) {
+      final centerY = top + rowHeight * (i + 0.5);
+
+      final label = i < labels.length ? labels[i] : '-';
+
+      final labelText = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: const TextStyle(color: grey, fontSize: 10),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '...',
+      )..layout(maxWidth: left - 10);
+
+      labelText.paint(
+        canvas,
+        Offset(left - labelText.width - 10, centerY - labelText.height / 2),
+      );
+
+      final barWidth = values[i] / maxValue * chartWidth;
+
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(left, centerY - barHeight / 2, barWidth, barHeight),
+        const Radius.circular(8),
+      );
+
+      canvas.drawRRect(rect, barPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HorizontalChartPainter oldDelegate) {
+    return oldDelegate.values != values || oldDelegate.labels != labels;
+  }
+}
+
+// ============================================================
+// ALIAS PETUGAS DASHBOARD
 // ============================================================
 
 class PetugasDashboardScreen extends StatelessWidget {

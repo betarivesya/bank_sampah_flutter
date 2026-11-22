@@ -116,12 +116,12 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
         0;
   }
 
-  double _hargaPerKg(_ItemSetoran item) {
-    return item.jenisTerpilih?.hargaPerKg.toDouble() ?? 0;
+  double _hargaPerGram(_ItemSetoran item) {
+    return item.jenisTerpilih?.hargaPerGram ?? 0;
   }
 
   double _subtotal(_ItemSetoran item) {
-    return _berat(item) * _hargaPerKg(item);
+    return _berat(item) * _hargaPerGram(item);
   }
 
   double get _totalBerat {
@@ -197,7 +197,7 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
       }
 
       if (_berat(item) <= 0) {
-        _showError('Berat sampah pada baris ${i + 1} harus lebih dari 0 kg.');
+        _showError('Berat sampah pada baris ${i + 1} minimal 1 gram.');
         return;
       }
     }
@@ -208,7 +208,7 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
       final itemsRequest = _items.map((item) {
         return <String, dynamic>{
           'id_jenis_sampah': item.jenisTerpilih!.idJenisSampah,
-          'total_berat': _berat(item),
+          'berat_gram': _berat(item),
         };
       }).toList();
 
@@ -529,18 +529,18 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
             decoration: _inputDecoration(
               'Masukkan berat',
               Icons.scale_outlined,
-            ).copyWith(hintText: 'Contoh: 2.5', suffixText: 'kg'),
+            ).copyWith(hintText: 'Contoh: 1000', suffixText: 'gram'),
           ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Harga/kg',
-                style: TextStyle(color: Color(0xFF71847F)),
+                'Harga per gram',
+                style: TextStyle(color: Colors.black54),
               ),
               Text(
-                rupiah(_hargaPerKg(item)),
+                '${rupiah(_hargaPerGram(item), desimal: true)} / gram',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ],
@@ -600,7 +600,7 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
           const SizedBox(height: 16),
           _summaryRow('Jumlah jenis sampah', '${_items.length} item'),
           const SizedBox(height: 10),
-          _summaryRow('Total berat', '${_totalBerat.toStringAsFixed(2)} kg'),
+          _summaryRow('Total berat', '${_totalBerat.toStringAsFixed(0)} gram'),
           const Divider(height: 24),
           const Text('Total Nilai Setoran', style: TextStyle(color: _hijau)),
           const SizedBox(height: 5),

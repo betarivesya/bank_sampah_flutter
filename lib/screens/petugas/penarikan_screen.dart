@@ -1,3 +1,5 @@
+import 'package:bank_sampah_flutter/screens/admin/admin_drawer.dart';
+import 'package:bank_sampah_flutter/screens/petugas/petugas_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:bank_sampah_flutter/services/api_service.dart';
 
@@ -13,6 +15,7 @@ class PenarikanScreen extends StatefulWidget {
 class _PenarikanScreenState extends State<PenarikanScreen> {
   static const int _pageSize = 20;
   final TextEditingController _kodeController = TextEditingController();
+  final FocusNode _kodeFocusNode = FocusNode();
 
   Map<String, dynamic>? _pengajuan;
   bool _loading = false;
@@ -22,15 +25,12 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
   bool _pesanError = false;
 
   List<Map<String, dynamic>> _daftarPenarikan = [];
-  String _filterStatus = 'Semua';
+  DateTime? _dariTanggal;
+  DateTime? _sampaiTanggal;
+  bool _memuatRiwayat = false;
+
   int _currentPage = 1;
   int _totalPages = 1;
-  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
-
-  List<DateTime> get _monthOptions {
-    final now = DateTime(DateTime.now().year, DateTime.now().month);
-    return List.generate(12, (index) => DateTime(now.year, now.month - index));
-  }
 
   static const Color hijau = Color(0xFF2D765D);
   static const Color hijauMuda = Color(0xFFDCFCE7);
@@ -45,16 +45,21 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
   @override
   void dispose() {
     _kodeController.dispose();
+    _kodeFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _muatDaftarPenarikan({int page = 1}) async {
-    _currentPage = page;
+    setState(() {
+      _memuatRiwayat = true;
+      _currentPage = page;
+    });
+
     try {
       final result = await ApiService.getPetugasPenarikanPage(
-        bulan: _selectedMonth.month,
-        tahun: _selectedMonth.year,
-        status: _filterStatus,
+        status: 'Disetujui',
+        dariTanggal: _formatTanggalApi(_dariTanggal),
+        sampaiTanggal: _formatTanggalApi(_sampaiTanggal),
         page: page,
         perPage: _pageSize,
       );
@@ -68,10 +73,13 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      setState(() {
-        _pesan = _bersihkanError(e);
-        _pesanError = true;
-      });
+      _tampilkanPesan(_bersihkanError(e), error: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _memuatRiwayat = false;
+        });
+      }
     }
   }
 
@@ -196,6 +204,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
         idPenarikan: idPenarikan,
         idPetugas: widget.idPetugas,
         status: statusBaru,
+        kodeVerifikasi: _kodeController.text.trim(),
       );
 
       if (!mounted) return;
@@ -254,6 +263,60 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+  }
+
+  // FILTER TANGGAL
+  Future<void> _pilihTanggal({required bool tanggalMulai}) async {
+    final sekarang = DateTime.now();
+
+    final tanggal = await showDatePicker(
+      context: context,
+      initialDate: tanggalMulai
+          ? (_dariTanggal ?? _sampaiTanggal ?? sekarang)
+          : (_sampaiTanggal ?? _dariTanggal ?? sekarang),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      helpText: tanggalMulai ? 'Pilih Tanggal Awal' : 'Pilih Tanggal Akhir',
+      cancelText: 'Batal',
+      confirmText: 'Pilih',
+    );
+
+    if (tanggal == null || !mounted) return;
+
+    setState(() {
+      if (tanggalMulai) {
+        _dariTanggal = tanggal;
+
+        if (_sampaiTanggal != null && _sampaiTanggal!.isBefore(tanggal)) {
+          _sampaiTanggal = tanggal;
+        }
+      } else {
+        _sampaiTanggal = tanggal;
+
+        if (_dariTanggal != null && tanggal.isBefore(_dariTanggal!)) {
+          _dariTanggal = tanggal;
+        }
+      }
+    });
+  }
+
+  void _resetFilterTanggal() {
+    setState(() {
+      _dariTanggal = null;
+      _sampaiTanggal = null;
+    });
+
+    _muatDaftarPenarikan();
+  }
+
+  String? _formatTanggalApi(DateTime? tanggal) {
+    if (tanggal == null) return '';
+
+    final tahun = tanggal.year.toString().padLeft(4, '0');
+    final bulan = tanggal.month.toString().padLeft(2, '0');
+    final hari = tanggal.day.toString().padLeft(2, '0');
+
+    return '$tahun-$bulan-$hari';
   }
 
   String _bersihkanError(Object error) {
@@ -365,14 +428,6 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
     return '${date.day} ${bulan[date.month - 1]} ${date.year}';
   }
 
-  List<Map<String, dynamic>> get _penarikanTerfilter {
-    if (_filterStatus == 'Semua') return _daftarPenarikan;
-
-    return _daftarPenarikan.where((item) {
-      return _normalisasiStatus(item['status']) == _filterStatus.toLowerCase();
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -383,8 +438,6 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _buildHeader(),
-            const SizedBox(height: 20),
-            _buildMonthSelector(),
             const SizedBox(height: 20),
             _buildFormValidasi(),
             if (_pesan != null) ...[const SizedBox(height: 12), _buildPesan()],
@@ -401,37 +454,23 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2D765D), Color(0xFF15803D)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: const Column(
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.account_balance_wallet_outlined,
-            color: Colors.white,
-            size: 34,
-          ),
-          SizedBox(height: 12),
           Text(
             'Verifikasi Penarikan',
             style: TextStyle(
-              fontSize: 21,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Color(0xFF172033),
             ),
           ),
-          SizedBox(height: 6),
+          SizedBox(height: 5),
           Text(
-            'Periksa pengajuan nasabah sebelum menyetujui atau menolaknya.',
-            style: TextStyle(color: Colors.white, height: 1.4),
+            'Periksa pengajuan nasabah dan kelola riwayat penarikan.',
+            style: TextStyle(color: Colors.black54, height: 1.4),
           ),
         ],
       ),
@@ -443,33 +482,115 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Validasi Pengajuan',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: hijauMuda,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.shield_outlined,
+                  color: AdminDrawer.darkGreen,
+                  size: 25,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Validasi Pengajuan',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Verifikasi penarikan nasabah',
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 20),
           const Text(
-            'Masukkan kode verifikasi 6 digit yang diberikan kepada nasabah.',
-            style: TextStyle(color: Color(0xFF71847F), height: 1.4),
+            'Masukkan Kode Verifikasi',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Masukkan 6 digit kode yang diberikan kepada nasabah.',
+            style: TextStyle(color: Colors.black54, fontSize: 13, height: 1.4),
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: _kodeController,
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.search,
-            maxLength: 6,
-            onSubmitted: (_) => _validasiKode(),
-            decoration: InputDecoration(
-              labelText: 'Kode Verifikasi',
-              hintText: 'Contoh: 123456',
-              prefixIcon: const Icon(Icons.verified_user_outlined),
-              counterText: '',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+
+          // Enam kotak kode visual
+          GestureDetector(
+            onTap: () {
+              FocusScope.of(context).requestFocus(_kodeFocusNode);
+            },
+            child: Stack(
+              children: [
+                Row(
+                  children: List.generate(6, (index) {
+                    final kode = _kodeController.text;
+                    final isi = index < kode.length ? kode[index] : '';
+
+                    return Expanded(
+                      child: Container(
+                        height: 54,
+                        margin: EdgeInsets.only(right: index == 5 ? 0 : 7),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: index == kode.length
+                                ? AdminDrawer.darkGreen
+                                : Colors.grey.shade400,
+                            width: index == kode.length ? 1.8 : 1,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          isi.isEmpty ? '-' : isi,
+                          style: const TextStyle(
+                            fontSize: 21,
+                            fontWeight: FontWeight.bold,
+                            color: AdminDrawer.darkGreen,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: 0,
+                    child: TextField(
+                      controller: _kodeController,
+                      focusNode: _kodeFocusNode,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.search,
+                      maxLength: 6,
+                      onChanged: (_) => setState(() {}),
+                      onSubmitted: (_) => _validasiKode(),
+                      decoration: const InputDecoration(
+                        counterText: '',
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -486,8 +607,8 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                   : const Icon(Icons.search),
               label: Text(_loading ? 'Memvalidasi...' : 'Validasi Pengajuan'),
               style: FilledButton.styleFrom(
-                backgroundColor: hijau,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: PetugasDrawer.darkGreen,
+                padding: const EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -497,47 +618,6 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
         ],
       ),
     );
-  }
-
-  Widget _buildMonthSelector() {
-    return _kartu(
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<DateTime>(
-          isExpanded: true,
-          value: _selectedMonth,
-          icon: const Icon(Icons.calendar_month, color: hijau),
-          items: _monthOptions.map((month) {
-            return DropdownMenuItem(
-              value: month,
-              child: Text('Penarikan ${_namaBulan(month.month)} ${month.year}'),
-            );
-          }).toList(),
-          onChanged: (month) {
-            if (month == null) return;
-            setState(() => _selectedMonth = month);
-            _muatDaftarPenarikan();
-          },
-        ),
-      ),
-    );
-  }
-
-  String _namaBulan(int bulan) {
-    const nama = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
-    ];
-    return nama[bulan - 1];
   }
 
   Widget _buildPesan() {
@@ -723,60 +803,121 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
           children: [
             const Expanded(
               child: Text(
-                'Daftar Pengajuan Penarikan',
+                'Riwayat Penarikan Terverifikasi',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
-            IconButton(
-              onPressed: _muatDaftarPenarikan,
-              tooltip: 'Muat ulang',
-              icon: const Icon(Icons.refresh),
-            ),
           ],
         ),
-        const SizedBox(height: 10),
-        DropdownButtonFormField<String>(
-          value: _filterStatus,
-          decoration: InputDecoration(
-            labelText: 'Filter Status',
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          items: const [
-            DropdownMenuItem(value: 'Semua', child: Text('Semua')),
-            DropdownMenuItem(
-              value: 'pending',
-              child: Text('Menunggu Verifikasi'),
+        const SizedBox(height: 30),
+        // Filter Tanggal
+        Row(
+          children: [
+            Expanded(
+              child: _fieldTanggal(
+                label: 'Dari Tanggal',
+                tanggal: _dariTanggal,
+                onTap: () => _pilihTanggal(tanggalMulai: true),
+              ),
             ),
-            DropdownMenuItem(value: 'Disetujui', child: Text('Disetujui')),
-            DropdownMenuItem(value: 'Ditolak', child: Text('Ditolak')),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _fieldTanggal(
+                label: 'Sampai Tanggal',
+                tanggal: _sampaiTanggal,
+                onTap: () => _pilihTanggal(tanggalMulai: false),
+              ),
+            ),
           ],
-          onChanged: (value) {
-            if (value == null) return;
-            setState(() {
-              _filterStatus = value;
-            });
-            _muatDaftarPenarikan();
-          },
         ),
         const SizedBox(height: 12),
-        if (_penarikanTerfilter.isEmpty)
+        // Tombol filter dan reset
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _memuatRiwayat ? null : () => _muatDaftarPenarikan(),
+                icon: const Icon(Icons.filter_alt_off_outlined),
+                label: const Text('Filter'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: PetugasDrawer.darkGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _memuatRiwayat ? null : _resetFilterTanggal,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reset'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: hijau,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        if (_memuatRiwayat)
+          const Padding(
+            padding: EdgeInsets.all(28),
+            child: Center(child: CircularProgressIndicator(color: hijau)),
+          )
+        else if (_daftarPenarikan.isEmpty)
           _kartu(
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 20),
               child: Center(
                 child: Text(
-                  'Belum ada pengajuan penarikan.',
-                  style: TextStyle(color: Color(0xFF71847F)),
+                  'Belum ada riwayat penarikan terverifikasi.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54),
                 ),
               ),
             ),
           )
         else
           ..._daftarPenarikan.map(_buildItemDaftar),
-        if (_totalPages > 1) _buildPagination(),
+
+        if (!_memuatRiwayat && _totalPages > 1) _buildPagination(),
       ],
+    );
+  }
+
+  Widget _fieldTanggal({
+    required String label,
+    required DateTime? tanggal,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: const Icon(Icons.calendar_today_outlined, size: 18),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 12,
+          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Text(
+          tanggal == null
+              ? 'Pilih Tanggal'
+              : formatTanggal(_formatTanggalApi(tanggal)),
+          style: TextStyle(
+            fontSize: 12,
+            color: tanggal == null ? Colors.black54 : Colors.black87,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
     );
   }
 
@@ -805,8 +946,8 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
   }
 
   Widget _buildItemDaftar(Map<String, dynamic> data) {
-    final status = data['status'];
-    final warna = _warnaStatus(status);
+    final nominal = _angka(data['nominal']);
+    final tanggalVerifikasi = data['tanggal_verifikasi'];
 
     return Card(
       color: Colors.white,
@@ -816,68 +957,85 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(color: Color(0xFFE5E7EB)),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => _pilihPengajuan(data),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.receipt_long_outlined, color: hijau),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      data['kode_penarikan']?.toString() ?? '-',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    data['nama_nasabah']?.toString() ?? '-',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: warna.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _labelStatus(status),
-                      style: TextStyle(
-                        color: warna,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                data['nama_nasabah']?.toString() ??
-                    'Nama nasabah tidak tersedia',
-              ),
-              const SizedBox(height: 5),
-              Text(
-                formatRupiah(_angka(data['nominal'])),
-                style: const TextStyle(
-                  color: hijau,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
                 ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: hijauMuda,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.verified, size: 13, color: hijau),
+                      SizedBox(width: 4),
+                      Text(
+                        'Terverifikasi',
+                        style: TextStyle(
+                          color: hijau,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              formatRupiah(nominal),
+              style: const TextStyle(
+                color: hijau,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
-              const SizedBox(height: 5),
-              Text(
-                formatTanggal(data['tgl_pengajuan']),
-                style: const TextStyle(color: Color(0xFF71847F), fontSize: 12),
-              ),
-            ],
-          ),
+            ),
+            const Divider(height: 18),
+            _barisDetail(
+              'Tanggal Pengajuan',
+              formatTanggal(data['tgl_pengajuan']),
+            ),
+            _barisDetail(
+              'Tanggal Verifikasi',
+              tanggalVerifikasi == null
+                  ? '-'
+                  : _formatTanggalWaktu(tanggalVerifikasi),
+            ),
+            _barisDetail('ID Petugas', data['id_petugas']?.toString() ?? '-'),
+          ],
         ),
       ),
     );
+  }
+
+  String _formatTanggalWaktu(dynamic tanggal) {
+    if (tanggal == null || tanggal.toString().isEmpty) return '-';
+
+    final date = DateTime.tryParse(tanggal.toString());
+    if (date == null) return tanggal.toString();
+
+    return '${formatTanggal(date.toIso8601String())}'
+        '${date.hour.toString().padLeft(2, '0')}:'
+        '${date.minute.toString().padLeft(2, '0')}';
   }
 
   Widget _kartu({required Widget child}) {
