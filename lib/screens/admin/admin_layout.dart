@@ -274,10 +274,11 @@ class _AdminLayoutState extends State<AdminLayout> {
                   color: const Color(0xFF2E8B72),
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: const Icon(
-                  Icons.eco_rounded,
-                  color: Colors.white,
-                  size: 23,
+                child: Image.asset(
+                  'assets/images/logo-griya-ayu-sidebar.png',
+                  width: 46,
+                  height: 46,
+                  fit: BoxFit.contain,
                 ),
               ),
 

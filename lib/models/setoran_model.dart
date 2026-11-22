@@ -13,19 +13,34 @@ class DetailSetoranModel {
     required this.totalNilai,
   });
 
-  factory DetailSetoranModel.fromJson(Map<String, dynamic> json) {
+  factory DetailSetoranModel.fromJson(
+    Map<String, dynamic> json, {
+    bool beratDalamKg = false,
+  }) {
     double angka(dynamic value) {
       if (value is num) return value.toDouble();
       return double.tryParse(value?.toString() ?? '') ?? 0;
     }
 
+    final beratAsli = angka(json['total_berat']);
+    final harga = angka(json['harga_per_kg']);
+    final beratGram = beratDalamKg ? beratAsli * 1000 : beratAsli;
+
+    final jenisSampah = json['jenis_sampah'] is Map
+        ? Map<String, dynamic>.from(json['jenis_sampah'])
+        : <String, dynamic>{};
+
+    final nama = json['nama_sampah'] ?? jenisSampah['nama_sampah'] ?? '-';
+
+    final nilaiApi = json['total_nilai'] ?? json['subtotal'];
+
     return DetailSetoranModel(
       idJenisSampah:
           int.tryParse(json['id_jenis_sampah']?.toString() ?? '') ?? 0,
-      namaSampah: (json['nama_sampah'] ?? '-').toString(),
-      totalBerat: angka(json['total_berat']),
-      hargaPerKg: angka(json['harga_per_kg']),
-      totalNilai: angka(json['total_nilai'] ?? json['subtotal']),
+      namaSampah: nama.toString(),
+      totalBerat: beratGram,
+      hargaPerKg: harga,
+      totalNilai: nilaiApi != null ? angka(nilaiApi) : beratAsli * harga,
     );
   }
 }
@@ -61,7 +76,10 @@ class SetoranModel {
     this.rincian = const [],
   });
 
-  factory SetoranModel.fromJson(Map<String, dynamic> json) {
+  factory SetoranModel.fromJson(
+    Map<String, dynamic> json, {
+    bool beratDalamKg = false,
+  }) {
     double angka(dynamic value) {
       if (value is num) return value.toDouble();
       return double.tryParse(value?.toString() ?? '') ?? 0;
@@ -82,17 +100,15 @@ class SetoranModel {
     final petugas = relasi(json['petugas']);
 
     final dynamic detailJson =
-        json['jenis_sampah'] ?? json['detail_setoran'] ?? json['detailSetoran'];
+        json['detail_setoran'] ?? json['detailSetoran'] ?? json['jenis_sampah'];
 
     final List<DetailSetoranModel> rincian = detailJson is List
-        ? detailJson
-              .whereType<Map>()
-              .map(
-                (item) => DetailSetoranModel.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
-              )
-              .toList()
+        ? detailJson.whereType<Map>().map((item) {
+            return DetailSetoranModel.fromJson(
+              Map<String, dynamic>.from(item),
+              beratDalamKg: beratDalamKg,
+            );
+          }).toList()
         : [];
 
     final beratDetail = rincian.fold<double>(
@@ -111,8 +127,16 @@ class SetoranModel {
         .toSet()
         .toList();
 
-    final hargaRataRata = beratDetail > 0
-        ? nominalDetail / (beratDetail / 1000)
+    final beratRingkasan = json['total_berat'] != null
+        ? angka(json['total_berat']) * (beratDalamKg ? 1000 : 1)
+        : beratDetail;
+
+    final nominalRingkasan = json['total_nilai'] != null
+        ? angka(json['total_nilai'])
+        : nominalDetail;
+
+    final hargaRataRata = beratRingkasan > 0
+        ? nominalRingkasan / (beratRingkasan / 1000)
         : 0.0;
 
     return SetoranModel(
@@ -149,15 +173,11 @@ class SetoranModel {
                   petugas['name'] ??
                   '-')
               .toString(),
-      totalBerat: json['total_berat'] != null
-          ? angka(json['total_berat'])
-          : beratDetail,
+      totalBerat: beratRingkasan,
       hargaPerKg: json['harga_per_kg'] != null
           ? angka(json['harga_per_kg'])
           : hargaRataRata,
-      totalNilai: json['total_nilai'] != null
-          ? angka(json['total_nilai'])
-          : nominalDetail,
+      totalNilai: nominalRingkasan,
       tanggal:
           (json['tgl_setoran'] ??
                   json['tanggal_setoran'] ??

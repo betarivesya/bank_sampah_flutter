@@ -149,9 +149,31 @@ class _LaporanScreenState extends State<LaporanScreen> {
     return 'Rp $hasil';
   }
 
-  // Menampilkan berat sampah dengan dua angka desimal dan satuan kilogram.
+  // Menampilkan Berat Sampah
   String _formatBerat(num berat) {
-    return '${berat.toStringAsFixed(2).replaceAll('.', ',')} kg';
+    return '${berat.toStringAsFixed(2).replaceAll('.', ',')} gram';
+  }
+
+  String _formatStatus(String status) {
+    switch (status.trim().toLowerCase()) {
+      case 'approved':
+      case 'disetujui':
+      case 'selesai':
+      case 'completed':
+        return 'Selesai';
+
+      case 'pending':
+      case 'menunggu':
+      case 'menunggu verifikasi':
+        return 'Menunggu';
+
+      case 'rejected':
+      case 'ditolak':
+        return 'Ditolak';
+
+      default:
+        return status.isEmpty ? '-' : status;
+    }
   }
 
   // Menampilkan kalender untuk memilih tanggal mulai atau tanggal akhir.
@@ -231,7 +253,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
         TextCellValue('Tanggal'),
         TextCellValue('Nama Nasabah'),
         TextCellValue('Jenis Sampah'),
-        TextCellValue('Berat (kg)'),
+        TextCellValue('Berat (gram)'),
         TextCellValue('Total Nominal'),
         TextCellValue('Nama Petugas'),
         TextCellValue('Status'),
@@ -246,7 +268,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
           DoubleCellValue(setoran.totalBerat),
           DoubleCellValue(setoran.totalNilai),
           TextCellValue(setoran.namaPetugas),
-          TextCellValue(setoran.status.isEmpty ? '-' : setoran.status),
+          TextCellValue(_formatStatus(setoran.status)),
         ]);
       }
 
@@ -739,7 +761,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
                 ),
               ),
               Text(
-                setoran.status.isEmpty ? '-' : setoran.status,
+                _formatStatus(setoran.status),
                 style: const TextStyle(fontSize: 10, color: Colors.black54),
               ),
             ],

@@ -536,10 +536,13 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 const SizedBox(height: 5),
 
                 Text(
-                  '${_formatRupiah(item.hargaPerKg)} / kg',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  '${_formatRupiah(item.hargaPerGram)} / gram',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
                 ),
-
                 const SizedBox(height: 7),
 
                 _buildStatusBadge(item.status),

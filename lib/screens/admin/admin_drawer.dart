@@ -44,10 +44,11 @@ class AdminDrawer extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.eco_rounded,
-                      color: Colors.white,
-                      size: 31,
+                    child: Image.asset(
+                      'assets/images/logo-griya-ayu-sidebar.png',
+                      width: 46,
+                      height: 46,
+                      fit: BoxFit.contain,
                     ),
                   ),
                   const SizedBox(width: 13),

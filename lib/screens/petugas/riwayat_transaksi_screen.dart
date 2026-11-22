@@ -247,33 +247,84 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
 
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
             decoration: const BoxDecoration(
               color: darkGreen,
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
               ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Riwayat Transaksi',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 21,
-                    fontWeight: FontWeight.bold,
-                  ),
+                // Judul dan jumlah transaksi
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Riwayat Transaksi',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 19,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Daftar transaksi setoran dan penarikan nasabah',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.receipt_long_rounded,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${semuaRiwayat.length} transaksi',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 5),
-                const Text(
-                  'Lihat seluruh aktivitas transaksi nasabah',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                const SizedBox(height: 18),
+
+                const SizedBox(height: 14),
+
+                // Filter bulan dan tahun
                 _buildMonthSelector(),
-                const SizedBox(height: 12),
+
+                const SizedBox(height: 10),
+
+                // Filter jenis transaksi
                 Row(
                   children: [
                     _filterButton('Semua'),
@@ -564,7 +615,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       onRefresh: _loadData,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         itemCount: riwayat.length + (_totalPages(semuaRiwayat) > 1 ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == riwayat.length) {
@@ -648,7 +699,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -657,8 +708,8 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               color: item.warna.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(14),

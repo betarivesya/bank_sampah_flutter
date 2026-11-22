@@ -226,6 +226,10 @@ class ApiService {
       },
     );
 
+    debugPrint('JENIS SAMPAH URL: ${response.request?.url}');
+    debugPrint('JENIS SAMPAH STATUS: ${response.statusCode}');
+    debugPrint('JENIS SAMPAH RESPONSE: ${response.body}');
+
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
 
@@ -310,16 +314,37 @@ class ApiService {
   // ==========================================================
 
   static Future<List<dynamic>> getHargaSampah() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/harga-sampah'),
-      headers: _headers(),
-    );
+    final url = Uri.parse('$baseUrl/harga-sampah');
 
-    if (response.statusCode != 200) {
-      throw Exception('Gagal mengambil harga sampah');
+    try {
+      debugPrint('===== DEBUG HARGA SAMPAH =====');
+      debugPrint('URL: $url');
+      debugPrint('Token tersedia: ${_authToken != null}');
+
+      final response = await http.get(url, headers: _headers());
+
+      debugPrint('STATUS CODE: ${response.statusCode}');
+      debugPrint('RESPONSE BODY: ${response.body}');
+
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is List) {
+        return decoded;
+      }
+
+      if (decoded is Map && decoded['data'] is List) {
+        return decoded['data'];
+      }
+
+      throw Exception('Format respons harga sampah tidak sesuai.');
+    } catch (e) {
+      debugPrint('ERROR GET HARGA SAMPAH: $e');
+      rethrow;
     }
-
-    return jsonDecode(response.body);
   }
 
   static Future<bool> tambahHargaSampah(
@@ -573,7 +598,13 @@ class ApiService {
       },
     );
 
+    print('TOKEN TERSEDIA: ${_authToken != null && _authToken!.isNotEmpty}');
+    print('PANJANG TOKEN: ${_authToken?.length ?? 0}');
+
     final response = await http.get(uri, headers: _headers());
+
+    print('LAPORAN STATUS: ${response.statusCode}');
+    print('LAPORAN RESPONSE: ${response.body}');
 
     final decoded = jsonDecode(response.body);
 
@@ -596,7 +627,12 @@ class ApiService {
     }
 
     return items
-        .map((item) => SetoranModel.fromJson(Map<String, dynamic>.from(item)))
+        .map(
+          (item) => SetoranModel.fromJson(
+            Map<String, dynamic>.from(item),
+            beratDalamKg: true,
+          ),
+        )
         .toList();
   }
 
@@ -633,11 +669,10 @@ class ApiService {
   }) async {
     final body = {
       'id_pengguna_nasabah': idNasabah,
-      'id_pengguna_petugas': idPetugas,
       'items': items.map((item) {
         return {
           'id_jenis_sampah': item['id_jenis_sampah'],
-          'total_berat': item['total_berat'],
+          'berat_gram': item['berat_gram'],
         };
       }).toList(),
     };
@@ -965,6 +1000,8 @@ class ApiService {
     int? bulan,
     int? tahun,
     String? status,
+    String? dariTanggal,
+    String? sampaiTanggal,
     int page = 1,
     int perPage = 20,
   }) async {
@@ -973,12 +1010,16 @@ class ApiService {
         if (bulan != null) 'bulan': '$bulan',
         if (tahun != null) 'tahun': '$tahun',
         if (status != null && status != 'Semua') 'status': status,
+        if (dariTanggal != null) 'tanggal_mulai': dariTanggal,
+        if (sampaiTanggal != null) 'tanggal_akhir': sampaiTanggal,
         'page': '$page',
         'per_page': '$perPage',
       },
     );
 
     final response = await http.get(uri, headers: _headers());
+
+    print('URL FILTER PENARIKAN: $uri');
 
     return _parsePetugasPage<Map<String, dynamic>>(
       response,
@@ -1020,15 +1061,21 @@ class ApiService {
     required int idPenarikan,
     required int idPetugas,
     required String status,
+    required String kodeVerifikasi,
   }) async {
     if (status != 'Disetujui' && status != 'Ditolak') {
       throw ArgumentError('Status penarikan tidak valid.');
     }
 
+    final body = <String, dynamic>{
+      'status': status,
+      if (status == 'Disetujui') 'kode_verifikasi': kodeVerifikasi.trim(),
+    };
+
     final response = await http.put(
       Uri.parse('$baseUrl/petugas/penarikan/$idPenarikan/proses'),
       headers: _headers(json: true),
-      body: jsonEncode({'status': status}),
+      body: jsonEncode(body),
     );
 
     print('PROSES PENARIKAN STATUS: ${response.statusCode}');
@@ -1046,7 +1093,6 @@ class ApiService {
 
     throw Exception(_errorMessage(data, 'Gagal memproses penarikan.'));
   }
-
   // ==========================================================
   // HELPER PAGINATION PETUGAS
   // ==========================================================

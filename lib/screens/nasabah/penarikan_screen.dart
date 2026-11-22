@@ -573,13 +573,6 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: sedangMemuat ? null : muatData,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Muat ulang',
-          ),
-        ],
       ),
       body: sedangMemuat
           ? const Center(child: CircularProgressIndicator())

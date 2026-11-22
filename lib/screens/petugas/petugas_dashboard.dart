@@ -30,13 +30,11 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   bool isLoadingAktivitas = true;
 
   int totalNasabah = 0;
-  int totalSetoran = 0;
-  int totalPenarikan = 0;
   int setoranHariIni = 0;
-  int penarikanHariIni = 0;
   int totalPending = 0;
 
-  double totalSaldo = 0;
+  double kasBankSampah = 0;
+  double totalSaldoNasabah = 0;
   double totalSampah = 0;
 
   List<dynamic> aktivitasTerbaru = [];
@@ -83,6 +81,25 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   }
 
   // ============================================================
+  // FORMAT ANGKA
+  // ============================================================
+
+  String _formatAngka(num value) {
+    final angka = value.round().toString();
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < angka.length; i++) {
+      if (i > 0 && (angka.length - i) % 3 == 0) {
+        buffer.write('.');
+      }
+
+      buffer.write(angka[i]);
+    }
+
+    return buffer.toString();
+  }
+
+  // ============================================================
   // FORMAT RUPIAH
   // ============================================================
 
@@ -122,14 +139,13 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
       setState(() {
         totalNasabah = _toInt(data['total_nasabah']);
 
-        totalSetoran = _toInt(data['total_setoran']);
-        totalPenarikan = _toInt(data['total_penarikan']);
+        kasBankSampah = _toDouble(data['kas_bank_sampah']);
+
+        totalSaldoNasabah = _toDouble(data['total_saldo_nasabah']);
 
         setoranHariIni = _toInt(data['setoran_hari_ini']);
-        penarikanHariIni = _toInt(data['penarikan_hari_ini']);
 
-        totalSaldo = _toDouble(data['nilai_setoran_hari_ini']);
-        totalSampah = _toDouble(data['berat_sampah_hari_ini']);
+        totalSampah = _toDouble(data['berat_sampah_hari_ini']) * 1000;
 
         totalPending = _toInt(data['total_pending']);
 
@@ -251,7 +267,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
         Text(
           'Dashboard Petugas',
           style: TextStyle(
-            color: PetugasDashboard.darkGreen,
+            color: Color(0xFF172033),
             fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
@@ -294,23 +310,21 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
       childAspectRatio: 1.55,
       children: [
         _statisticCard(
+          title: 'Kas Bank Sampah',
+          value: isLoading ? '...' : formatRupiah(kasBankSampah),
+          icon: Icons.account_balance_outlined,
+        ),
+
+        _statisticCard(
+          title: 'Total Saldo Nasabah',
+          value: isLoading ? '...' : formatRupiah(totalSaldoNasabah),
+          icon: Icons.account_balance_wallet_outlined,
+        ),
+
+        _statisticCard(
           title: 'Total Nasabah',
           value: isLoading ? '...' : '$totalNasabah',
           icon: Icons.people_outline_rounded,
-        ),
-
-        _statisticCard(
-          title: 'Sampah Terkumpul Hari Ini',
-          value: isLoading
-              ? '...'
-              : '${totalSampah.toStringAsFixed(2).replaceAll('.', ',')} kg',
-          icon: Icons.recycling_outlined,
-        ),
-
-        _statisticCard(
-          title: 'Nilai Setoran Hari Ini',
-          value: isLoading ? '...' : formatRupiah(totalSaldo),
-          icon: Icons.payments_outlined,
         ),
 
         _statisticCard(
@@ -320,9 +334,9 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
         ),
 
         _statisticCard(
-          title: 'Penarikan Hari Ini',
-          value: isLoading ? '...' : '$penarikanHariIni',
-          icon: Icons.account_balance_wallet_outlined,
+          title: 'Sampah Terkumpul Hari Ini',
+          value: isLoading ? '...' : '${_formatAngka(totalSampah)} gram',
+          icon: Icons.recycling_rounded,
         ),
 
         _statisticCard(
@@ -419,45 +433,43 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   // ============================================================
 
   Widget _buildDashboardCharts() {
-    final values = dataSetoran7Hari.map<double>((item) {
+    final valuesSetoran = dataSetoran7Hari.map<double>((item) {
       return _toDouble(item['total_berat']);
     }).toList();
 
-    final labels = dataSetoran7Hari.map<String>((item) {
+    final labelsSetoran = dataSetoran7Hari.map<String>((item) {
       final tanggal = DateTime.tryParse(item['tanggal']?.toString() ?? '');
 
       if (tanggal == null) return '-';
 
-      const namaHari = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-
-      return namaHari[tanggal.weekday - 1];
+      return '${tanggal.day} ${_namaBulan(tanggal.month).substring(0, 3)}';
     }).toList();
 
-    final komposisiValues = dataKomposisiSampah.map<double>((item) {
+    final valuesKomposisi = dataKomposisiSampah.map<double>((item) {
       return _toDouble(item['total_berat']);
     }).toList();
 
-    final komposisiLabels = dataKomposisiSampah.map<String>((item) {
+    final labelsKomposisi = dataKomposisiSampah.map<String>((item) {
       return item['nama_sampah']?.toString() ?? 'Lainnya';
     }).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _chartCard(
+        _lineChartCard(
           title: 'Setoran Sampah 7 Hari Terakhir',
           subtitle: 'Total berat sampah (kg)',
-          values: values,
-          labels: labels,
+          values: valuesSetoran,
+          labels: labelsSetoran,
         ),
 
         const SizedBox(height: 16),
 
-        _chartCard(
+        _horizontalChartCard(
           title: 'Komposisi Jenis Sampah',
           subtitle: 'Berat berdasarkan jenis sampah (kg)',
-          values: komposisiValues,
-          labels: komposisiLabels,
+          values: valuesKomposisi,
+          labels: labelsKomposisi,
           headerAction: InkWell(
             onTap: _pilihBulanKomposisi,
             borderRadius: BorderRadius.circular(8),
@@ -475,14 +487,14 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                     '${_bulanKomposisi.year}',
                     style: const TextStyle(
                       color: PetugasDashboard.darkGreen,
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(width: 6),
                   const Icon(
                     Icons.calendar_month_outlined,
-                    size: 14,
+                    size: 15,
                     color: PetugasDashboard.darkGreen,
                   ),
                 ],
@@ -498,24 +510,79 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   // CHART CARD
   // ============================================================
 
-  Widget _chartCard({
+  Widget _lineChartCard({
+    required String title,
+    required String subtitle,
+    required List<double> values,
+    required List<String> labels,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: PetugasDashboard.textDark,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: PetugasDashboard.textDark,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 210,
+            width: double.infinity,
+            child: values.isEmpty || !values.any((v) => v > 0)
+                ? const Center(
+                    child: Text(
+                      'Belum ada data pada periode ini.',
+                      style: TextStyle(
+                        color: PetugasDashboard.textGrey,
+                        fontSize: 12,
+                      ),
+                    ),
+                  )
+                : CustomPaint(
+                    painter: _LineChartPainter(values: values, labels: labels),
+                    child: const SizedBox.expand(),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _horizontalChartCard({
     required String title,
     required String subtitle,
     required List<double> values,
     required List<String> labels,
     Widget? headerAction,
   }) {
-    final maximum = values.fold<double>(
-      0,
-      (max, value) => value > max ? value : max,
-    );
-
-    final safeMaximum = maximum == 0 ? 1 : maximum;
-    final hasData = values.any((value) => value > 0);
-
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -531,7 +598,6 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Text(
@@ -546,79 +612,50 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
               if (headerAction != null) headerAction,
             ],
           ),
-
-          const SizedBox(height: 4),
-
+          const SizedBox(height: 5),
           Text(
             subtitle,
             style: const TextStyle(
               color: PetugasDashboard.textDark,
-              fontSize: 11,
+              fontSize: 12,
             ),
           ),
-
           const SizedBox(height: 18),
-
-          SizedBox(
-            height: 160,
-            child: values.isEmpty || !hasData
-                ? const Center(
-                    child: Text(
-                      'Belum ada data pada periode ini.',
-                      style: TextStyle(
-                        color: PetugasDashboard.textGrey,
-                        fontSize: 12,
-                      ),
-                    ),
-                  )
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: List.generate(values.length, (index) {
-                      final height = (values[index] / safeMaximum).clamp(
-                        0.04,
-                        1.0,
-                      );
-
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Expanded(
-                                child: Align(
-                                  alignment: Alignment.bottomCenter,
-                                  child: FractionallySizedBox(
-                                    heightFactor: height,
-                                    child: Container(
-                                      width: double.infinity,
-                                      decoration: BoxDecoration(
-                                        color: PetugasDashboard.primaryGreen,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 7),
-
-                              Text(
-                                index < labels.length ? labels[index] : '-',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: PetugasDashboard.textGrey,
-                                  fontSize: 9,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }),
+          if (values.isEmpty || !values.any((v) => v > 0))
+            const SizedBox(
+              height: 130,
+              child: Center(
+                child: Text(
+                  'Belum ada data pada periode ini.',
+                  style: TextStyle(
+                    color: PetugasDashboard.textGrey,
+                    fontSize: 12,
                   ),
-          ),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: 250,
+              width: double.infinity,
+              child: Scrollbar(
+                child: SingleChildScrollView(
+                  child: SizedBox(
+                    height: (values.length * 43 + 30).toDouble() < 250
+                        ? 250
+                        : (values.length * 43 + 30).toDouble(),
+                    width: double.infinity,
+                    child: CustomPaint(
+                      painter: _HorizontalChartPainter(
+                        values: values,
+                        labels: labels,
+                      ),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -1012,6 +1049,234 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
         ),
       ),
     );
+  }
+}
+
+class _LineChartPainter extends CustomPainter {
+  final List<double> values;
+  final List<String> labels;
+
+  _LineChartPainter({required this.values, required this.labels});
+
+  static const Color green = Color(0xFF2E8B72);
+  static const Color grey = Color(0xFF7B8A89);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+
+    const left = 32.0;
+    const right = 8.0;
+    const top = 12.0;
+    const bottom = 27.0;
+
+    final chartWidth = size.width - left - right;
+    final chartHeight = size.height - top - bottom;
+
+    final maximum = values.reduce((a, b) => a > b ? a : b);
+    final maxValue = maximum <= 0 ? 1.0 : maximum * 1.2;
+
+    final gridPaint = Paint()
+      ..color = const Color(0xFFE8ECEA)
+      ..strokeWidth = 1;
+
+    final linePaint = Paint()
+      ..color = green
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final fillPaint = Paint()
+      ..color = green.withValues(alpha: 0.12)
+      ..style = PaintingStyle.fill;
+
+    final points = <Offset>[];
+
+    for (int i = 0; i < values.length; i++) {
+      final x = values.length == 1
+          ? left + chartWidth / 2
+          : left + (chartWidth * i / (values.length - 1));
+
+      final y = top + chartHeight - (values[i] / maxValue * chartHeight);
+
+      points.add(Offset(x, y));
+    }
+
+    // Garis grid dan label sumbu Y
+    for (int i = 0; i <= 4; i++) {
+      final y = top + chartHeight * i / 4;
+
+      canvas.drawLine(
+        Offset(left, y),
+        Offset(size.width - right, y),
+        gridPaint,
+      );
+
+      final angka = (maxValue * (4 - i) / 4).toStringAsFixed(1);
+
+      final text = TextPainter(
+        text: TextSpan(
+          text: angka,
+          style: const TextStyle(color: grey, fontSize: 9),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      text.paint(canvas, Offset(left - text.width - 5, y - text.height / 2));
+    }
+
+    // Area di bawah garis
+    if (points.length >= 2) {
+      final fillPath = Path()..moveTo(points.first.dx, top + chartHeight);
+
+      fillPath.lineTo(points.first.dx, points.first.dy);
+
+      for (int i = 1; i < points.length; i++) {
+        fillPath.lineTo(points[i].dx, points[i].dy);
+      }
+
+      fillPath
+        ..lineTo(points.last.dx, top + chartHeight)
+        ..close();
+
+      canvas.drawPath(fillPath, fillPaint);
+    }
+
+    // Garis grafik
+    if (points.length >= 2) {
+      final linePath = Path()..moveTo(points.first.dx, points.first.dy);
+
+      for (int i = 1; i < points.length; i++) {
+        linePath.lineTo(points[i].dx, points[i].dy);
+      }
+
+      canvas.drawPath(linePath, linePaint);
+    }
+
+    // Titik data dan label tanggal
+    for (int i = 0; i < points.length; i++) {
+      canvas.drawCircle(points[i], 3.5, Paint()..color = green);
+
+      canvas.drawCircle(points[i], 1.7, Paint()..color = Colors.white);
+
+      final label = i < labels.length ? labels[i] : '-';
+
+      final text = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: const TextStyle(color: grey, fontSize: 9),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: chartWidth / values.length + 10);
+
+      text.paint(
+        canvas,
+        Offset(points[i].dx - text.width / 2, top + chartHeight + 8),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LineChartPainter oldDelegate) {
+    return oldDelegate.values != values || oldDelegate.labels != labels;
+  }
+}
+
+// ============================================================
+// HORIZONTAL BAR CHART
+// ============================================================
+
+class _HorizontalChartPainter extends CustomPainter {
+  final List<double> values;
+  final List<String> labels;
+
+  _HorizontalChartPainter({required this.values, required this.labels});
+
+  static const Color green = Color(0xFF2E8B72);
+  static const Color grey = Color(0xFF7B8A89);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+
+    const left = 85.0;
+    const right = 8.0;
+    const top = 5.0;
+    const bottom = 22.0;
+
+    final chartWidth = size.width - left - right;
+    final chartHeight = size.height - top - bottom;
+
+    final maximum = values.reduce((a, b) => a > b ? a : b);
+    final maxValue = maximum <= 0 ? 1.0 : maximum * 1.15;
+
+    final gridPaint = Paint()
+      ..color = const Color(0xFFE8ECEA)
+      ..strokeWidth = 1;
+
+    final barPaint = Paint()
+      ..color = green
+      ..style = PaintingStyle.fill;
+
+    // Grid dan label sumbu X
+    const jumlahGrid = 4;
+
+    for (int i = 0; i <= jumlahGrid; i++) {
+      final x = left + chartWidth * i / jumlahGrid;
+
+      canvas.drawLine(Offset(x, top), Offset(x, top + chartHeight), gridPaint);
+
+      final angka = (maxValue * i / jumlahGrid).toStringAsFixed(1);
+
+      final text = TextPainter(
+        text: TextSpan(
+          text: angka,
+          style: const TextStyle(color: grey, fontSize: 9),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      text.paint(canvas, Offset(x - text.width / 2, top + chartHeight + 5));
+    }
+
+    final rowHeight = chartHeight / values.length;
+    final barHeight = rowHeight * 0.48;
+
+    for (int i = 0; i < values.length; i++) {
+      final centerY = top + rowHeight * (i + 0.5);
+
+      final label = i < labels.length ? labels[i] : '-';
+
+      final labelText = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: const TextStyle(color: grey, fontSize: 10),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '...',
+      )..layout(maxWidth: left - 10);
+
+      labelText.paint(
+        canvas,
+        Offset(left - labelText.width - 10, centerY - labelText.height / 2),
+      );
+
+      final barWidth = values[i] / maxValue * chartWidth;
+
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(left, centerY - barHeight / 2, barWidth, barHeight),
+        const Radius.circular(8),
+      );
+
+      canvas.drawRRect(rect, barPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HorizontalChartPainter oldDelegate) {
+    return oldDelegate.values != values || oldDelegate.labels != labels;
   }
 }
 

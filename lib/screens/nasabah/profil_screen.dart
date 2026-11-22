@@ -543,8 +543,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
     // Prioritaskan foto lokal yang baru dipilih.
     if (_fotoSementara != null) {
       return Container(
-        width: 76,
-        height: 76,
+        width: 88,
+        height: 88,
         clipBehavior: Clip.antiAlias,
         decoration: const BoxDecoration(
           color: Color(0xFF2FCB78),
@@ -725,8 +725,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
     final telepon = _getValue('no_telepon');
     final status = _getStatus();
 
-    final nomorAnggota = 'BSA-${widget.idNasabah.toString().padLeft(4, '0')}';
-
     return RefreshIndicator(
       onRefresh: _loadProfil,
       color: AppColors.primary,
@@ -798,18 +796,14 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   nama,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 17,
                     color: Color(0xFF1679B8),
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 6),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 6,
-                  runSpacing: 5,
-                  children: [_badgeProfil(nomorAnggota), _badgeProfil(status)],
-                ),
+                const SizedBox(height: 8),
+                _badgeProfil(status),
+
                 const SizedBox(height: 9),
                 OutlinedButton.icon(
                   onPressed: _editProfil,
@@ -844,12 +838,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
             ),
             child: Column(
               children: [
-                _barisProfil(
-                  Icons.shield_outlined,
-                  'Nomor Anggota',
-                  nomorAnggota,
-                ),
-                _pemisahProfil(),
                 _barisProfil(Icons.person_outline, 'Nama Lengkap', nama),
                 _pemisahProfil(),
                 _barisProfil(Icons.email_outlined, 'Email', email),
@@ -871,19 +859,27 @@ class _ProfilScreenState extends State<ProfilScreen> {
             child: Material(
               color: Colors.transparent,
               child: ListTile(
-                dense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 5,
+                ),
+                minLeadingWidth: 28,
                 leading: const Icon(
                   Icons.lock_outline,
-                  size: 18,
+                  size: 23,
                   color: AppColors.primary,
                 ),
                 title: const Text(
                   'Login dan Keamanan',
-                  style: TextStyle(fontSize: 11),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF344054),
+                  ),
                 ),
                 trailing: const Icon(
                   Icons.chevron_right,
-                  size: 17,
+                  size: 22,
                   color: Colors.grey,
                 ),
                 onTap: () {
@@ -911,15 +907,23 @@ class _ProfilScreenState extends State<ProfilScreen> {
             child: Material(
               color: Colors.transparent,
               child: ListTile(
-                dense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 5,
+                ),
+                minLeadingWidth: 28,
                 leading: const Icon(
                   Icons.logout,
-                  size: 17,
+                  size: 22,
                   color: Colors.redAccent,
                 ),
                 title: const Text(
                   'Keluar dari Akun',
-                  style: TextStyle(fontSize: 11, color: Colors.redAccent),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.redAccent,
+                  ),
                 ),
                 onTap: _konfirmasiLogout,
               ),
@@ -962,14 +966,18 @@ class _ProfilScreenState extends State<ProfilScreen> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(fontSize: 8, color: Color(0xFF9299A3)),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF9299A3),
+                  ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   nilai,
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 13,
                     color: Color(0xFF344054),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],

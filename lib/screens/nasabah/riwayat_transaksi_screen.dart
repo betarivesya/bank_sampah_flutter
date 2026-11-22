@@ -193,7 +193,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       case 'selesai':
       case 'berhasil':
       case 'active':
-        return Colors.green;
+        return AppColors.primary;
       case 'ditolak':
       case 'gagal':
         return Colors.red;
@@ -239,13 +239,6 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: _loading ? null : _muatData,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Muat Ulang',
-          ),
-        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -302,7 +295,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                 nilai: _rupiah(_totalSetoran),
                 jumlah: '${_setoran.length} transaksi',
                 ikon: Icons.recycling,
-                warna: Colors.green,
+                warna: AppColors.primary,
               ),
             ),
             const SizedBox(width: 12),
@@ -383,7 +376,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
               },
               selectedColor: Colors.green.shade100,
               labelStyle: TextStyle(
-                color: aktif ? Colors.green.shade900 : Colors.black87,
+                color: aktif ? AppColors.primary : Colors.black87,
                 fontWeight: aktif ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -399,7 +392,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     final status = _labelStatus(item['status']?.toString() ?? '');
     final setoran = jenis == 'Setoran';
 
-    final warna = setoran ? Colors.green : Colors.orange;
+    final warna = setoran ? AppColors.primary : Colors.orange;
 
     return Card(
       elevation: 1,
@@ -503,7 +496,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: setoran
-                      ? Colors.green
+                      ? AppColors.primary
                       : (status == 'Disetujui' || status == 'Selesai')
                       ? Colors.orange
                       : Colors.grey,
@@ -646,7 +639,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                                   _barisDetail(
                                     'Subtotal',
                                     _rupiah(detail.totalNilai),
-                                    warna: Colors.green.shade700,
+                                    warna: Colors.green,
                                   ),
                                   const Divider(height: 18),
                                 ],

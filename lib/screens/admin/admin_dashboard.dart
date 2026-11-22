@@ -23,8 +23,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
   bool isLoading = true;
 
   int nasabahAktif = 0;
+  double kasBankSampah = 0;
+  double totalSaldoNasabah = 0;
   double nilaiSetoran = 0;
   double totalSampahTerkumpul = 0;
+
   int totalPetugasAktif = 0;
   int penarikanPending = 0;
   int transaksiDisetujui = 0;
@@ -66,14 +69,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       final data = await ApiService.getAdminDashboard();
 
+      debugPrint('DATA DASHBOARD ADMIN: $data');
+      debugPrint('TOTAL SAMPAH API: ${data['total_sampah_terkumpul']}');
+
+      debugPrint('TOTAL PETUGAS AKTIF API: ${data['total_petugas_aktif']}');
+
       if (!mounted) return;
 
       setState(() {
         nasabahAktif =
             int.tryParse(data['nasabah_aktif']?.toString() ?? '0') ?? 0;
 
-        nilaiSetoran =
-            double.tryParse(data['nilai_setoran']?.toString() ?? '0') ?? 0;
+        totalPetugasAktif =
+            int.tryParse(data['total_petugas_aktif']?.toString() ?? '0') ?? 0;
+
+        kasBankSampah =
+            double.tryParse(data['kas_bank_sampah']?.toString() ?? '0') ?? 0;
+
+        totalSaldoNasabah =
+            double.tryParse(data['total_saldo_nasabah']?.toString() ?? '0') ??
+            0;
 
         totalSampahTerkumpul =
             double.tryParse(
@@ -81,8 +96,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ) ??
             0;
 
-        totalPetugasAktif =
-            int.tryParse(data['total_petugas_aktif']?.toString() ?? '0') ?? 0;
+        nilaiSetoran =
+            double.tryParse(data['nilai_setoran']?.toString() ?? '0') ?? 0;
 
         penarikanPending =
             int.tryParse(data['penarikan_pending']?.toString() ?? '0') ?? 0;
@@ -182,9 +197,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
             children: [
               _buildDashboardHeader(),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
+
+              if (!isLoading && penarikanPending > 0) ...[
+                _buildPendingAlert(),
+                const SizedBox(height: 20),
+              ],
 
               _buildStatistics(),
+
+              const SizedBox(height: 20),
+
+              _buildActivityStatistics(),
 
               const SizedBox(height: 22),
 
@@ -223,63 +247,50 @@ class _AdminDashboardState extends State<AdminDashboard> {
   // ============================================================
 
   Widget _buildStatistics() {
-    return GridView.count(
-      crossAxisCount: 2,
-
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-
-      shrinkWrap: true,
-
-      physics: const NeverScrollableScrollPhysics(),
-
-      childAspectRatio: 1.55,
-
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _statisticCard(
-          title: 'Total Nasabah Aktif',
-          value: isLoading ? '...' : '$nasabahAktif',
-          icon: Icons.people_outline_rounded,
-        ),
+        _buildSectionTitle('Ringkasan Utama'),
+        const SizedBox(height: 12),
 
-        _statisticCard(
-          title: 'Total Sampah Terkumpul',
-          value: isLoading
-              ? '...'
-              : '${totalSampahTerkumpul.toStringAsFixed(2).replaceAll('.', ',')} kg',
-          icon: Icons.recycling_outlined,
-        ),
+        GridView.count(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 1.55,
+          children: [
+            _statisticCard(
+              title: 'Kas Bank Sampah',
+              value: isLoading ? '...' : formatRupiah(kasBankSampah),
+              icon: Icons.account_balance_wallet_outlined,
+            ),
 
-        _statisticCard(
-          title: 'Total Petugas Aktif',
-          value: isLoading ? '...' : '$totalPetugasAktif',
-          icon: Icons.badge_outlined,
-        ),
+            _statisticCard(
+              title: 'Total Saldo Nasabah',
+              value: isLoading ? '...' : formatRupiah(totalSaldoNasabah),
+              icon: Icons.people_outline_rounded,
+            ),
 
-        _statisticCard(
-          title: 'Nilai Setoran',
-          value: isLoading ? '...' : formatRupiah(nilaiSetoran),
-          icon: Icons.payments_outlined,
-        ),
+            _statisticCard(
+              title: 'Sampah Terkumpul',
+              value: isLoading
+                  ? '...'
+                  : '${totalSampahTerkumpul.toStringAsFixed(0)} gram',
+              icon: Icons.recycling_outlined,
+            ),
 
-        _statisticCard(
-          title: 'Penarikan Pending',
-          value: isLoading ? '...' : '$penarikanPending',
-          icon: Icons.money_outlined,
-        ),
-
-        _statisticCard(
-          title: 'Transaksi Disetujui',
-          value: isLoading ? '...' : '$transaksiDisetujui',
-          icon: Icons.check_circle_outline_rounded,
+            _statisticCard(
+              title: 'Total Nilai Setoran',
+              value: isLoading ? '...' : formatRupiah(nilaiSetoran),
+              icon: Icons.trending_up_rounded,
+            ),
+          ],
         ),
       ],
     );
   }
-
-  // ============================================================
-  // STATISTIC CARD
-  // ============================================================
 
   Widget _statisticCard({
     required String title,
@@ -288,79 +299,206 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }) {
     return Container(
       padding: const EdgeInsets.all(14),
-
       decoration: BoxDecoration(
         color: Colors.white,
-
         borderRadius: BorderRadius.circular(17),
-
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-
             blurRadius: 8,
-
             offset: const Offset(0, 3),
           ),
         ],
       ),
-
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-
         children: [
-          Row(
-            children: [
-              Container(
-                width: 35,
-                height: 35,
-
-                decoration: BoxDecoration(
-                  color: AdminDashboard.primaryGreen.withValues(alpha: 0.10),
-
-                  borderRadius: BorderRadius.circular(10),
-                ),
-
-                child: Icon(icon, color: AdminDashboard.primaryGreen, size: 19),
-              ),
-
-              const Spacer(),
-
-              const Icon(
-                Icons.more_horiz_rounded,
-
-                color: Colors.grey,
-
-                size: 18,
-              ),
-            ],
+          Container(
+            width: 35,
+            height: 35,
+            decoration: BoxDecoration(
+              color: AdminDashboard.primaryGreen.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: AdminDashboard.primaryGreen, size: 19),
           ),
-
           const Spacer(),
-
           Text(
             value,
-
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AdminDashboard.textDark,
-
-              fontSize: 17,
-
+              fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
-
-          const SizedBox(height: 3),
-
+          const SizedBox(height: 4),
           Text(
             title,
-
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AdminDashboard.textGrey,
-
               fontSize: 11,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // STATISTIK AKTIVITAS
+  // ============================================================
+
+  Widget _buildActivityStatistics() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Statistik Aktivitas'),
+        const SizedBox(height: 12),
+
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(17),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              _activityItem(
+                title: 'Nasabah Aktif',
+                value: isLoading ? '...' : '$nasabahAktif',
+                icon: Icons.people_outline_rounded,
+                color: Colors.blue,
+              ),
+
+              const Divider(height: 1),
+
+              _activityItem(
+                title: 'Petugas Aktif',
+                value: isLoading ? '...' : '$totalPetugasAktif',
+                icon: Icons.badge_outlined,
+                color: Colors.orange,
+              ),
+
+              const Divider(height: 1),
+
+              _activityItem(
+                title: 'Setoran Berhasil',
+                value: isLoading ? '...' : '$transaksiDisetujui',
+                icon: Icons.check_circle_outline_rounded,
+                color: Colors.green,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _activityItem({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 13),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+
+          const SizedBox(width: 12),
+
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: AdminDashboard.textGrey,
+                fontSize: 13,
+              ),
+            ),
+          ),
+
+          Text(
+            value,
+            style: const TextStyle(
+              color: AdminDashboard.textDark,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPendingAlert() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7E8),
+        border: Border.all(color: const Color(0xFFFFB74D)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.notifications_active_outlined,
+            color: Color(0xFFE58A00),
+            size: 23,
+          ),
+
+          const SizedBox(width: 11),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Perlu Perhatian',
+                  style: TextStyle(
+                    color: Color(0xFF9A5B00),
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  '$penarikanPending pengajuan penarikan menunggu validasi.',
+                  style: const TextStyle(
+                    color: Color(0xFF8A6A3D),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 6),
+
+          const Icon(Icons.chevron_right_rounded, color: Color(0xFFE58A00)),
         ],
       ),
     );
@@ -377,7 +515,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           title: 'Nilai Setoran per Bulan',
           subtitle: DateTime.now().year.toString(),
           chart: CustomPaint(
-            painter: _BarChartPainter(grafikSetoran, isCurrency: true),
+            painter: _BarChartPainter(grafikSetoran),
             child: const SizedBox.expand(),
           ),
         ),
@@ -508,7 +646,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               SizedBox(
                 width: 55,
                 child: Text(
-                  '${berat.toStringAsFixed(2)} kg',
+                  '${berat.toStringAsFixed(2)} gram / 1 ton',
                   textAlign: TextAlign.end,
                   style: const TextStyle(
                     color: AdminDashboard.textGrey,
@@ -732,11 +870,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }
 
 // ============================================================
@@ -744,9 +877,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 // ============================================================
 class _BarChartPainter extends CustomPainter {
   final List<dynamic> data;
-  final bool isCurrency;
 
-  _BarChartPainter(this.data, {this.isCurrency = false});
+  _BarChartPainter(this.data);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -809,7 +941,7 @@ class _BarChartPainter extends CustomPainter {
             'Nov',
             'Des',
           ][bulan.clamp(0, 12)],
-          style: const TextStyle(color: AdminDashboard.textGrey, fontSize: 9),
+          style: const TextStyle(color: Colors.black, fontSize: 9),
         ),
         textDirection: TextDirection.ltr,
       )..layout();

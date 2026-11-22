@@ -18,17 +18,13 @@ class NasabahHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
       child: Row(
         children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5F0),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: const Icon(
-              Icons.eco_rounded,
-              color: Color(0xFF167A63),
-              size: 27,
+          ClipRRect(
+            borderRadius: BorderRadiusGeometry.circular(12),
+            child: Image.asset(
+              'assets/images/logo-griya-ayu-sidebar.png',
+              width: 46,
+              height: 46,
+              fit: BoxFit.contain,
             ),
           ),
           const SizedBox(width: 10),
