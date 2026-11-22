@@ -45,7 +45,7 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
       ..showSnackBar(
         SnackBar(
           content: Text(pesan),
-          backgroundColor: error ? Colors.red.shade700 : AppColors.primary,
+          backgroundColor: error ? Color(0xFFB42318) : AppColors.primary,
         ),
       );
   }
@@ -179,7 +179,7 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: Color(0xFFB42318),
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.pop(dialogContext, true),
@@ -260,7 +260,7 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
               },
               child: const Text(
                 'Hapus Harga',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: Color(0xFFB42318)),
               ),
             ),
           TextButton(
@@ -427,7 +427,7 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
                           children: [
                             const Icon(
                               Icons.error_outline,
-                              color: Colors.red,
+                              color: Color(0xFFB42318),
                               size: 42,
                             ),
                             const SizedBox(height: 10),
@@ -451,7 +451,10 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
                     return const Center(
                       child: Text(
                         'Tidak ada data sampah.',
-                        style: TextStyle(color: Colors.grey, fontSize: 16),
+                        style: TextStyle(
+                          color: Color(0xFF71847F),
+                          fontSize: 16,
+                        ),
                       ),
                     );
                   }
@@ -483,9 +486,9 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
 
 // WARNA
 class AppColors {
-  static const Color primary = Color(0xFF2E7D32);
-  static const Color secondary = Color(0xFFA5D6A7);
-  static const Color background = Color(0xFFF4F6F8);
+  static const Color primary = Color(0xFF2D765D);
+  static const Color secondary = Color(0xFFE6F5ED);
+  static const Color background = Color(0xFFEDF1EF);
 }
 
 // STYLE INPUT
@@ -500,7 +503,7 @@ class AppStyles {
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(color: Color(0xFFD1D5DB)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -560,7 +563,7 @@ class SampahItemCard extends StatelessWidget {
                 ? 'Rp ${item.hargaPerKg.toStringAsFixed(0)} / kg'
                 : 'Harga: Belum diatur',
             style: TextStyle(
-              color: adaHarga ? Colors.green.shade700 : Colors.orange.shade800,
+              color: adaHarga ? Color(0xFF166534) : Color(0xFFD88916),
               fontWeight: FontWeight.w600,
               fontSize: 13,
             ),
@@ -601,7 +604,7 @@ class SampahItemCard extends StatelessWidget {
             PopupMenuItem(
               value: 'hapus',
               child: ListTile(
-                leading: Icon(Icons.delete_outline, color: Colors.red),
+                leading: Icon(Icons.delete_outline, color: Color(0xFFB42318)),
                 title: Text('Hapus'),
                 contentPadding: EdgeInsets.zero,
               ),

@@ -192,18 +192,18 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       case 'selesai':
       case 'berhasil':
       case 'active':
-        return Colors.green;
+        return Color(0xFF298357);
       case 'ditolak':
       case 'gagal':
-        return Colors.red;
+        return Color(0xFFB42318);
       case 'menunggu':
       case 'menunggu verifikasi':
       case 'pending':
-        return Colors.orange;
+        return Color(0xFFD88916);
       case 'dibatalkan':
-        return Colors.grey;
+        return Color(0xFF71847F);
       default:
-        return Colors.blueGrey;
+        return Color(0xFF6B7F7B);
     }
   }
 
@@ -301,7 +301,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                 nilai: _rupiah(_totalSetoran),
                 jumlah: '${_setoran.length} transaksi',
                 ikon: Icons.recycling,
-                warna: Colors.green,
+                warna: Color(0xFF298357),
               ),
             ),
             const SizedBox(width: 12),
@@ -312,7 +312,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                 jumlah:
                     '${_penarikan.where(_penarikanBerhasil).length} transaksi',
                 ikon: Icons.account_balance_wallet_outlined,
-                warna: Colors.orange,
+                warna: Color(0xFFD88916),
               ),
             ),
           ],
@@ -342,7 +342,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
           const SizedBox(height: 12),
           Text(
             judul,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF71847F)),
           ),
           const SizedBox(height: 6),
           Text(
@@ -356,7 +356,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
           const SizedBox(height: 4),
           Text(
             jumlah,
-            style: const TextStyle(fontSize: 11, color: Colors.black54),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF71847F)),
           ),
         ],
       ),
@@ -380,9 +380,9 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
               onSelected: (_) {
                 setState(() => _filter = pilihan);
               },
-              selectedColor: Colors.green.shade100,
+              selectedColor: Color(0xFFD1FAE5),
               labelStyle: TextStyle(
-                color: aktif ? Colors.green.shade900 : Colors.black87,
+                color: aktif ? Color(0xFF166534) : Color(0xFF17332E),
                 fontWeight: aktif ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -411,16 +411,15 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: (setoran ? Colors.green : Colors.orange).withValues(
-                  alpha: 0.12,
-                ),
+                color: (setoran ? Color(0xFF298357) : Color(0xFFD88916))
+                    .withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 setoran
                     ? Icons.recycling
                     : Icons.account_balance_wallet_outlined,
-                color: setoran ? Colors.green : Colors.orange,
+                color: setoran ? Color(0xFF298357) : Color(0xFFD88916),
               ),
             ),
             const SizedBox(width: 12),
@@ -439,7 +438,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                   Text(
                     jenis,
                     style: TextStyle(
-                      color: setoran ? Colors.green : Colors.orange,
+                      color: setoran ? Color(0xFF298357) : Color(0xFFD88916),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -447,12 +446,18 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                   const SizedBox(height: 4),
                   Text(
                     item['keterangan']?.toString() ?? '',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF71847F),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _formatTanggal(item['tanggal']?.toString() ?? ''),
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF71847F),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Container(
@@ -487,10 +492,10 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: setoran
-                    ? Colors.green
+                    ? Color(0xFF298357)
                     : (status == 'Disetujui' || status == 'Selesai')
-                    ? Colors.orange
-                    : Colors.grey,
+                    ? Color(0xFFD88916)
+                    : Color(0xFF71847F),
               ),
             ),
           ],
@@ -504,11 +509,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
-          Icon(
-            Icons.receipt_long_outlined,
-            size: 56,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.receipt_long_outlined, size: 56, color: Color(0xFF9CA3AF)),
           const SizedBox(height: 12),
           const Text(
             'Belum ada transaksi',
@@ -518,7 +519,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
           const Text(
             'Riwayat setoran dan penarikan akan muncul di sini.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.black54),
+            style: TextStyle(color: Color(0xFF71847F)),
           ),
         ],
       ),
@@ -533,7 +534,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
           const Icon(
             Icons.cloud_off_outlined,
             size: 48,
-            color: Colors.redAccent,
+            color: Color(0xFFB42318),
           ),
           const SizedBox(height: 12),
           const Text(
@@ -544,7 +545,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
           Text(
             _error ?? 'Terjadi kesalahan.',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.black54),
+            style: const TextStyle(color: Color(0xFF71847F)),
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(

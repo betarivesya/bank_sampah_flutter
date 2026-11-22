@@ -13,12 +13,12 @@ class DetailNasabahScreen extends StatelessWidget {
   // WARNA
   // ==========================================================
 
-  static const Color darkGreen = Color(0xFF075B4F);
-  static const Color primaryGreen = Color(0xFF2E8B72);
-  static const Color lightGreen = Color(0xFFE8F5F1);
-  static const Color background = Color(0xFFF6F8F7);
-  static const Color textDark = Color(0xFF172033);
-  static const Color textGrey = Color(0xFF7B8A89);
+  static const Color darkGreen = Color(0xFF0F463D);
+  static const Color primaryGreen = Color(0xFF2C8069);
+  static const Color lightGreen = Color(0xFFE8F7F1);
+  static const Color background = Color(0xFFEDF1EF);
+  static const Color textDark = Color(0xFF253735);
+  static const Color textGrey = Color(0xFF71847F);
 
   // ==========================================================
   // FORMAT RUPIAH
@@ -94,7 +94,7 @@ class DetailNasabahScreen extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF075B4F), Color(0xFF2E8B72)],
+                colors: [Color(0xFF0F463D), Color(0xFF2C8069)],
               ),
               borderRadius: BorderRadius.circular(22),
               boxShadow: [
@@ -260,14 +260,14 @@ class DetailNasabahScreen extends StatelessWidget {
                 .map(
                   (item) => _HistoryTile(
                     icon: Icons.account_balance_wallet_outlined,
-                    iconBackground: const Color(0xFFFFF4E5),
-                    iconColor: Colors.orange.shade800,
+                    iconBackground: const Color(0xFFFFF2DC),
+                    iconColor: Color(0xFFD88916),
                     title: item.kodePengajuan,
                     subtitle:
                         '${tanggalIndonesia(item.tanggalPengajuan)} • '
                         '${item.status}',
                     amount: '- ${formatRupiah(item.nominal)}',
-                    amountColor: Colors.orange.shade800,
+                    amountColor: Color(0xFFD88916),
                   ),
                 )
                 .toList(),
@@ -283,8 +283,8 @@ class DetailNasabahScreen extends StatelessWidget {
 // ============================================================
 
 class _SectionCard extends StatelessWidget {
-  static const Color primaryGreen = Color(0xFF2E8B72);
-  static const Color textDark = Color(0xFF172033);
+  static const Color primaryGreen = Color(0xFF2C8069);
+  static const Color textDark = Color(0xFF253735);
 
   final String title;
   final IconData icon;
@@ -321,7 +321,7 @@ class _SectionCard extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5F1),
+                  color: const Color(0xFFE8F7F1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: primaryGreen, size: 19),
@@ -354,9 +354,9 @@ class _SectionCard extends StatelessWidget {
 // ============================================================
 
 class _InfoRow extends StatelessWidget {
-  static const Color primaryGreen = Color(0xFF2E8B72);
-  static const Color textDark = Color(0xFF172033);
-  static const Color textGrey = Color(0xFF7B8A89);
+  static const Color primaryGreen = Color(0xFF2C8069);
+  static const Color textDark = Color(0xFF253735);
+  static const Color textGrey = Color(0xFF71847F);
 
   final IconData icon;
   final String label;
@@ -410,9 +410,9 @@ class _InfoRow extends StatelessWidget {
 // ============================================================
 
 class _HistorySection extends StatelessWidget {
-  static const Color textDark = Color(0xFF172033);
-  static const Color textGrey = Color(0xFF7B8A89);
-  static const Color primaryGreen = Color(0xFF2E8B72);
+  static const Color textDark = Color(0xFF253735);
+  static const Color textGrey = Color(0xFF71847F);
+  static const Color primaryGreen = Color(0xFF2C8069);
 
   final String title;
   final IconData icon;
@@ -453,7 +453,7 @@ class _HistorySection extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5F1),
+                  color: const Color(0xFFE8F7F1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: primaryGreen, size: 19),
@@ -475,7 +475,7 @@ class _HistorySection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5F1),
+                  color: const Color(0xFFE8F7F1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -513,8 +513,8 @@ class _HistorySection extends StatelessWidget {
 // ============================================================
 
 class _HistoryTile extends StatelessWidget {
-  static const Color textDark = Color(0xFF172033);
-  static const Color textGrey = Color(0xFF7B8A89);
+  static const Color textDark = Color(0xFF253735);
+  static const Color textGrey = Color(0xFF71847F);
 
   final IconData icon;
   final Color iconBackground;

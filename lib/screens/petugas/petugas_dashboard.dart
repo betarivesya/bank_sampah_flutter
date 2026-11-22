@@ -16,12 +16,12 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   // WARNA APLIKASI
   // ============================================================
 
-  static const Color darkGreen = Color(0xFF075B4F);
-  static const Color primaryGreen = Color(0xFF2E8B72);
-  static const Color lightGreen = Color(0xFFE8F5F1);
+  static const Color darkGreen = Color(0xFF0D463F);
+  static const Color primaryGreen = Color(0xFF2C8069);
+  static const Color lightGreen = Color(0xFFE8F7F1);
 
-  static const Color textDark = Color(0xFF172033);
-  static const Color textGrey = Color(0xFF7B8A89);
+  static const Color textDark = Color(0xFF253735);
+  static const Color textGrey = Color(0xFF71847F);
 
   // ============================================================
   // DATA DASHBOARD
@@ -904,7 +904,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                             style: TextStyle(
                               color: jenis == 'Setoran'
                                   ? darkGreen
-                                  : Colors.orange.shade800,
+                                  : Color(0xFFD88916),
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),

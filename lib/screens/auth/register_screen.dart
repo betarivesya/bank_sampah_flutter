@@ -99,7 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF172033),
+            color: Color(0xFF17332E),
           ),
         ),
         const SizedBox(height: 7),
@@ -109,7 +109,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             controller: controller,
             keyboardType: keyboardType,
             obscureText: obscureText,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF172033)),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF17332E)),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: const TextStyle(
@@ -126,14 +126,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 minHeight: 40,
               ),
               filled: true,
-              fillColor: const Color(0xFFFAFAFA),
+              fillColor: const Color(0xFFF4F8F7),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
+                borderSide: const BorderSide(color: Color(0xFFDFE6E3)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7),
-                borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
+                borderSide: const BorderSide(color: Color(0xFFDFE6E3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(7),
@@ -171,13 +171,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF172033),
+                      color: Color(0xFF17332E),
                     ),
                   ),
                   const SizedBox(height: 7),
                   const Text(
                     'Isi data berikut untuk membuat akun nasabah.',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF667085)),
+                    style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
                   ),
 
                   const SizedBox(height: 25),
@@ -227,7 +227,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
                         size: 18,
-                        color: const Color(0xFF667085),
+                        color: const Color(0xFF6B7280),
                       ),
                       onPressed: () {
                         setState(() {
@@ -255,7 +255,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
                         size: 18,
-                        color: const Color(0xFF667085),
+                        color: const Color(0xFF6B7280),
                       ),
                       onPressed: () {
                         setState(() {
@@ -302,7 +302,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           'Sudah punya akun? ',
                           style: TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF172033),
+                            color: Color(0xFF17332E),
                           ),
                         ),
                         GestureDetector(
@@ -326,7 +326,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const Center(
                     child: Text(
                       'Bank Sampah Griya Ayu',
-                      style: TextStyle(fontSize: 10, color: Color(0xFF667085)),
+                      style: TextStyle(fontSize: 10, color: Color(0xFF6B7280)),
                     ),
                   ),
                 ],

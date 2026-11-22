@@ -29,8 +29,8 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
   bool _loading = true;
   bool _saving = false;
 
-  static const Color _hijau = Color(0xFF075B4F);
-  static const Color _latar = Color(0xFFF6F8F7);
+  static const Color _hijau = Color(0xFF0F463D);
+  static const Color _latar = Color(0xFFF5F8F7);
 
   @override
   void initState() {
@@ -78,7 +78,7 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gagal mengambil data: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: Color(0xFFB42318),
         ),
       );
     }
@@ -242,7 +242,7 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: Color(0xFFB42318)),
     );
   }
 
@@ -416,7 +416,7 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
           const SizedBox(height: 6),
           const Text(
             'Pilih jenis sampah dan masukkan berat setiap item.',
-            style: TextStyle(color: Colors.black54, fontSize: 12),
+            style: TextStyle(color: Color(0xFF71847F), fontSize: 12),
           ),
           const SizedBox(height: 14),
 
@@ -465,8 +465,8 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAF9),
-        border: Border.all(color: const Color(0xFFE0E8E4)),
+        color: const Color(0xFFF4F8F7),
+        border: Border.all(color: const Color(0xFFDFE6E3)),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -479,7 +479,7 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
                 height: 28,
                 alignment: Alignment.center,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFDDF1E9),
+                  color: Color(0xFFE8F7F1),
                   shape: BoxShape.circle,
                 ),
                 child: Text(
@@ -503,7 +503,7 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
                     ? null
                     : () => _hapusItem(index),
                 icon: const Icon(Icons.delete_outline),
-                color: Colors.red,
+                color: Color(0xFFB42318),
               ),
             ],
           ),
@@ -535,7 +535,10 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Harga/kg', style: TextStyle(color: Colors.black54)),
+              const Text(
+                'Harga/kg',
+                style: TextStyle(color: Color(0xFF71847F)),
+              ),
               Text(
                 rupiah(_hargaPerKg(item)),
                 style: const TextStyle(fontWeight: FontWeight.w600),
@@ -573,9 +576,9 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5F1),
+        color: const Color(0xFFE8F7F1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFCDE8DE)),
+        border: Border.all(color: const Color(0xFFE6F5ED)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -618,7 +621,7 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Colors.black54)),
+        Text(label, style: const TextStyle(color: Color(0xFF71847F))),
         Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
       ],
     );
@@ -633,11 +636,11 @@ class _TambahSetoranScreenState extends State<TambahSetoranScreen> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE0E8E4)),
+        borderSide: const BorderSide(color: Color(0xFFDFE6E3)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE0E8E4)),
+        borderSide: const BorderSide(color: Color(0xFFDFE6E3)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -704,7 +707,7 @@ class _SectionTitle extends StatelessWidget {
           height: 30,
           alignment: Alignment.center,
           decoration: const BoxDecoration(
-            color: Color(0xFF075B4F),
+            color: Color(0xFF0F463D),
             shape: BoxShape.circle,
           ),
           child: Text(

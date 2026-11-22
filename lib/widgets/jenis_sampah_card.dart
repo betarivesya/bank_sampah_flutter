@@ -58,21 +58,21 @@ class JenisSampahCard extends StatelessWidget {
 
           // Tombol atur harga
           IconButton(
-            icon: const Icon(Icons.attach_money, color: Colors.green),
+            icon: const Icon(Icons.attach_money, color: Color(0xFF298357)),
             tooltip: 'Atur Harga',
             onPressed: onAturHarga,
           ),
 
           // Tombol edit
           IconButton(
-            icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+            icon: const Icon(Icons.edit_outlined, color: Color(0xFF23619A)),
             tooltip: 'Edit Jenis Sampah',
             onPressed: onEdit,
           ),
 
           // Tombol hapus
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            icon: const Icon(Icons.delete_outline, color: Color(0xFFB42318)),
             tooltip: 'Hapus Jenis Sampah',
             onPressed: onDelete,
           ),

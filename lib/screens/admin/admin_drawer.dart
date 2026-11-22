@@ -12,8 +12,8 @@ class AdminDrawer extends StatelessWidget {
     required this.onLogout,
   });
 
-  static const Color darkGreen = Color(0xFF075B4F);
-  static const Color primaryGreen = Color(0xFF2E8B72);
+  static const Color darkGreen = Color(0xFF0F463D);
+  static const Color primaryGreen = Color(0xFF2F806B);
 
   @override
   Widget build(BuildContext context) {
@@ -146,6 +146,13 @@ class AdminDrawer extends StatelessWidget {
                       title: 'Laporan',
                       menuKey: 'laporan',
                     ),
+
+                    _drawerMenu(
+                      context: context,
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'Manajemen Keuangan',
+                      menuKey: 'keuangan',
+                    ),
                   ],
                 ),
               ),
@@ -169,7 +176,7 @@ class AdminDrawer extends StatelessWidget {
                     width: 45,
                     height: 45,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF57BF91),
+                      color: Color(0xFF4FD1A5),
                       shape: BoxShape.circle,
                     ),
                     child: const Center(
@@ -223,7 +230,7 @@ class AdminDrawer extends StatelessWidget {
                       ),
                       child: const Icon(
                         Icons.logout_rounded,
-                        color: Color(0xFFFF9B96),
+                        color: Color(0xFFB42318),
                         size: 21,
                       ),
                     ),

@@ -134,7 +134,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF24413D),
+                  color: Color(0xFF17332E),
                 ),
               ),
               content: SingleChildScrollView(
@@ -236,7 +236,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                   },
                   child: const Text(
                     'Batal',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(color: Color(0xFF71847F)),
                   ),
                 ),
 
@@ -353,14 +353,14 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 width: 62,
                 height: 62,
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.12),
+                  color: Color(0xFFD88916).withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
                   child: Text(
                     '!',
                     style: TextStyle(
-                      color: Colors.orange,
+                      color: Color(0xFFD88916),
                       fontSize: 34,
                       fontWeight: FontWeight.bold,
                     ),
@@ -375,7 +375,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF24413D),
+                  color: Color(0xFF17332E),
                 ),
               ),
 
@@ -388,7 +388,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 'digunakan lagi.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Colors.grey,
+                  color: Color(0xFF71847F),
                   fontSize: 13,
                   height: 1.5,
                 ),
@@ -403,7 +403,10 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Color(0xFF71847F)),
+              ),
             ),
 
             ElevatedButton(
@@ -468,14 +471,14 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: aktif
-            ? Colors.green.withValues(alpha: 0.10)
-            : Colors.red.withValues(alpha: 0.10),
+            ? Color(0xFF298357).withValues(alpha: 0.10)
+            : Color(0xFFB42318).withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         aktif ? 'Aktif' : 'Nonaktif',
         style: TextStyle(
-          color: aktif ? Colors.green.shade700 : Colors.red.shade700,
+          color: aktif ? Color(0xFF166534) : Color(0xFFB42318),
           fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
@@ -513,7 +516,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
             ),
             child: const Icon(
               Icons.recycling_outlined,
-              color: Color(0xFF2E8B72),
+              color: Color(0xFF2D765D),
               size: 25,
             ),
           ),
@@ -527,7 +530,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 Text(
                   item.namaSampah,
                   style: const TextStyle(
-                    color: Color(0xFF24413D),
+                    color: Color(0xFF17332E),
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -537,7 +540,10 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
 
                 Text(
                   '${_formatRupiah(item.hargaPerKg)} / kg',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: const TextStyle(
+                    color: Color(0xFF71847F),
+                    fontSize: 12,
+                  ),
                 ),
 
                 const SizedBox(height: 7),
@@ -556,7 +562,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 },
                 icon: const Icon(
                   Icons.edit_outlined,
-                  color: Color(0xFF2E8B72),
+                  color: Color(0xFF2D765D),
                   size: 21,
                 ),
               ),
@@ -568,7 +574,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 },
                 icon: const Icon(
                   Icons.delete_outline_rounded,
-                  color: Colors.redAccent,
+                  color: Color(0xFFB42318),
                   size: 21,
                 ),
               ),
@@ -604,7 +610,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                       Text(
                         'Kelola Jenis Sampah',
                         style: TextStyle(
-                          color: Color(0xFF24413D),
+                          color: Color(0xFF17332E),
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -612,7 +618,10 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                       SizedBox(height: 4),
                       Text(
                         'Atur jenis dan harga sampah',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                        style: TextStyle(
+                          color: Color(0xFF71847F),
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -708,7 +717,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 const Text(
                   'Daftar Sampah',
                   style: TextStyle(
-                    color: Color(0xFF24413D),
+                    color: Color(0xFF17332E),
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -728,7 +737,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                   child: Text(
                     '${data.length}',
                     style: const TextStyle(
-                      color: Color(0xFF2E8B72),
+                      color: Color(0xFF2D765D),
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -756,13 +765,13 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                     Icon(
                       Icons.search_off_rounded,
                       size: 45,
-                      color: Colors.grey,
+                      color: Color(0xFF71847F),
                     ),
                     SizedBox(height: 12),
                     Text(
                       'Data tidak ditemukan',
                       style: TextStyle(
-                        color: Colors.grey,
+                        color: Color(0xFF71847F),
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),

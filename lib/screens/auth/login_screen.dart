@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../app_styles.dart';
 import '../../services/api_service.dart';
 
 import 'lupa_password_screen.dart';
@@ -213,9 +212,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                       begin: Alignment.topCenter,
                                       end: Alignment.bottomCenter,
                                       colors: [
-                                        const Color(0xFF164A43)
+                                        const Color(0xFF153834)
                                             .withValues(alpha: 0.25),
-                                        const Color(0xFF164A43)
+                                        const Color(0xFF153834)
                                             .withValues(alpha: 0.8),
                                       ],
                                     ),
@@ -314,7 +313,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF172033),
+                        color: Color(0xFF17332E),
                       ),
                     ),
 
@@ -322,7 +321,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const Text(
                       'Silahkan masuk untuk melanjutkan.',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                      style: TextStyle(fontSize: 14, color: Color(0xFF71847F)),
                     ),
 
                     const SizedBox(height: 30),
@@ -414,7 +413,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                           child: const Text(
                             'Lupa Password?',
-                            style: TextStyle(color: Color(0xFF159447)),
+                            style: TextStyle(color: Color(0xFF2D6A4F)),
                           ),
                         ),
 
@@ -430,7 +429,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: const Text(
                             'Sign Up',
                             style: TextStyle(
-                              color: Color(0xFF159447),
+                              color: Color(0xFF2D6A4F),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -443,7 +442,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     const Center(
                       child: Text(
                         'Bank Sampah Griya Ayu',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                        style: TextStyle(
+                          color: Color(0xFF71847F),
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],

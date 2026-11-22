@@ -17,7 +17,17 @@ class PetugasPreviewApp extends StatelessWidget {
       title: 'Bank Sampah - Petugas',
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary)
+            .copyWith(
+              primary: AppColors.primary,
+              secondary: AppColors.secondary,
+              error: AppColors.error,
+              surface: AppColors.cardBg,
+              onSurface: AppColors.textPrimary,
+            ),
+        primaryColor: AppColors.primary,
+        scaffoldBackgroundColor: AppColors.background,
+        dividerColor: AppColors.border,
       ),
       home: PetugasDashboard(
         onMenuSelected: (menu) {

@@ -32,9 +32,9 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
     return List.generate(12, (index) => DateTime(now.year, now.month - index));
   }
 
-  static const Color hijau = Color(0xFF166534);
+  static const Color hijau = Color(0xFF2D765D);
   static const Color hijauMuda = Color(0xFFDCFCE7);
-  static const Color latar = Color(0xFFF8FAFC);
+  static const Color latar = Color(0xFFF4F7FB);
 
   @override
   void initState() {
@@ -167,7 +167,9 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: statusBaru == 'Disetujui' ? hijau : Colors.red,
+              backgroundColor: statusBaru == 'Disetujui'
+                  ? hijau
+                  : Color(0xFFB91C1C),
             ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(statusBaru),
@@ -248,7 +250,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
       ..showSnackBar(
         SnackBar(
           content: Text(pesan),
-          backgroundColor: error ? Colors.red.shade700 : hijau,
+          backgroundColor: error ? Color(0xFFB91C1C) : hijau,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -301,25 +303,25 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
       case 'pending':
       case 'menunggu':
       case 'menunggu verifikasi':
-        return Color(0xFF9A5700);
+        return Color(0xFFD88916);
 
       case 'approved':
       case 'disetujui':
       case 'completed':
       case 'selesai':
-        return const Color(0xFF146C2E);
+        return const Color(0xFF298357);
 
       case 'rejected':
       case 'ditolak':
-        return const Color(0xFFB42318);
+        return const Color(0xFFB91C1C);
 
       case 'cancelled':
       case 'canceled':
       case 'dibatalkan':
-        return const Color(0xFF424242);
+        return const Color(0xFF6B7280);
 
       default:
-        return const Color(0xFF37474F);
+        return const Color(0xFF374B48);
     }
   }
 
@@ -403,7 +405,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF166534), Color(0xFF15803D)],
+          colors: [Color(0xFF2D765D), Color(0xFF15803D)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -448,7 +450,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
           const SizedBox(height: 8),
           const Text(
             'Masukkan kode verifikasi 6 digit yang diberikan kepada nasabah.',
-            style: TextStyle(color: Colors.black54, height: 1.4),
+            style: TextStyle(color: Color(0xFF71847F), height: 1.4),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -542,7 +544,9 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _pesanError ? Colors.red.withValues(alpha: 0.08) : hijauMuda,
+        color: _pesanError
+            ? Color(0xFFB91C1C).withValues(alpha: 0.08)
+            : hijauMuda,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -550,15 +554,13 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
         children: [
           Icon(
             _pesanError ? Icons.error_outline : Icons.check_circle_outline,
-            color: _pesanError ? Colors.red : hijau,
+            color: _pesanError ? Color(0xFFB91C1C) : hijau,
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               _pesan!,
-              style: TextStyle(
-                color: _pesanError ? Colors.red.shade800 : hijau,
-              ),
+              style: TextStyle(color: _pesanError ? Color(0xFFB91C1C) : hijau),
             ),
           ),
         ],
@@ -648,7 +650,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
             children: [
               Icon(
                 _saldoCukup ? Icons.check_circle : Icons.cancel,
-                color: _saldoCukup ? hijau : Colors.red,
+                color: _saldoCukup ? hijau : Color(0xFFB91C1C),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -657,7 +659,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                       ? 'Saldo nasabah mencukupi.'
                       : 'Saldo nasabah tidak mencukupi.',
                   style: TextStyle(
-                    color: _saldoCukup ? hijau : Colors.red,
+                    color: _saldoCukup ? hijau : Color(0xFFB91C1C),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -676,8 +678,8 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                     icon: const Icon(Icons.close),
                     label: const Text('Tolak'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
+                      foregroundColor: Color(0xFFB91C1C),
+                      side: const BorderSide(color: Color(0xFFB91C1C)),
                       padding: const EdgeInsets.symmetric(vertical: 13),
                     ),
                   ),
@@ -766,7 +768,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
               child: Center(
                 child: Text(
                   'Belum ada pengajuan penarikan.',
-                  style: TextStyle(color: Colors.black54),
+                  style: TextStyle(color: Color(0xFF71847F)),
                 ),
               ),
             ),
@@ -812,7 +814,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: Color(0xFFE5E7EB)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -869,7 +871,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
               const SizedBox(height: 5),
               Text(
                 formatTanggal(data['tgl_pengajuan']),
-                style: const TextStyle(color: Colors.black54, fontSize: 12),
+                style: const TextStyle(color: Color(0xFF71847F), fontSize: 12),
               ),
             ],
           ),
@@ -884,7 +886,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Color(0xFFE5E7EB)),
       ),
       child: child,
     );
@@ -898,7 +900,10 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
         children: [
           Expanded(
             flex: 5,
-            child: Text(label, style: const TextStyle(color: Colors.black54)),
+            child: Text(
+              label,
+              style: const TextStyle(color: Color(0xFF71847F)),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

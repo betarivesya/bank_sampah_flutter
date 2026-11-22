@@ -56,7 +56,7 @@ class _UbahPasswordScreenState extends State<UbahPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Password berhasil diubah.'),
-          backgroundColor: Colors.green,
+          backgroundColor: Color(0xFF298357),
         ),
       );
 
@@ -67,7 +67,7 @@ class _UbahPasswordScreenState extends State<UbahPasswordScreen> {
       final pesan = e.toString().replaceFirst('Exception: ', '');
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(pesan), backgroundColor: Colors.redAccent),
+        SnackBar(content: Text(pesan), backgroundColor: Color(0xFFB42318)),
       );
     } finally {
       if (mounted) {
@@ -124,11 +124,11 @@ class _UbahPasswordScreenState extends State<UbahPasswordScreen> {
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+              borderSide: const BorderSide(color: Color(0xFFDFE6E3)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+              borderSide: const BorderSide(color: Color(0xFFDFE6E3)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

@@ -16,11 +16,11 @@ class _NasabahScreenState extends State<NasabahScreen> {
   // WARNA
   // ==========================================================
 
-  static const Color darkGreen = Color(0xFF075B4F);
-  static const Color primaryGreen = Color(0xFF2E8B72);
-  static const Color lightGreen = Color(0xFFE8F5F1);
-  static const Color background = Color(0xFFF6F8F7);
-  static const Color textDark = Color(0xFF172033);
+  static const Color darkGreen = Color(0xFF0F463D);
+  static const Color primaryGreen = Color(0xFF2C8069);
+  static const Color lightGreen = Color(0xFFE8F7F1);
+  static const Color background = Color(0xFFEDF1EF);
+  static const Color textDark = Color(0xFF253735);
   // ==========================================================
   // SEARCH
   // ==========================================================
@@ -155,7 +155,7 @@ class _NasabahScreenState extends State<NasabahScreen> {
                     decoration: InputDecoration(
                       hintText: 'Cari nama atau nomor HP...',
                       hintStyle: const TextStyle(
-                        color: Colors.grey,
+                        color: Color(0xFF71847F),
                         fontSize: 13,
                       ),
                       prefixIcon: const Icon(
@@ -169,7 +169,7 @@ class _NasabahScreenState extends State<NasabahScreen> {
                               onPressed: _searchController.clear,
                               icon: const Icon(
                                 Icons.clear_rounded,
-                                color: Colors.grey,
+                                color: Color(0xFF71847F),
                               ),
                             ),
                       border: InputBorder.none,
@@ -325,10 +325,10 @@ class _NasabahScreenState extends State<NasabahScreen> {
 // ============================================================
 
 class _NasabahCard extends StatelessWidget {
-  static const Color primaryGreen = Color(0xFF2E8B72);
-  static const Color lightGreen = Color(0xFFE8F5F1);
-  static const Color textDark = Color(0xFF172033);
-  static const Color textGrey = Color(0xFF7B8A89);
+  static const Color primaryGreen = Color(0xFF2C8069);
+  static const Color lightGreen = Color(0xFFE8F7F1);
+  static const Color textDark = Color(0xFF253735);
+  static const Color textGrey = Color(0xFF71847F);
 
   final Map<String, dynamic> nasabah;
   final VoidCallback onTap;
@@ -507,13 +507,13 @@ class _EmptyState extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFFE8F5F1),
+                color: const Color(0xFFE8F7F1),
                 borderRadius: BorderRadius.circular(22),
               ),
               child: const Icon(
                 Icons.person_search_outlined,
                 size: 40,
-                color: Color(0xFF2E8B72),
+                color: Color(0xFF2C8069),
               ),
             ),
 
@@ -524,7 +524,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
-                color: Color(0xFF172033),
+                color: Color(0xFF253735),
               ),
             ),
 
@@ -533,7 +533,7 @@ class _EmptyState extends StatelessWidget {
             const Text(
               'Coba gunakan nama atau nomor HP yang lain.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF7B8A89), fontSize: 12),
+              style: TextStyle(color: Color(0xFF71847F), fontSize: 12),
             ),
           ],
         ),

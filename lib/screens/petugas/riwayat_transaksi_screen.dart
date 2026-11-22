@@ -12,12 +12,12 @@ class RiwayatTransaksiScreen extends StatefulWidget {
 
 class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   static const int _pageSize = 20;
-  static const Color darkGreen = Color(0xFF075B4F);
-  static const Color primaryGreen = Color(0xFF2E8B72);
-  static const Color lightGreen = Color(0xFFE8F5F1);
-  static const Color background = Color(0xFFF6F8F7);
-  static const Color textDark = Color(0xFF172033);
-  static const Color textGrey = Color(0xFF7B8A89);
+  static const Color darkGreen = Color(0xFF0F463D);
+  static const Color primaryGreen = Color(0xFF2D765D);
+  static const Color lightGreen = Color(0xFFE6F5ED);
+  static const Color background = Color(0xFFF5F8F7);
+  static const Color textDark = Color(0xFF153B38);
+  static const Color textGrey = Color(0xFF6B7F7B);
 
   String _filter = 'Semua';
   int _currentPage = 1;
@@ -193,7 +193,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                 DateTime.tryParse(tanggalString) ??
                 DateTime.fromMillisecondsSinceEpoch(0),
             icon: Icons.account_balance_wallet_outlined,
-            warna: Colors.orange.shade700,
+            warna: Color(0xFFD88916),
             status: item['status']?.toString(),
           ),
         );
@@ -353,7 +353,11 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.cloud_off_rounded, size: 50, color: Colors.grey),
+              const Icon(
+                Icons.cloud_off_rounded,
+                size: 50,
+                color: Color(0xFF71847F),
+              ),
               const SizedBox(height: 12),
               const Text(
                 'Gagal mengambil data riwayat',
@@ -513,7 +517,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6ECEA)),
+        border: Border.all(color: const Color(0xFFDFE6E3)),
       ),
       child: Row(
         children: [
@@ -577,7 +581,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
               Text(
                 '${isSetoran ? '+' : '-'}${formatRupiah(item.nominal)}',
                 style: TextStyle(
-                  color: isSetoran ? primaryGreen : Colors.orange.shade700,
+                  color: isSetoran ? primaryGreen : Color(0xFFD88916),
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
@@ -608,7 +612,7 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       case 'menunggu':
       case 'menunggu verfikasi':
         label = 'Menunggu Verfikasi';
-        warna = Colors.orange;
+        warna = Color(0xFFD88916);
         break;
 
       case 'approved':
@@ -626,19 +630,19 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       case 'ditolak':
       case 'rejected':
         label = 'Ditolak';
-        warna = Colors.redAccent;
+        warna = Color(0xFFB42318);
         break;
 
       case 'dibatalkan':
       case 'cancelled':
       case 'canceled':
         label = 'Dibatalkan';
-        warna = Colors.blueGrey;
+        warna = Color(0xFF6B7F7B);
         break;
 
       default:
         label = status;
-        warna = Colors.blueGrey;
+        warna = Color(0xFF6B7F7B);
     }
 
     return Container(

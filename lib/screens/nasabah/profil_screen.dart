@@ -288,7 +288,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
     showDialog<void>(
       context: context,
-      barrierColor: Colors.black87,
+      barrierColor: Color(0xFF17332E),
       builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.all(16),
@@ -309,7 +309,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       color: Colors.white,
                       child: Text(
                         'Foto profil tidak dapat ditampilkan.',
-                        style: TextStyle(color: Colors.grey.shade800),
+                        style: TextStyle(color: Color(0xFF374151)),
                       ),
                     ),
                   ),
@@ -350,7 +350,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     width: 38,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD9DEE3),
+                      color: const Color(0xFFDFE6E3),
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -364,7 +364,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF172033),
+                          color: Color(0xFF17332E),
                         ),
                       ),
                     ),
@@ -377,7 +377,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         },
                         icon: const Icon(
                           Icons.delete_outline,
-                          color: Colors.redAccent,
+                          color: Color(0xFFB42318),
                         ),
                       ),
                   ],
@@ -385,7 +385,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Pilih sumber foto yang ingin digunakan.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
                 ),
                 const SizedBox(height: 8),
 
@@ -450,7 +450,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
+              backgroundColor: Color(0xFFB42318),
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.pop(dialogContext, true),
@@ -501,10 +501,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF7F1),
+        color: const Color(0xFFF0F8F5),
         borderRadius: BorderRadius.circular(13),
       ),
-      child: Icon(ikon, color: const Color(0xFF167A63)),
+      child: Icon(ikon, color: const Color(0xFF2D765D)),
     );
   }
 
@@ -547,7 +547,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
         height: 76,
         clipBehavior: Clip.antiAlias,
         decoration: const BoxDecoration(
-          color: Color(0xFF2FCB78),
+          color: Color(0xFF16715E),
           shape: BoxShape.circle,
         ),
         child: Image.file(
@@ -567,7 +567,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
       height: 76,
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
-        color: Color(0xFF2FCB78),
+        color: Color(0xFF16715E),
         shape: BoxShape.circle,
       ),
       child: url != null && url.trim().isNotEmpty
@@ -644,7 +644,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
+                backgroundColor: Color(0xFFB42318),
                 foregroundColor: Colors.white,
               ),
               onPressed: () => Navigator.pop(dialogContext, true),
@@ -739,7 +739,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE8EBEE)),
+              border: Border.all(color: const Color(0xFFEDF1EF)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.04),
@@ -761,7 +761,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       right: 0,
                       bottom: 0,
                       child: Material(
-                        color: const Color(0xFF167A63),
+                        color: const Color(0xFF2D765D),
                         shape: const CircleBorder(),
                         child: InkWell(
                           onTap: _sedangMemilihFoto
@@ -799,7 +799,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF1679B8),
+                    color: Color(0xFF16715E),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -819,8 +819,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     style: TextStyle(fontSize: 10),
                   ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF20A85A),
-                    side: const BorderSide(color: Color(0xFF2FCB78)),
+                    foregroundColor: const Color(0xFF16715E),
+                    side: const BorderSide(color: Color(0xFF16715E)),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
                       vertical: 5,
@@ -840,7 +840,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE8EBEE)),
+              border: Border.all(color: const Color(0xFFEDF1EF)),
             ),
             child: Column(
               children: [
@@ -866,7 +866,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE8EBEE)),
+              border: Border.all(color: const Color(0xFFEDF1EF)),
             ),
             child: Material(
               color: Colors.transparent,
@@ -884,7 +884,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 trailing: const Icon(
                   Icons.chevron_right,
                   size: 17,
-                  color: Colors.grey,
+                  color: Color(0xFF71847F),
                 ),
                 onTap: () {
                   Navigator.push(
@@ -906,7 +906,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE8EBEE)),
+              border: Border.all(color: const Color(0xFFEDF1EF)),
             ),
             child: Material(
               color: Colors.transparent,
@@ -915,11 +915,11 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 leading: const Icon(
                   Icons.logout,
                   size: 17,
-                  color: Colors.redAccent,
+                  color: Color(0xFFB42318),
                 ),
                 title: const Text(
                   'Keluar dari Akun',
-                  style: TextStyle(fontSize: 11, color: Colors.redAccent),
+                  style: TextStyle(fontSize: 11, color: Color(0xFFB42318)),
                 ),
                 onTap: _konfirmasiLogout,
               ),
@@ -938,12 +938,12 @@ class _ProfilScreenState extends State<ProfilScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF9F0),
+        color: const Color(0xFFF0F8F5),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         teks,
-        style: const TextStyle(fontSize: 8, color: Color(0xFF16894A)),
+        style: const TextStyle(fontSize: 8, color: Color(0xFF16715E)),
       ),
     );
   }
@@ -962,14 +962,14 @@ class _ProfilScreenState extends State<ProfilScreen> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(fontSize: 8, color: Color(0xFF9299A3)),
+                  style: const TextStyle(fontSize: 8, color: Color(0xFF7C8D89)),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   nilai,
                   style: const TextStyle(
                     fontSize: 10,
-                    color: Color(0xFF344054),
+                    color: Color(0xFF374B48),
                   ),
                 ),
               ],
@@ -981,7 +981,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _pemisahProfil() {
-    return const Divider(height: 1, thickness: 0.5, color: Color(0xFFF0F1F3));
+    return const Divider(height: 1, thickness: 0.5, color: Color(0xFFEDF1EF));
   }
 }
 

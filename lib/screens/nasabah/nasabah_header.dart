@@ -22,12 +22,12 @@ class NasabahHeader extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: const Color(0xFFE8F5F0),
+              color: const Color(0xFFE6F5ED),
               borderRadius: BorderRadius.circular(15),
             ),
             child: const Icon(
               Icons.eco_rounded,
-              color: Color(0xFF167A63),
+              color: Color(0xFF2D765D),
               size: 27,
             ),
           ),
@@ -43,7 +43,7 @@ class NasabahHeader extends StatelessWidget {
                     fontSize: 19,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.8,
-                    color: Color(0xFF172033),
+                    color: Color(0xFF17332E),
                   ),
                 ),
                 SizedBox(height: 2),
@@ -51,7 +51,7 @@ class NasabahHeader extends StatelessWidget {
                   'Bank Sampah Griya Ayu',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF167A63),
+                    color: Color(0xFF2D765D),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -92,9 +92,9 @@ class NasabahHeader extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE8ECEA)),
+                border: Border.all(color: const Color(0xFFDFE6E3)),
               ),
-              child: Icon(icon, color: const Color(0xFF172033), size: 21),
+              child: Icon(icon, color: const Color(0xFF17332E), size: 21),
             ),
           ),
         ),
@@ -108,7 +108,7 @@ class NasabahHeader extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF8A3D),
+                color: const Color(0xFFD88916),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Colors.white, width: 1.5),
               ),

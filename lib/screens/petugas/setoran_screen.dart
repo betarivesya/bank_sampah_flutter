@@ -68,7 +68,7 @@ class _SetoranScreenState extends State<SetoranScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gagal mengambil data setoran: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: Color(0xFFB42318),
         ),
       );
     }
@@ -97,12 +97,12 @@ class _SetoranScreenState extends State<SetoranScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F8F7),
+      backgroundColor: const Color(0xFFEDF1EF),
       body: RefreshIndicator(
         onRefresh: _loadSetoran,
         child: _loading
             ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF075B4F)),
+                child: CircularProgressIndicator(color: Color(0xFF0F463D)),
               )
             : _setoran.isEmpty
             ? _buildEmpty()
@@ -129,7 +129,7 @@ class _SetoranScreenState extends State<SetoranScreen> {
       // TAMBAH SETORAN
       // ============================================================
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF075B4F),
+        backgroundColor: const Color(0xFF0F463D),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Setoran Baru'),
@@ -165,12 +165,12 @@ class _SetoranScreenState extends State<SetoranScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFE8F5F1),
+              color: const Color(0xFFE8F7F1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.recycling,
-              color: Color(0xFF075B4F),
+              color: Color(0xFF0F463D),
               size: 28,
             ),
           ),
@@ -184,13 +184,13 @@ class _SetoranScreenState extends State<SetoranScreen> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF172033),
+                    color: Color(0xFF253735),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${_setoran.length} transaksi setoran',
-                  style: const TextStyle(color: Colors.grey),
+                  style: const TextStyle(color: Color(0xFF71847F)),
                 ),
               ],
             ),
@@ -206,13 +206,13 @@ class _SetoranScreenState extends State<SetoranScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE4EAE7)),
+        border: Border.all(color: const Color(0xFFDFE6E3)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<DateTime>(
           isExpanded: true,
           value: _selectedMonth,
-          icon: const Icon(Icons.calendar_month, color: Color(0xFF075B4F)),
+          icon: const Icon(Icons.calendar_month, color: Color(0xFF0F463D)),
           items: _monthOptions.map((month) {
             return DropdownMenuItem(
               value: month,
@@ -281,7 +281,7 @@ class _SetoranScreenState extends State<SetoranScreen> {
       padding: const EdgeInsets.all(20),
       children: [
         const SizedBox(height: 100),
-        const Icon(Icons.inbox_outlined, size: 70, color: Colors.grey),
+        const Icon(Icons.inbox_outlined, size: 70, color: Color(0xFF71847F)),
         const SizedBox(height: 16),
         const Center(
           child: Text(
@@ -294,7 +294,7 @@ class _SetoranScreenState extends State<SetoranScreen> {
           child: Text(
             'Tambahkan setoran baru untuk nasabah.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(color: Color(0xFF71847F)),
           ),
         ),
       ],
@@ -320,7 +320,7 @@ class _SetoranCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE4EAE7)),
+        border: Border.all(color: const Color(0xFFDFE6E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,10 +330,10 @@ class _SetoranCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5F1),
+                  color: const Color(0xFFE8F7F1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.person, color: Color(0xFF075B4F)),
+                child: const Icon(Icons.person, color: Color(0xFF0F463D)),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -350,7 +350,10 @@ class _SetoranCard extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       tanggal,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      style: const TextStyle(
+                        color: Color(0xFF71847F),
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -426,7 +429,7 @@ class _InfoItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: const Color(0xFF2E8B72)),
+        Icon(icon, size: 18, color: const Color(0xFF2C8069)),
         const SizedBox(width: 8),
         Expanded(
           child: Column(
@@ -434,7 +437,7 @@ class _InfoItem extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                style: const TextStyle(fontSize: 11, color: Color(0xFF71847F)),
               ),
               const SizedBox(height: 3),
               Text(
@@ -466,13 +469,13 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5F1),
+        color: const Color(0xFFE8F7F1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         status,
         style: const TextStyle(
-          color: Color(0xFF075B4F),
+          color: Color(0xFF0F463D),
           fontSize: 11,
           fontWeight: FontWeight.bold,
         ),

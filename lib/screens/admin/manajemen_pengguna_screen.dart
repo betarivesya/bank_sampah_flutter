@@ -19,10 +19,10 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
   // WARNA
   // ============================================================
 
-  static const Color darkGreen = Color(0xFF075B4F);
-  static const Color primaryGreen = Color(0xFF2E8B72);
-  static const Color background = Color(0xFFF5F8F7);
-  static const Color textDark = Color(0xFF172033);
+  static const Color darkGreen = Color(0xFF123D36);
+  static const Color primaryGreen = Color(0xFF065F46);
+  static const Color background = Color(0xFFF3F4F6);
+  static const Color textDark = Color(0xFF111827);
   static const Color textGrey = Color(0xFF6B7280);
 
   // ============================================================
@@ -112,7 +112,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gagal mengambil data pengguna: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: Color(0xFFB42318),
         ),
       );
     }
@@ -374,7 +374,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Semua data harus diisi.'),
-                                backgroundColor: Colors.red,
+                                backgroundColor: Color(0xFFB42318),
                               ),
                             );
                             return;
@@ -384,7 +384,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Password minimal 6 karakter.'),
-                                backgroundColor: Colors.red,
+                                backgroundColor: Color(0xFFB42318),
                               ),
                             );
                             return;
@@ -428,7 +428,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Gagal menambahkan pengguna: $e'),
-                                backgroundColor: Colors.red,
+                                backgroundColor: Color(0xFFB42318),
                               ),
                             );
                           }
@@ -590,7 +590,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                                 content: Text(
                                   'Nama pengguna tidak boleh kosong.',
                                 ),
-                                backgroundColor: Colors.red,
+                                backgroundColor: Color(0xFFB42318),
                               ),
                             );
                             return;
@@ -634,7 +634,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Gagal memperbarui pengguna: $e'),
-                                backgroundColor: Colors.red,
+                                backgroundColor: Color(0xFFB42318),
                               ),
                             );
                           }
@@ -667,7 +667,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Admin utama tidak dapat dihapus.'),
-          backgroundColor: Colors.orange,
+          backgroundColor: Color(0xFFD88916),
         ),
       );
 
@@ -700,7 +700,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
             // ==================================================
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: Color(0xFFB42318),
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
@@ -731,7 +731,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Gagal menghapus pengguna: $e'),
-                      backgroundColor: Colors.red,
+                      backgroundColor: Color(0xFFB42318),
                     ),
                   );
                 }
@@ -866,7 +866,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
               title: 'Admin',
               value: totalAdmin.toString(),
               icon: Icons.admin_panel_settings_outlined,
-              color: Colors.blue,
+              color: Color(0xFF23619A),
             ),
           ),
 
@@ -877,7 +877,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
               title: 'Petugas',
               value: totalPetugas.toString(),
               icon: Icons.badge_outlined,
-              color: Colors.orange,
+              color: Color(0xFFD88916),
             ),
           ),
 
@@ -1159,12 +1159,12 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
 
     switch (role.toLowerCase()) {
       case 'admin':
-        roleColor = Colors.blue;
+        roleColor = Color(0xFF23619A);
         roleIcon = Icons.admin_panel_settings_outlined;
         break;
 
       case 'petugas':
-        roleColor = Colors.orange;
+        roleColor = Color(0xFFD88916);
         roleIcon = Icons.badge_outlined;
         break;
 
@@ -1178,7 +1178,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: Colors.grey.withOpacity(0.10)),
+        border: Border.all(color: Color(0xFF71847F).withOpacity(0.10)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -1258,8 +1258,8 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
               decoration: BoxDecoration(
                 color: isActive
-                    ? Colors.green.withOpacity(0.08)
-                    : Colors.red.withOpacity(0.08),
+                    ? Color(0xFF298357).withOpacity(0.08)
+                    : Color(0xFFB42318).withOpacity(0.08),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -1268,7 +1268,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                   Icon(
                     Icons.circle,
                     size: 7,
-                    color: isActive ? Colors.green : Colors.red,
+                    color: isActive ? Color(0xFF298357) : Color(0xFFB42318),
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -1276,7 +1276,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w600,
-                      color: isActive ? Colors.green : Colors.red,
+                      color: isActive ? Color(0xFF298357) : Color(0xFFB42318),
                     ),
                   ),
                 ],
@@ -1328,9 +1328,16 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete_outline, size: 19, color: Colors.red),
+                        Icon(
+                          Icons.delete_outline,
+                          size: 19,
+                          color: Color(0xFFB42318),
+                        ),
                         SizedBox(width: 8),
-                        Text('Hapus', style: TextStyle(color: Colors.red)),
+                        Text(
+                          'Hapus',
+                          style: TextStyle(color: Color(0xFFB42318)),
+                        ),
                       ],
                     ),
                   ),

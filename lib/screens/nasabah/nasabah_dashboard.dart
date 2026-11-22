@@ -305,7 +305,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
       height: ukuran,
       alignment: Alignment.center,
       decoration: const BoxDecoration(
-        color: Color(0xFF2E9B7D),
+        color: Color(0xFF2D765D),
         shape: BoxShape.circle,
       ),
       child: Text(
@@ -443,7 +443,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             child: RefreshIndicator(
               // Tarik layar ke bawah untuk memuat ulang data.
               onRefresh: _muatDashboard,
-              color: const Color(0xFF167A63),
+              color: const Color(0xFF2D765D),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -510,7 +510,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE7ECEA)),
+          border: Border.all(color: const Color(0xFFEDF1EF)),
         ),
         child: Row(
           children: [
@@ -526,18 +526,18 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF172033),
+                      color: Color(0xFF17332E),
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     nomorAnggota,
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFF71847F)),
           ],
         ),
       ),
@@ -556,12 +556,12 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF176B59), Color(0xFF2E9277)],
+          colors: [Color(0xFF2D765D), Color(0xFF2D765D)],
         ),
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF176B59).withValues(alpha: 0.20),
+            color: const Color(0xFF2D765D).withValues(alpha: 0.20),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -657,32 +657,32 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
           value: '$totalSetoran',
           subtitle: 'Seluruh transaksi setoran',
           icon: Icons.recycling_rounded,
-          iconColor: const Color(0xFF3B82F6),
-          backgroundColor: const Color(0xFFEFF5FF),
+          iconColor: const Color(0xFF23619A),
+          backgroundColor: const Color(0xFFE2F0FF),
         ),
         _buildStatisticCard(
           title: 'Total Sampah',
           value: '${totalSampah.toStringAsFixed(2)} kg',
           subtitle: 'Total berat sampah',
           icon: Icons.delete_outline_rounded,
-          iconColor: const Color(0xFFF28C28),
-          backgroundColor: const Color(0xFFFFF4E7),
+          iconColor: const Color(0xFFD88916),
+          backgroundColor: const Color(0xFFFFF2DC),
         ),
         _buildStatisticCard(
           title: 'Total Pendapatan',
           value: _formatRupiah(totalPendapatan),
           subtitle: 'Hasil seluruh setoran',
           icon: Icons.payments_outlined,
-          iconColor: const Color(0xFF16805F),
-          backgroundColor: const Color(0xFFEAF7F1),
+          iconColor: const Color(0xFF2D765D),
+          backgroundColor: const Color(0xFFF0F8F5),
         ),
         _buildStatisticCard(
           title: 'Tahun Aktif',
           value: '2026',
           subtitle: 'Statistik tahun ini',
           icon: Icons.calendar_month_outlined,
-          iconColor: const Color(0xFF8B5CF6),
-          backgroundColor: const Color(0xFFF3EEFF),
+          iconColor: const Color(0xFFD88916),
+          backgroundColor: const Color(0xFFFFF2DC),
         ),
       ],
     );
@@ -702,7 +702,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8ECEA)),
+        border: Border.all(color: const Color(0xFFDFE6E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -714,7 +714,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                   title,
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey.shade600,
+                    color: Color(0xFF6B7280),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -738,7 +738,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF172033),
+              color: Color(0xFF17332E),
             ),
           ),
           const SizedBox(height: 3),
@@ -746,7 +746,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             subtitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 9, color: Colors.grey.shade500),
+            style: TextStyle(fontSize: 9, color: Color(0xFF6B7280)),
           ),
         ],
       ),
@@ -766,7 +766,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF172033),
+              color: Color(0xFF17332E),
             ),
           ),
         ),
@@ -776,7 +776,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             child: const Text(
               'Lihat semua',
               style: TextStyle(
-                color: Color(0xFF167A63),
+                color: Color(0xFF2D765D),
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -805,7 +805,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE8ECEA)),
+          border: Border.all(color: const Color(0xFFDFE6E3)),
         ),
         child: Row(
           children: [
@@ -813,12 +813,12 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: const Color(0xFFE8F5F0),
+                color: const Color(0xFFE6F5ED),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Icon(
                 Icons.price_change_rounded,
-                color: Color(0xFF167A63),
+                color: Color(0xFF2D765D),
                 size: 25,
               ),
             ),
@@ -832,18 +832,18 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF172033),
+                      color: Color(0xFF17332E),
                     ),
                   ),
                   SizedBox(height: 4),
                   Text(
                     'Lihat harga setiap jenis sampah',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    style: TextStyle(fontSize: 12, color: Color(0xFF71847F)),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFF71847F)),
           ],
         ),
       ),
@@ -864,7 +864,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8ECEA)),
+        border: Border.all(color: const Color(0xFFDFE6E3)),
       ),
       child: transaksi.isEmpty
           ? _buildEmptyContent(
@@ -902,12 +902,12 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: const Color(0xFFEAF7F1),
+            color: const Color(0xFFF0F8F5),
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Icon(
             Icons.arrow_upward_rounded,
-            color: Color(0xFF16805F),
+            color: Color(0xFF2D765D),
             size: 20,
           ),
         ),
@@ -926,7 +926,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
               const SizedBox(height: 3),
               Text(
                 '$date • $weight',
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 11),
               ),
             ],
           ),
@@ -937,7 +937,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             Text(
               '+ ${_formatRupiah(amount)}',
               style: const TextStyle(
-                color: Color(0xFF16805F),
+                color: Color(0xFF2D765D),
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
               ),
@@ -945,7 +945,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             const SizedBox(height: 3),
             Text(
               status.isEmpty ? '-' : status,
-              style: const TextStyle(color: Color(0xFF16805F), fontSize: 10),
+              style: const TextStyle(color: Color(0xFF2D765D), fontSize: 10),
             ),
           ],
         ),
@@ -965,7 +965,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF195E4F), Color(0xFF2C806B)],
+          colors: [Color(0xFF2D765D), Color(0xFF2D765D)],
         ),
         borderRadius: BorderRadius.circular(20),
       ),
@@ -1002,7 +1002,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF195E4F),
+                    foregroundColor: const Color(0xFF2D765D),
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
@@ -1067,7 +1067,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8ECEA)),
+        border: Border.all(color: const Color(0xFFDFE6E3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1089,7 +1089,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                 },
                 child: const Text(
                   'Riwayat',
-                  style: TextStyle(color: Color(0xFF167A63), fontSize: 11),
+                  style: TextStyle(color: Color(0xFF2D765D), fontSize: 11),
                 ),
               ),
             ],
@@ -1105,7 +1105,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFF7F9F8),
+                color: const Color(0xFFF4F8F7),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
@@ -1114,12 +1114,12 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEAF7F1),
+                      color: const Color(0xFFF0F8F5),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
                       Icons.account_balance_wallet_outlined,
-                      color: Color(0xFF16805F),
+                      color: Color(0xFF2D765D),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1138,7 +1138,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                         Text(
                           _formatTanggalDashboard(tanggal),
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color: Color(0xFF6B7280),
                             fontSize: 10,
                           ),
                         ),
@@ -1146,7 +1146,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                         Text(
                           status,
                           style: const TextStyle(
-                            color: Color(0xFF16805F),
+                            color: Color(0xFF2D765D),
                             fontSize: 10,
                           ),
                         ),
@@ -1157,7 +1157,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                   Text(
                     _formatRupiah(nominal),
                     style: const TextStyle(
-                      color: Color(0xFF16805F),
+                      color: Color(0xFF2D765D),
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -1176,17 +1176,17 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F9F8),
+        color: const Color(0xFFF4F8F7),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         children: [
-          Icon(icon, color: Colors.grey.shade400, size: 30),
+          Icon(icon, color: Color(0xFF9CA3AF), size: 30),
           const SizedBox(height: 8),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+            style: TextStyle(color: Color(0xFF6B7280), fontSize: 12),
           ),
         ],
       ),
@@ -1261,12 +1261,12 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F9F8),
+        backgroundColor: const Color(0xFFF4F8F7),
 
         // Menampilkan indikator loading, pesan error, atau halaman yang dipilih.
         body: _loadingDashboard
             ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF167A63)),
+                child: CircularProgressIndicator(color: Color(0xFF2D765D)),
               )
             : _errorDashboard != null
             ? Center(
@@ -1277,7 +1277,7 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
                     children: [
                       const Icon(
                         Icons.wifi_off_rounded,
-                        color: Colors.grey,
+                        color: Color(0xFF71847F),
                         size: 44,
                       ),
                       const SizedBox(height: 12),

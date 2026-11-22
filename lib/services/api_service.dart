@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -24,7 +25,7 @@ class PetugasPage<T> {
 }
 
 class ApiService {
-  static const String baseUrl = 'http://10.113.26.158:8000/api';
+  static const String baseUrl = 'http://192.168.1.5:8000/api';
 
   static String? _authToken;
   static String? _sessionCookie;
@@ -159,6 +160,92 @@ class ApiService {
     }
 
     throw Exception(data['message'] ?? 'Gagal mengambil dashboard admin');
+  }
+
+  static Future<Map<String, dynamic>> getAdminKeuangan({
+    Map<String, String> filters = const {},
+  }) async {
+    final uri = Uri.parse('$baseUrl/admin/keuangan')
+        .replace(queryParameters: filters.isEmpty ? null : filters);
+    final response = await http.get(uri, headers: _headers());
+    final data = _decodeMap(response.body);
+
+    if (response.statusCode == 200) {
+      return data;
+    }
+
+    throw Exception(
+      _errorMessage(data, 'Gagal mengambil data keuangan admin.'),
+    );
+  }
+
+  static Future<Map<String, dynamic>> storeAdminKeuangan({
+    required String jenisTransaksi,
+    required String kategori,
+    required String tanggalTransaksi,
+    required String keterangan,
+    String? nominal,
+    List<Map<String, dynamic>> detailPenjualan = const [],
+    Uint8List? buktiBytes,
+    String? buktiNamaFile,
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/admin/keuangan'),
+    );
+    request.headers.addAll(_headers());
+    request.fields.addAll({
+      'jenis_transaksi': jenisTransaksi,
+      'kategori': kategori,
+      'tanggal_transaksi': tanggalTransaksi,
+      if (keterangan.trim().isNotEmpty) 'keterangan': keterangan.trim(),
+      if (nominal != null && nominal.trim().isNotEmpty)
+        'nominal': nominal.trim(),
+    });
+
+    for (var index = 0; index < detailPenjualan.length; index++) {
+      final detail = detailPenjualan[index];
+      request.fields['detail_penjualan[$index][id_jenis_sampah]'] =
+          detail['id_jenis_sampah'].toString();
+      request.fields['detail_penjualan[$index][berat_kg]'] = detail['berat_kg']
+          .toString();
+      request.fields['detail_penjualan[$index][harga_per_kg]'] =
+          detail['harga_per_kg'].toString();
+    }
+
+    if (buktiBytes != null) {
+      final fileName = buktiNamaFile;
+      if (fileName == null || fileName.trim().isEmpty) {
+        throw Exception('Nama file bukti transaksi tidak tersedia.');
+      }
+
+      final extension = fileName.split('.').last.toLowerCase();
+      final contentType = switch (extension) {
+        'jpg' || 'jpeg' => MediaType('image', 'jpeg'),
+        'png' => MediaType('image', 'png'),
+        'pdf' => MediaType('application', 'pdf'),
+        _ => throw Exception('Format bukti harus JPG, JPEG, PNG, atau PDF.'),
+      };
+
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'bukti_transaksi',
+          buktiBytes,
+          filename: fileName,
+          contentType: contentType,
+        ),
+      );
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    final data = _decodeMap(response.body);
+
+    if (response.statusCode == 201) {
+      return data;
+    }
+
+    throw Exception(_errorMessage(data, 'Gagal mencatat transaksi keuangan.'));
   }
 
   // ==========================================================

@@ -20,10 +20,10 @@ class PetugasLayout extends StatefulWidget {
 }
 
 class _PetugasLayoutState extends State<PetugasLayout> {
-  static const Color darkGreen = Color(0xFF075B4F);
-  static const Color background = Color(0xFFF6F8F7);
-  static const Color textDark = Color(0xFF172033);
-  static const Color textGrey = Color(0xFF7B8A89);
+  static const Color darkGreen = Color(0xFF0F463D);
+  static const Color background = Color(0xFFF5F8F7);
+  static const Color textDark = Color(0xFF153B38);
+  static const Color textGrey = Color(0xFF71847F);
 
   String _selectedMenu = 'dashboard';
 
@@ -53,11 +53,14 @@ class _PetugasLayoutState extends State<PetugasLayout> {
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Color(0xFF71847F)),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
+                backgroundColor: Color(0xFFB42318),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -102,11 +105,14 @@ class _PetugasLayoutState extends State<PetugasLayout> {
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Color(0xFF71847F)),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
+                backgroundColor: Color(0xFFB42318),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),

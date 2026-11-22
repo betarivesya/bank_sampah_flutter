@@ -10,9 +10,9 @@ class HargaSampahScreen extends StatefulWidget {
 }
 
 class _HargaSampahScreenState extends State<HargaSampahScreen> {
-  static const Color hijau = Color(0xFF167A63);
-  static const Color latar = Color(0xFFF7F9F8);
-  static const Color teks = Color(0xFF172033);
+  static const Color hijau = Color(0xFF2D765D);
+  static const Color latar = Color(0xFFF4F8F7);
+  static const Color teks = Color(0xFF17332E);
 
   List<Map<String, dynamic>> hargaSampah = [];
   bool isLoading = true;
@@ -111,7 +111,7 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE8F5F0),
+                        color: const Color(0xFFE6F5ED),
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: const Icon(
@@ -161,7 +161,7 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEAF7F1),
+                    color: const Color(0xFFF0F8F5),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Row(
@@ -175,7 +175,7 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
                           'Bank Sampah Griya Ayu.',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF477267),
+                            color: Color(0xFF4A665F),
                             height: 1.5,
                             decoration: TextDecoration.none,
                           ),
@@ -207,7 +207,7 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
               const Icon(
                 Icons.cloud_off_outlined,
                 size: 46,
-                color: Color(0xFF89938E),
+                color: Color(0xFF7C8D89),
               ),
               const SizedBox(height: 12),
               Text(
@@ -264,7 +264,7 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE8ECEA)),
+              border: Border.all(color: const Color(0xFFDFE6E3)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.035),
@@ -279,7 +279,7 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEAF7F1),
+                    color: const Color(0xFFF0F8F5),
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: Icon(_getIcon(nama), color: hijau, size: 25),
@@ -303,7 +303,7 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
                         'Harga per kilogram',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF89938E),
+                          color: Color(0xFF7C8D89),
                           decoration: TextDecoration.none,
                         ),
                       ),
@@ -328,7 +328,7 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
                       '/ kg',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF89938E),
+                        color: Color(0xFF7C8D89),
                         decoration: TextDecoration.none,
                       ),
                     ),

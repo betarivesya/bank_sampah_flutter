@@ -164,7 +164,10 @@ class _LoginKeamananScreenState extends State<LoginKeamananScreen> {
                 'Perbarui password akunmu',
                 style: TextStyle(fontSize: 11),
               ),
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: Color(0xFF71847F),
+              ),
               onTap: () {
                 Navigator.push(
                   context,
@@ -198,12 +201,12 @@ class _LoginKeamananScreenState extends State<LoginKeamananScreen> {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1976D2).withValues(alpha: 0.1),
+                    color: const Color(0xFF2D765D).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
                     Icons.fingerprint,
-                    color: Color(0xFF1976D2),
+                    color: Color(0xFF2D765D),
                   ),
                 ),
                 const SizedBox(width: 12),

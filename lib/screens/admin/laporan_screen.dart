@@ -18,8 +18,8 @@ class LaporanScreen extends StatefulWidget {
 
 class _LaporanScreenState extends State<LaporanScreen> {
   // Menentukan warna utama dan latar belakang halaman laporan.
-  static const Color _green = Color(0xFF075B4F);
-  static const Color _background = Color(0xFFF4F7F6);
+  static const Color _green = Color(0xFF123D36);
+  static const Color _background = Color(0xFFF9FBFA);
 
   // Menyimpan data setoran, status pemuatan, dan pesan kesalahan.
   List<SetoranModel> _setoran = [];
@@ -353,7 +353,11 @@ class _LaporanScreenState extends State<LaporanScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         const SizedBox(height: 100),
-        const Icon(Icons.cloud_off_outlined, size: 48, color: Colors.grey),
+        const Icon(
+          Icons.cloud_off_outlined,
+          size: 48,
+          color: Color(0xFF71847F),
+        ),
         const SizedBox(height: 12),
         const Text(
           'Gagal memuat laporan',
@@ -392,13 +396,13 @@ class _LaporanScreenState extends State<LaporanScreen> {
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF173B35),
+            color: Color(0xFF153B38),
           ),
         ),
         const SizedBox(height: 5),
         const Text(
           'Daftar transaksi setoran sampah yang tercatat dalam sistem.',
-          style: TextStyle(fontSize: 12, color: Colors.black54),
+          style: TextStyle(fontSize: 12, color: Color(0xFF71847F)),
         ),
         const SizedBox(height: 16),
 
@@ -472,7 +476,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
           icon: Icons.receipt_long_outlined,
           judul: 'Total Transaksi',
           nilai: '${data.length}',
-          warna: const Color(0xFF2E8B72),
+          warna: const Color(0xFF2D765D),
         ),
 
         const SizedBox(height: 9),
@@ -481,7 +485,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
           icon: Icons.scale_outlined,
           judul: 'Total Berat Sampah',
           nilai: _formatBerat(totalBerat),
-          warna: const Color(0xFF3878B8),
+          warna: const Color(0xFF23619A),
         ),
 
         const SizedBox(height: 9),
@@ -506,7 +510,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
               const SizedBox(height: 3),
               Text(
                 '${data.length} transaksi ditemukan',
-                style: const TextStyle(fontSize: 11, color: Colors.black54),
+                style: const TextStyle(fontSize: 11, color: Color(0xFF71847F)),
               ),
               const SizedBox(height: 12),
 
@@ -519,7 +523,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
                         Icon(
                           Icons.inbox_outlined,
                           size: 42,
-                          color: Colors.black38,
+                          color: Color(0xFF71847F),
                         ),
                         SizedBox(height: 8),
                         Text('Tidak ada setoran pada periode ini'),
@@ -566,7 +570,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: Colors.black54),
+          style: const TextStyle(fontSize: 11, color: Color(0xFF71847F)),
         ),
         const SizedBox(height: 6),
         InkWell(
@@ -575,7 +579,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
             decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFD7E0DD)),
+              border: Border.all(color: const Color(0xFFDFE6E3)),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -639,7 +643,10 @@ class _LaporanScreenState extends State<LaporanScreen> {
               children: [
                 Text(
                   judul,
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF71847F),
+                  ),
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -647,7 +654,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
                   style: const TextStyle(
                     fontSize: 19,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF153C35),
+                    color: Color(0xFF153B38),
                   ),
                 ),
               ],
@@ -666,7 +673,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFF9FBFA),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE7EEEB)),
+        border: Border.all(color: const Color(0xFFEDF1EF)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -676,7 +683,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE0F2EB),
+                  color: const Color(0xFFE6F5ED),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -691,7 +698,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
               const Spacer(),
               Text(
                 _formatTanggalData(setoran.tanggal),
-                style: const TextStyle(fontSize: 11, color: Colors.black54),
+                style: const TextStyle(fontSize: 11, color: Color(0xFF71847F)),
               ),
             ],
           ),
@@ -703,7 +710,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
           const SizedBox(height: 4),
           Text(
             setoran.namaSampah,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF71847F)),
           ),
           const SizedBox(height: 10),
           const Divider(height: 1),
@@ -730,17 +737,24 @@ class _LaporanScreenState extends State<LaporanScreen> {
           const SizedBox(height: 7),
           Row(
             children: [
-              const Icon(Icons.person_outline, size: 15, color: Colors.black45),
+              const Icon(
+                Icons.person_outline,
+                size: 15,
+                color: Color(0xFF71847F),
+              ),
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
                   'Petugas: ${setoran.namaPetugas}',
-                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF71847F),
+                  ),
                 ),
               ),
               Text(
                 setoran.status.isEmpty ? '-' : setoran.status,
-                style: const TextStyle(fontSize: 10, color: Colors.black54),
+                style: const TextStyle(fontSize: 10, color: Color(0xFF71847F)),
               ),
             ],
           ),

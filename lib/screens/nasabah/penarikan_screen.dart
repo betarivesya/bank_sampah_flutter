@@ -95,25 +95,25 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
       case 'pending':
       case 'menunggu':
       case 'menunggu verifikasi':
-        return Colors.orange.withValues(alpha: 0.12);
+        return Color(0xFFD88916).withValues(alpha: 0.12);
 
       case 'disetujui':
       case 'approved':
       case 'selesai':
       case "completed":
-        return Colors.green.withValues(alpha: 0.12);
+        return Color(0xFF298357).withValues(alpha: 0.12);
 
       case 'ditolak':
       case 'rejected':
-        return Colors.red.withValues(alpha: 0.10);
+        return Color(0xFFB42318).withValues(alpha: 0.10);
 
       case 'dibatalkan':
       case 'cancelled':
       case 'canceled':
-        return Colors.grey.withValues(alpha: 0.12);
+        return Color(0xFF71847F).withValues(alpha: 0.12);
 
       default:
-        return Colors.blueGrey.withValues(alpha: 0.10);
+        return Color(0xFF6B7F7B).withValues(alpha: 0.10);
     }
   }
 
@@ -122,25 +122,25 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
       case 'pending':
       case 'menunggu':
       case 'menunggu verifikasi':
-        return Colors.orange.shade800;
+        return Color(0xFFD88916);
 
       case 'disetujui':
       case 'approved':
       case 'selesai':
       case "completed":
-        return Colors.green.shade700;
+        return Color(0xFF166534);
 
       case 'ditolak':
       case 'rejected':
-        return Colors.red.shade700;
+        return Color(0xFFB42318);
 
       case 'dibatalkan':
       case 'cancelled':
       case 'canceled':
-        return Colors.grey.shade700;
+        return Color(0xFF4B5563);
 
       default:
-        return Colors.blueGrey.shade700;
+        return Color(0xFF6B7F7B);
     }
   }
 
@@ -385,7 +385,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Color(0xFFB42318)),
             child: const Text('Ya, Batalkan'),
           ),
         ],
@@ -502,7 +502,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                                 style: const TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF167A63),
+                                  color: Color(0xFF2D765D),
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -558,7 +558,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                                   });
                                 },
                           contentPadding: EdgeInsets.zero,
-                          activeColor: const Color(0xFF167A63),
+                          activeColor: const Color(0xFF2D765D),
                           controlAffinity: ListTileControlAffinity.leading,
                           title: const Text(
                             'Saya yakin ingin mengajukan penarikan saldo.',
@@ -572,7 +572,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                           child: ElevatedButton(
                             onPressed: sedangMengirim ? null : prosesPenarikan,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF167A63),
+                              backgroundColor: const Color(0xFF2D765D),
                               foregroundColor: Colors.white,
                             ),
                             child: sedangMengirim
@@ -651,7 +651,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                           Icon(
                             Icons.receipt_long_outlined,
                             size: 42,
-                            color: Colors.grey,
+                            color: Color(0xFF71847F),
                           ),
                           SizedBox(height: 10),
                           Text('Belum ada pengajuan penarikan.'),
@@ -749,8 +749,10 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                                   ),
                                   label: const Text('Batalkan Pengajuan'),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.red,
-                                    side: const BorderSide(color: Colors.red),
+                                    foregroundColor: Color(0xFFB42318),
+                                    side: const BorderSide(
+                                      color: Color(0xFFB42318),
+                                    ),
                                   ),
                                 ),
                               ),

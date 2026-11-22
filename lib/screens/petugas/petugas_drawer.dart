@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 class PetugasDrawer extends StatelessWidget {
-  static const Color darkGreen = Color(0xFF075B4F);
-  static const Color primaryGreen = Color(0xFF2E8B72);
+  static const Color darkGreen = Color(0xFF0F463D);
+  static const Color primaryGreen = Color(0xFF2F806B);
 
   final String selectedMenu;
   final Function(String) onMenuSelected;
@@ -171,7 +171,7 @@ class PetugasDrawer extends StatelessWidget {
                     width: 45,
                     height: 45,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF57BF91),
+                      color: Color(0xFF4FD1A5),
                       shape: BoxShape.circle,
                     ),
                     child: const Center(
@@ -222,7 +222,7 @@ class PetugasDrawer extends StatelessWidget {
                       ),
                       child: const Icon(
                         Icons.logout_rounded,
-                        color: Color(0xFFFF9B96),
+                        color: Color(0xFFB42318),
                         size: 21,
                       ),
                     ),
@@ -282,7 +282,7 @@ class PetugasDrawer extends StatelessWidget {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF716B),
+                      color: const Color(0xFFB42318),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(

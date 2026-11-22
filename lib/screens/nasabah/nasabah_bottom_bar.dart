@@ -16,7 +16,7 @@ class NasabahBottomBar extends StatelessWidget {
       selectedIndex: selectedIndex,
       onDestinationSelected: onDestinationSelected,
       backgroundColor: Colors.white,
-      indicatorColor: const Color(0xFFE0F2EB),
+      indicatorColor: const Color(0xFFE6F5ED),
       elevation: 8,
       height: 68,
       destinations: const [

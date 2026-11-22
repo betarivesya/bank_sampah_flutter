@@ -11,8 +11,8 @@ class AdminNotificationScreen extends StatefulWidget {
 }
 
 class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
-  static const Color _green = Color(0xFF2E7D32);
-  static const Color _background = Color(0xFFF7F8FA);
+  static const Color _green = Color(0xFF2D765D);
+  static const Color _background = Color(0xFFEDF1EF);
 
   List<Map<String, dynamic>> _notifikasi = [];
   bool _loading = true;
@@ -169,15 +169,15 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
     switch ((tipe ?? '').toLowerCase()) {
       case 'saldo':
       case 'penarikan':
-        return const Color(0xFF2E7D32);
+        return const Color(0xFF2D765D);
       case 'setoran':
-        return const Color(0xFF43A047);
+        return const Color(0xFF298357);
       case 'pengguna':
-        return const Color(0xFF1976D2);
+        return const Color(0xFF23619A);
       case 'laporan':
-        return const Color(0xFFEF6C00);
+        return const Color(0xFFD88916);
       default:
-        return const Color(0xFF1976D2);
+        return const Color(0xFF23619A);
     }
   }
 
@@ -225,20 +225,20 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
+      backgroundColor: const Color(0xFFEDF1EF),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF17332E)),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Notifikasi',
           style: TextStyle(
-            color: Colors.black87,
+            color: Color(0xFF17332E),
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -255,7 +255,7 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
                     )
                   : const Text(
                       'Baca semua',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF2E7D32)),
+                      style: TextStyle(fontSize: 11, color: Color(0xFF2D765D)),
                     ),
             ),
         ],
@@ -279,13 +279,13 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
               const Icon(
                 Icons.cloud_off_outlined,
                 size: 48,
-                color: Colors.grey,
+                color: Color(0xFF71847F),
               ),
               const SizedBox(height: 12),
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey),
+                style: const TextStyle(color: Color(0xFF71847F)),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -310,12 +310,12 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
             SizedBox(height: 150),
-            Icon(Icons.notifications_none, size: 64, color: Colors.grey),
+            Icon(Icons.notifications_none, size: 64, color: Color(0xFF71847F)),
             SizedBox(height: 12),
             Center(
               child: Text(
                 'Belum ada notifikasi',
-                style: TextStyle(fontSize: 15, color: Colors.grey),
+                style: TextStyle(fontSize: 15, color: Color(0xFF71847F)),
               ),
             ),
           ],
@@ -342,12 +342,12 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: dibaca ? Colors.white : const Color(0xFFF0F8F1),
+                color: dibaca ? Colors.white : const Color(0xFFE6F5ED),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: dibaca
-                      ? const Color(0xFFEEEEEE)
-                      : const Color(0xFFC8E6C9),
+                      ? const Color(0xFFEDF1EF)
+                      : const Color(0xFFD1FAE5),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -385,7 +385,7 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
                                   fontWeight: dibaca
                                       ? FontWeight.w600
                                       : FontWeight.bold,
-                                  color: Colors.black87,
+                                  color: Color(0xFF17332E),
                                 ),
                               ),
                             ),
@@ -408,7 +408,7 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
                           item['pesan']?.toString() ?? '',
                           style: const TextStyle(
                             fontSize: 12,
-                            color: Colors.black54,
+                            color: Color(0xFF71847F),
                             height: 1.4,
                           ),
                         ),
@@ -417,7 +417,7 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
                           _formatWaktu(item['created_at']),
                           style: const TextStyle(
                             fontSize: 11,
-                            color: Colors.grey,
+                            color: Color(0xFF71847F),
                           ),
                         ),
                       ],

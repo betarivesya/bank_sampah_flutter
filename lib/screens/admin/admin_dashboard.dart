@@ -5,11 +5,11 @@ import '../../services/api_service.dart';
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
-  static const Color darkGreen = Color(0xFF075B4F);
-  static const Color primaryGreen = Color(0xFF2E8B72);
-  static const Color background = Color(0xFFF5F7F8);
-  static const Color textDark = Color(0xFF24413D);
-  static const Color textGrey = Color(0xFF7B8A89);
+  static const Color darkGreen = Color(0xFF263B34);
+  static const Color primaryGreen = Color(0xFF276F58);
+  static const Color background = Color(0xFFEDF1EF);
+  static const Color textDark = Color(0xFF263B34);
+  static const Color textGrey = Color(0xFF7B8783);
 
   @override
   State<AdminDashboard> createState() => _AdminDashboardState();
@@ -329,7 +329,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               const Icon(
                 Icons.more_horiz_rounded,
 
-                color: Colors.grey,
+                color: Color(0xFF71847F),
 
                 size: 18,
               ),
@@ -706,8 +706,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
                 decoration: BoxDecoration(
                   color: selesai
-                      ? Colors.green.withValues(alpha: 0.10)
-                      : Colors.orange.withValues(alpha: 0.10),
+                      ? Color(0xFF298357).withValues(alpha: 0.10)
+                      : Color(0xFFD88916).withValues(alpha: 0.10),
 
                   borderRadius: BorderRadius.circular(20),
                 ),
@@ -716,9 +716,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   status,
 
                   style: TextStyle(
-                    color: selesai
-                        ? Colors.green.shade700
-                        : Colors.orange.shade700,
+                    color: selesai ? Color(0xFF166534) : Color(0xFFD88916),
 
                     fontSize: 9,
 
@@ -751,7 +749,7 @@ class _BarChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = Colors.grey.withValues(alpha: 0.15)
+      ..color = Color(0xFF71847F).withValues(alpha: 0.15)
       ..strokeWidth = 1;
 
     final barPaint = Paint()

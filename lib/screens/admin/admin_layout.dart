@@ -9,6 +9,7 @@ import 'kelola_sampah_screen.dart';
 import 'manajemen_pengguna_screen.dart';
 import 'admin_notification_screen.dart';
 import 'laporan_screen.dart';
+import 'manajemen_keuangan_screen.dart';
 
 import 'dart:async';
 
@@ -118,7 +119,10 @@ class _AdminLayoutState extends State<AdminLayout> {
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Color(0xFF71847F)),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -164,7 +168,10 @@ class _AdminLayoutState extends State<AdminLayout> {
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Color(0xFF71847F)),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -202,6 +209,9 @@ class _AdminLayoutState extends State<AdminLayout> {
 
       case 'laporan':
         return const LaporanScreen();
+
+      case 'keuangan':
+        return const ManajemenKeuanganScreen();
 
       case 'notifikasi':
         return const AdminNotificationScreen();
@@ -259,7 +269,7 @@ class _AdminLayoutState extends State<AdminLayout> {
         // APP BAR
         // ======================================================
         appBar: AppBar(
-          backgroundColor: const Color(0xFF075B4F),
+          backgroundColor: const Color(0xFF0F463D),
           foregroundColor: Colors.white,
           elevation: 0,
           titleSpacing: 0,
@@ -271,7 +281,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2E8B72),
+                  color: const Color(0xFF2F806B),
                   borderRadius: BorderRadius.circular(11),
                 ),
                 child: const Icon(
@@ -336,7 +346,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                         ),
 
                         decoration: const BoxDecoration(
-                          color: Colors.redAccent,
+                          color: Color(0xFFB42318),
                           shape: BoxShape.rectangle,
                           borderRadius: BorderRadius.all(Radius.circular(10)),
                         ),
