@@ -47,6 +47,7 @@ class DetailLaporanPenyerahanModel {
   final double beratFinal;
   final double hargaPerKg;
   final double subtotal;
+  final int idJenisSampah;
 
   DetailLaporanPenyerahanModel({
     required this.idDetailLaporan,
@@ -55,13 +56,19 @@ class DetailLaporanPenyerahanModel {
     required this.beratFinal,
     required this.hargaPerKg,
     required this.subtotal,
+    required this.idJenisSampah,
   });
 
   factory DetailLaporanPenyerahanModel.fromJson(Map<String, dynamic> json) {
     final jenis = json['jenis_sampah'] ?? json['jenisSampah'] ?? {};
 
+    final idJenis =
+        json['id_jenis_sampah'] ??
+        (jenis is Map ? jenis['id_jenis_sampah'] : null);
+
     return DetailLaporanPenyerahanModel(
       idDetailLaporan: _toInt(json['id_detail_laporan'] ?? json['id']),
+      idJenisSampah: _toInt(idJenis),
       namaSampah: jenis is Map
           ? (jenis['nama_sampah'] ?? 'Tidak diketahui').toString()
           : 'Tidak diketahui',

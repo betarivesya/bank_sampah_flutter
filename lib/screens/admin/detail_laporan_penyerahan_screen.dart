@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'package:open_filex/open_filex.dart';
+
 import '../../models/laporan_penyerahan_induk_model.dart';
 import '../../services/api_service.dart';
+import 'edit_laporan_penyerahan_screen.dart';
 
 class DetailLaporanPenyerahanScreen extends StatefulWidget {
   final int idLaporan;
@@ -62,13 +65,12 @@ class _DetailLaporanPenyerahanScreenState
 
   String _tanggal(String value) {
     if (value.length < 10) return value;
-    try {
-      final date = DateTime.parse(value.substring(0, 10));
-      return '${date.day.toString().padLeft(2, '0')}/'
-          '${date.month.toString().padLeft(2, '0')}/${date.year}';
-    } catch (_) {
-      return value;
-    }
+
+    final bagianTanggal = value.substring(0, 10).split('-');
+
+    if (bagianTanggal.length != 3) return value;
+
+    return '${bagianTanggal[2]}/${bagianTanggal[1]}/${bagianTanggal[0]}';
   }
 
   String _status(String value) {
@@ -173,6 +175,62 @@ class _DetailLaporanPenyerahanScreenState
           .showSnackBar(SnackBar(content: Text('Gagal mengubah status: $e')));
     } finally {
       if (mounted) setState(() => _processing = false);
+    }
+  }
+
+  // EXPORT EXCEL
+  Future<void> _exportExcel() async {
+    if (_laporan == null || _processing) return;
+
+    setState(() => _processing = true);
+
+    try {
+      final path = await ApiService.downloadExcelLaporanPenyerahan(
+        _laporan!.idLaporan,
+      );
+
+      if (!mounted) return;
+
+      await OpenFilex.open(path);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Gagal export Excel: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
+      }
+    }
+  }
+
+  // CETAK PDF
+  Future<void> _cetakPdf() async {
+    if (_laporan == null || _processing) return;
+
+    setState(() => _processing = true);
+
+    try {
+      final path = await ApiService.downloadPdfLaporanPenyerahan(
+        _laporan!.idLaporan,
+      );
+
+      if (!mounted) return;
+
+      await OpenFilex.open(path);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mencetak laporan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
+      }
     }
   }
 
@@ -291,14 +349,19 @@ class _DetailLaporanPenyerahanScreenState
               child: Column(
                 children: [
                   if (isDraft) ...[
-                    _actionButton('Edit', Icons.edit_outlined, green, () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Halaman Edit akan disambungkan berikutnya.',
+                    _actionButton('Edit', Icons.edit_outlined, green, () async {
+                      final berhasil = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EditLaporanPenyerahanScreen(
+                            idLaporan: laporan.idLaporan,
                           ),
                         ),
                       );
+
+                      if (berhasil == true && mounted) {
+                        await _muatDetail();
+                      }
                     }),
                     _actionButton(
                       'Hapus',
@@ -326,29 +389,13 @@ class _DetailLaporanPenyerahanScreenState
                     'Export Excel',
                     Icons.file_download_outlined,
                     const Color(0xFF16834B),
-                    () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Fungsi unduh Excel akan disambungkan berikutnya.',
-                          ),
-                        ),
-                      );
-                    },
+                    _processing ? null : _exportExcel,
                   ),
                   _actionButton(
                     'Cetak',
                     Icons.print_outlined,
                     const Color(0xFF23619A),
-                    () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Fungsi cetak akan disambungkan berikutnya.',
-                          ),
-                        ),
-                      );
-                    },
+                    _processing ? null : _cetakPdf,
                   ),
                 ],
               ),

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../models/jenis_sampah_model.dart';
 import '../models/setoran_model.dart';
@@ -796,6 +797,88 @@ class ApiService {
     return '$path/$idLaporan';
   }
 
+  // DOWNLOAD EXCEL LAPORAN PENYERAHAN
+  static Future<String> downloadExcelLaporanPenyerahan(int idLaporan) async {
+    final response = await http.get(
+      Uri.parse('${_laporanIndukUrl(idLaporan)}/export-excel'),
+      headers: {
+        ..._headers(),
+        'Accept':
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      String pesan = 'Gagal mengunduh Excel laporan.';
+
+      try {
+        final data = _decodeMap(utf8.decode(response.bodyBytes));
+        pesan = _errorMessage(data, pesan);
+      } catch (_) {
+        pesan = 'Gagal mengunduh Excel. HTTP ${response.statusCode}';
+      }
+
+      throw Exception(pesan);
+    }
+
+    if (response.bodyBytes.isEmpty) {
+      throw Exception('File Excel yang diterima kosong.');
+    }
+
+    final directory = await getApplicationDocumentsDirectory();
+
+    final folder = Directory('${directory.path}/Laporan Penyerahan');
+
+    if (!await folder.exists()) {
+      await folder.create(recursive: true);
+    }
+
+    final file = File('${folder.path}/laporan-penyerahan-bsi-$idLaporan.xlsx');
+
+    await file.writeAsBytes(response.bodyBytes, flush: true);
+
+    return file.path;
+  }
+
+  // DOWNLOAD PDF LAPORAN PENYERAHAN
+  static Future<String> downloadPdfLaporanPenyerahan(int idLaporan) async {
+    final response = await http.get(
+      Uri.parse('${_laporanIndukUrl(idLaporan)}/export-pdf'),
+      headers: {..._headers(), 'Accept': 'application/pdf'},
+    );
+
+    if (response.statusCode != 200) {
+      String pesan = 'Gagal mengunduh PDF laporan.';
+
+      try {
+        final data = _decodeMap(utf8.decode(response.bodyBytes));
+        pesan = _errorMessage(data, pesan);
+      } catch (_) {
+        pesan = 'Gagal mengunduh PDF. HTTP ${response.statusCode}';
+      }
+
+      throw Exception(pesan);
+    }
+
+    if (response.bodyBytes.isEmpty) {
+      throw Exception('File PDF yang diterima kosong.');
+    }
+
+    final directory = await getApplicationDocumentsDirectory();
+
+    final folder = Directory('${directory.path}/Laporan Penyerahan');
+
+    if (!await folder.exists()) {
+      await folder.create(recursive: true);
+    }
+
+    final file = File('${folder.path}/laporan-penyerahan-bsi-$idLaporan.pdf');
+
+    await file.writeAsBytes(response.bodyBytes, flush: true);
+
+    return file.path;
+  }
+
   // AMBIL DAFTAR LAPORAN PENYERAHAN
   static Future<List<LaporanPenyerahanIndukModel>>
   getLaporanPenyerahanInduk() async {
@@ -861,6 +944,10 @@ class ApiService {
     required String tanggalLaporan,
     required List<Map<String, dynamic>> items,
   }) async {
+    debugPrint('TANGGAL DIKIRIM: $tanggalLaporan');
+    debugPrint(
+      'BODY LAPORAN: ${jsonEncode({'tanggal_laporan': tanggalLaporan, 'items': items})}',
+    );
     final response = await http.post(
       Uri.parse(_laporanIndukUrl()),
       headers: _headers(json: true),

@@ -55,13 +55,12 @@ class _LaporanScreenState extends State<LaporanScreen> {
 
   String _tanggal(String value) {
     if (value.length < 10) return value;
-    try {
-      final date = DateTime.parse(value.substring(0, 10));
-      return '${date.day.toString().padLeft(2, '0')}/'
-          '${date.month.toString().padLeft(2, '0')}/${date.year}';
-    } catch (_) {
-      return value;
-    }
+
+    final tanggal = value.substring(0, 10).split('-');
+
+    if (tanggal.length != 3) return value;
+
+    return '${tanggal[2]}/${tanggal[1]}/${tanggal[0]}';
   }
 
   String _labelStatus(String status) {
