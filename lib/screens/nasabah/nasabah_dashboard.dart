@@ -53,9 +53,9 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
 
   // Mengambil nama nasabah dari beberapa kemungkinan nama field API.
   String get namaNasabah => _ambilTeks([
+    'nama_lengkap',
     'nama_nasabah',
     'nama_pengguna',
-    'nama_lengkap',
     'nama',
     'name',
   ], fallback: 'Nasabah');
@@ -337,8 +337,8 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
       _selectedIndex = index;
     });
 
-    // Muat ulang dashboard saat kembali dari halaman Penarikan
-    if (indexSebelumnya == 2 && index == 0) {
+    // Muat ulang dashboard ketika kembali dari Profil atau Penarikan.
+    if ((indexSebelumnya == 2 || indexSebelumnya == 3) && index == 0) {
       _muatDashboard();
     }
   }
