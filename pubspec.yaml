@@ -44,6 +44,8 @@ dependencies:
   open_filex: ^5.0.0
   google_sign_in: ^7.2.0
   pdf: ^3.11.3
+  font_awesome_flutter: ^11.0.0
+  flutter_svg: ^2.5.0
 
 dev_dependencies:
   flutter_test:
