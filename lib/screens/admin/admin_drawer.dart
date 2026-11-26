@@ -4,12 +4,14 @@ class AdminDrawer extends StatelessWidget {
   final String selectedMenu;
   final Function(String) onMenuSelected;
   final VoidCallback onLogout;
+  final bool isSuperadmin;
 
   const AdminDrawer({
     super.key,
     required this.selectedMenu,
     required this.onMenuSelected,
     required this.onLogout,
+    this.isSuperadmin = false,
   });
 
   static const Color darkGreen = Color(0xFF0F463D);
@@ -143,17 +145,32 @@ class AdminDrawer extends StatelessWidget {
 
                     _drawerMenu(
                       context: context,
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'Manajemen Keuangan',
+                      menuKey: 'keuangan',
+                    ),
+
+                    _drawerMenu(
+                      context: context,
+                      icon: Icons.receipt_long_outlined,
+                      title: 'Riwayat Transaksi',
+                      menuKey: 'riwayat-transaksi',
+                    ),
+
+                    _drawerMenu(
+                      context: context,
                       icon: Icons.bar_chart_outlined,
                       title: 'Laporan',
                       menuKey: 'laporan',
                     ),
 
-                    _drawerMenu(
-                      context: context,
-                      icon: Icons.account_balance_wallet_outlined,
-                      title: 'Manajemen Keuangan',
-                      menuKey: 'keuangan',
-                    ),
+                    if (isSuperadmin)
+                      _drawerMenu(
+                        context: context,
+                        icon: Icons.manage_accounts_outlined,
+                        title: 'Pengaturan Akun',
+                        menuKey: 'pengaturan-akun',
+                      ),
                   ],
                 ),
               ),

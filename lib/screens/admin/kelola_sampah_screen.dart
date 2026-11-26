@@ -4,6 +4,8 @@ import '../../app_styles.dart';
 import '../../models/jenis_sampah_model.dart';
 import '../../services/api_service.dart';
 
+import 'package:flutter/services.dart';
+
 class KelolaSampahScreen extends StatefulWidget {
   const KelolaSampahScreen({super.key});
 
@@ -111,7 +113,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
     );
 
     final hargaController = TextEditingController(
-      text: isEdit ? data.hargaPerKg.toInt().toString() : '',
+      text: isEdit ? data.hargaPerGram.toInt().toString() : '',
     );
 
     String selectedStatus = isEdit && data.status ? 'Aktif' : 'Nonaktif';
@@ -154,6 +156,11 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
 
                     TextField(
                       controller: jenisController,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'[a-zA-Z0-9 ]'),
+                        ),
+                      ],
                       decoration: InputDecoration(
                         hintText: 'Contoh: Botol Plastik',
                         prefixIcon: const Icon(Icons.recycling_outlined),
@@ -166,7 +173,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                     const SizedBox(height: 16),
 
                     const Text(
-                      'Harga per kg',
+                      'Harga per gram',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -178,6 +185,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                     TextField(
                       controller: hargaController,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: InputDecoration(
                         hintText: 'Contoh: 4000',
                         prefixText: 'Rp ',
@@ -275,13 +283,13 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                         await ApiService.updateJenisSampah(
                           id: data.idJenisSampah,
                           namaSampah: jenis,
-                          hargaPerKg: harga,
+                          hargaPerGram: harga,
                           status: status,
                         );
                       } else {
                         await ApiService.tambahJenisSampah(
                           namaSampah: jenis,
-                          hargaPerKg: harga,
+                          hargaPerGram: harga,
                           status: status,
                         );
                       }
@@ -539,7 +547,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                 const SizedBox(height: 5),
 
                 Text(
-                  '${_formatRupiah(item.hargaPerKg)} / kg',
+                  '${_formatRupiah(item.hargaPerGram)} / gram',
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
                 const SizedBox(height: 7),

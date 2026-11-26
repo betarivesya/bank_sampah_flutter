@@ -10,6 +10,8 @@ import 'manajemen_pengguna_screen.dart';
 import 'admin_notification_screen.dart';
 import 'laporan_screen.dart';
 import 'manajemen_keuangan_screen.dart';
+import 'pengaturan_akun_screen.dart';
+import 'admin_riwayat_transaksi_screen.dart';
 
 import 'dart:async';
 
@@ -210,11 +212,17 @@ class _AdminLayoutState extends State<AdminLayout> {
       case 'laporan':
         return const LaporanScreen();
 
+      case 'riwayat-transaksi':
+        return const AdminRiwayatTransaksiScreen();
+
       case 'keuangan':
         return const ManajemenKeuanganScreen();
 
       case 'notifikasi':
         return const AdminNotificationScreen();
+
+      case 'pengaturan-akun':
+        return PengaturanAkunScreen(currentEmail: ApiService.currentUserEmail);
 
       case 'dashboard':
       default:
@@ -263,6 +271,8 @@ class _AdminLayoutState extends State<AdminLayout> {
           selectedMenu: _selectedMenu,
           onMenuSelected: _selectMenu,
           onLogout: _logout,
+          isSuperadmin:
+              ApiService.currentUserRole?.toLowerCase() == 'superadmin',
         ),
 
         // ======================================================

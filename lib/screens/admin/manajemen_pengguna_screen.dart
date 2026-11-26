@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../services/api_service.dart';
 
@@ -155,9 +156,10 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
   int get totalUsers => users.length;
 
   int get totalAdmin {
-    return users
-        .where((user) => user['role'].toString().toLowerCase() == 'admin')
-        .length;
+    return users.where((user) {
+      final role = user['role'].toString().toLowerCase();
+      return role == 'admin' || role == 'superadmin';
+    }).length;
   }
 
   int get totalPetugas {
@@ -183,7 +185,6 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
     final passwordController = TextEditingController();
 
     String selectedRole = 'Nasabah';
-    String selectedStatus = 'Aktif';
 
     bool obscurePassword = true;
 
@@ -203,12 +204,12 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // ==================================================
                     // NAMA LENGKAP
-                    // ==================================================
-
                     TextField(
                       controller: namaController,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z ]')),
+                      ],
                       decoration: const InputDecoration(
                         labelText: 'Nama Lengkap',
                         prefixIcon: Icon(Icons.person_outline),
@@ -218,12 +219,11 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
 
                     const SizedBox(height: 12),
 
-                    // ==================================================
                     // NOMOR TELEPON
-                    // ==================================================
                     TextField(
                       controller: teleponController,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: const InputDecoration(
                         labelText: 'Nomor Telepon',
                         prefixIcon: Icon(Icons.phone_outlined),
@@ -233,9 +233,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
 
                     const SizedBox(height: 12),
 
-                    // ==================================================
                     // EMAIL
-                    // ==================================================
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -248,9 +246,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
 
                     const SizedBox(height: 12),
 
-                    // ==================================================
                     // PASSWORD
-                    // ==================================================
                     TextField(
                       controller: passwordController,
                       obscureText: obscurePassword,
@@ -278,13 +274,11 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
 
                     const SizedBox(height: 12),
 
-                    // ==================================================
                     // ROLE
-                    // ==================================================
                     DropdownButtonFormField<String>(
                       value: selectedRole,
                       decoration: const InputDecoration(
-                        labelText: 'Kategori Pengguna',
+                        labelText: 'Pilih Role',
                         prefixIcon: Icon(Icons.badge_outlined),
                         border: OutlineInputBorder(),
                       ),
@@ -311,42 +305,11 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                     ),
 
                     const SizedBox(height: 12),
-
-                    // ==================================================
-                    // STATUS AKUN
-                    // ==================================================
-                    DropdownButtonFormField<String>(
-                      value: selectedStatus,
-                      decoration: const InputDecoration(
-                        labelText: 'Status Akun',
-                        prefixIcon: Icon(Icons.toggle_on_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'Aktif', child: Text('Aktif')),
-                        DropdownMenuItem(
-                          value: 'Nonaktif',
-                          child: Text('Nonaktif'),
-                        ),
-                      ],
-                      onChanged: isSaving
-                          ? null
-                          : (value) {
-                              if (value != null) {
-                                setDialogState(() {
-                                  selectedStatus = value;
-                                });
-                              }
-                            },
-                    ),
                   ],
                 ),
               ),
               actions: [
-                // ==================================================
                 // TOMBOL BATAL
-                // ==================================================
-
                 TextButton(
                   onPressed: isSaving
                       ? null
@@ -356,9 +319,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                   child: const Text('Batal'),
                 ),
 
-                // ==================================================
                 // TOMBOL SIMPAN
-                // ==================================================
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: darkGreen,
@@ -374,6 +335,30 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Semua data harus diisi.'),
+                                backgroundColor: Color(0xFFB42318),
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (teleponController.text.trim().length < 10 ||
+                              teleponController.text.trim().length > 15) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Nomor telepon harus terdiri dari 10-15 angka.',
+                                ),
+                                backgroundColor: Color(0xFFB42318),
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                              .hasMatch(emailController.text.trim())) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Format email tidak valid.'),
                                 backgroundColor: Color(0xFFB42318),
                               ),
                             );
@@ -401,7 +386,6 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                               email: emailController.text.trim(),
                               password: passwordController.text,
                               role: selectedRole,
-                              status: selectedStatus == 'Aktif',
                             );
 
                             if (!mounted) return;
@@ -461,6 +445,14 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
       text: user['nama']?.toString() ?? '',
     );
 
+    final teleponController = TextEditingController(
+      text: user['telepon']?.toString() == '-'
+          ? ''
+          : user['telepon']?.toString() ?? '',
+    );
+
+    final isProtected = user['protected'] == true;
+
     String selectedRole = user['role']?.toString() ?? 'Nasabah';
     String selectedStatus = user['status']?.toString() ?? 'Aktif';
 
@@ -480,12 +472,12 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // ==================================================
-                    // NAMA
-                    // ==================================================
-
+                    // NAMA LENGKAP EDIT
                     TextField(
                       controller: namaController,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z ]')),
+                      ],
                       decoration: const InputDecoration(
                         labelText: 'Nama Lengkap',
                         prefixIcon: Icon(Icons.person_outline),
@@ -495,75 +487,92 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
 
                     const SizedBox(height: 12),
 
-                    // ==================================================
-                    // ROLE
-                    // ==================================================
-                    DropdownButtonFormField<String>(
-                      value: selectedRole,
+                    // NOMOR TELEPON EDIT
+                    TextField(
+                      controller: teleponController,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: const InputDecoration(
-                        labelText: 'Kategori Pengguna',
-                        prefixIcon: Icon(Icons.badge_outlined),
+                        labelText: 'Nomor Telepon',
+                        prefixIcon: Icon(Icons.phone_outlined),
                         border: OutlineInputBorder(),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'Admin', child: Text('Admin')),
-                        DropdownMenuItem(
-                          value: 'Petugas',
-                          child: Text('Petugas'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Nasabah',
-                          child: Text('Nasabah'),
-                        ),
-                      ],
-                      onChanged: isSaving
-                          ? null
-                          : (value) {
-                              if (value != null) {
-                                setDialogState(() {
-                                  selectedRole = value;
-                                });
-                              }
-                            },
                     ),
 
                     const SizedBox(height: 12),
 
-                    // ==================================================
-                    // STATUS
-                    // ==================================================
-                    DropdownButtonFormField<String>(
-                      value: selectedStatus,
-                      decoration: const InputDecoration(
-                        labelText: 'Status Akun',
-                        prefixIcon: Icon(Icons.toggle_on_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'Aktif', child: Text('Aktif')),
-                        DropdownMenuItem(
-                          value: 'Nonaktif',
-                          child: Text('Nonaktif'),
+                    // ROLE DAN STATUS HANYA UNTUK PENGGUNA BIASA
+                    if (!isProtected) ...[
+                      // ROLE EDIT
+                      DropdownButtonFormField<String>(
+                        value: selectedRole,
+                        decoration: const InputDecoration(
+                          labelText: 'Role',
+                          prefixIcon: Icon(Icons.badge_outlined),
+                          border: OutlineInputBorder(),
                         ),
-                      ],
-                      onChanged: isSaving
-                          ? null
-                          : (value) {
-                              if (value != null) {
-                                setDialogState(() {
-                                  selectedStatus = value;
-                                });
-                              }
-                            },
-                    ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Admin',
+                            child: Text('Admin'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Petugas',
+                            child: Text('Petugas'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Nasabah',
+                            child: Text('Nasabah'),
+                          ),
+                        ],
+                        onChanged: isSaving
+                            ? null
+                            : (value) {
+                                if (value != null) {
+                                  setDialogState(() {
+                                    selectedRole = value;
+                                  });
+                                }
+                              },
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // STATUS EDIT
+                      DropdownButtonFormField<String>(
+                        value: selectedStatus,
+                        decoration: const InputDecoration(
+                          labelText: 'Status Akun',
+                          prefixIcon: Icon(Icons.toggle_on_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Aktif',
+                            child: Text('Aktif'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Nonaktif',
+                            child: Text('Nonaktif'),
+                          ),
+                        ],
+                        onChanged: isSaving
+                            ? null
+                            : (value) {
+                                if (value != null) {
+                                  setDialogState(() {
+                                    selectedStatus = value;
+                                  });
+                                }
+                              },
+                      ),
+                    ],
                   ],
                 ),
               ),
-              actions: [
-                // ==================================================
-                // TOMBOL BATAL
-                // ==================================================
 
+              // TOMBOL
+              actions: [
                 TextButton(
                   onPressed: isSaving
                       ? null
@@ -573,9 +582,6 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                   child: const Text('Batal'),
                 ),
 
-                // ==================================================
-                // TOMBOL SIMPAN
-                // ==================================================
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: darkGreen,
@@ -584,11 +590,12 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                   onPressed: isSaving
                       ? null
                       : () async {
-                          if (namaController.text.trim().isEmpty) {
+                          if (namaController.text.trim().isEmpty ||
+                              teleponController.text.trim().isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                  'Nama pengguna tidak boleh kosong.',
+                                  'Nama dan nomor telepon harus diisi.',
                                 ),
                                 backgroundColor: Color(0xFFB42318),
                               ),
@@ -604,8 +611,11 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                             await ApiService.updatePengguna(
                               id: int.parse(user['id'].toString()),
                               nama: namaController.text.trim(),
-                              role: selectedRole,
-                              status: selectedStatus == 'Aktif',
+                              telepon: teleponController.text.trim(),
+                              role: isProtected ? 'superadmin' : selectedRole,
+                              status: isProtected
+                                  ? true
+                                  : selectedStatus == 'Aktif',
                             );
 
                             if (!mounted) return;
@@ -666,7 +676,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
     if (user['protected'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Admin utama tidak dapat dihapus.'),
+          content: Text('Akun Superadmin tidak dapat dihapus.'),
           backgroundColor: Color(0xFFD88916),
         ),
       );
@@ -951,10 +961,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Column(
         children: [
-          // ==================================================
           // SEARCH
-          // ==================================================
-
           TextField(
             controller: searchController,
             decoration: InputDecoration(
@@ -979,15 +986,10 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
 
           const SizedBox(height: 10),
 
-          // ==================================================
           // FILTER
-          // ==================================================
           Row(
             children: [
-              // ==================================================
               // FILTER ROLE
-              // ==================================================
-
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: selectedRoleFilter,
@@ -1010,6 +1012,10 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
                     ),
                   ),
                   items: const [
+                    DropdownMenuItem(
+                      value: 'Superadmin',
+                      child: Text('Superadmin'),
+                    ),
                     DropdownMenuItem(value: 'Semua', child: Text('Semua')),
                     DropdownMenuItem(value: 'Admin', child: Text('Admin')),
                     DropdownMenuItem(value: 'Petugas', child: Text('Petugas')),
@@ -1027,9 +1033,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
 
               const SizedBox(width: 8),
 
-              // ==================================================
               // FILTER STATUS
-              // ==================================================
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: selectedStatusFilter,
@@ -1071,9 +1075,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
             ],
           ),
 
-          // ==================================================
           // RESET FILTER
-          // ==================================================
           if (selectedRoleFilter != 'Semua' ||
               selectedStatusFilter != 'Semua' ||
               searchController.text.isNotEmpty)
@@ -1153,11 +1155,18 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
     final status = user['status']?.toString() ?? 'Nonaktif';
     final nama = user['nama']?.toString() ?? '-';
     final isActive = status == 'Aktif';
+    final isProtected = user['protected'] == true;
+    final isCurrentUserSuperadmin = ApiService.currentUserRole == 'superadmin';
 
     Color roleColor;
     IconData roleIcon;
 
     switch (role.toLowerCase()) {
+      case 'superadmin':
+        roleColor = Color(0xFF7C3AED);
+        roleIcon = Icons.verified_user_outlined;
+        break;
+
       case 'admin':
         roleColor = Color(0xFF23619A);
         roleIcon = Icons.admin_panel_settings_outlined;
@@ -1190,9 +1199,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
 
-        // ==================================================
         // ICON ROLE
-        // ==================================================
         child: Row(
           children: [
             Container(
@@ -1207,9 +1214,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
 
             const SizedBox(width: 11),
 
-            // ==================================================
             // INFORMASI PENGGUNA
-            // ==================================================
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1251,9 +1256,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
 
             const SizedBox(height: 6),
 
-            // ==================================================
             // STATUS
-            // ==================================================
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
               decoration: BoxDecoration(
@@ -1285,22 +1288,26 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
 
             const SizedBox(width: 2),
 
-            // ==================================================
             // MENU AKSI
-            // ==================================================
-            if (user['protected'] == true)
-              IconButton(
-                tooltip: 'Edit Admin Utama',
-                visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                padding: EdgeInsets.zero,
-                onPressed: () => showEditUserDialog(user),
-                icon: const Icon(
-                  Icons.edit_outlined,
-                  color: darkGreen,
-                  size: 19,
-                ),
-              )
+            if (isProtected)
+              if (isCurrentUserSuperadmin)
+                IconButton(
+                  tooltip: 'Edit Superadmin',
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints(
+                    minWidth: 34,
+                    minHeight: 34,
+                  ),
+                  padding: EdgeInsets.zero,
+                  onPressed: () => showEditUserDialog(user),
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: darkGreen,
+                    size: 19,
+                  ),
+                )
+              else
+                const SizedBox(width: 34)
             else
               PopupMenuButton<String>(
                 tooltip: 'Aksi Pengguna',

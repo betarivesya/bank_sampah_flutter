@@ -46,7 +46,7 @@ class JenisSampahCard extends StatelessWidget {
 
                 Text(
                   adaHarga
-                      ? 'Rp ${item.hargaPerKg.toStringAsFixed(0)} / kg'
+                      ? 'Rp ${item.hargaPerGram.toStringAsFixed(0)} / kg'
                       : 'Harga belum diatur',
                   style: adaHarga
                       ? AppTextStyles.price
