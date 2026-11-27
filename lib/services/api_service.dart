@@ -1060,19 +1060,25 @@ class ApiService {
       throw Exception('File Excel yang diterima kosong.');
     }
 
-    final directory = await getApplicationDocumentsDirectory();
+    final fileName = 'laporan-penyerahan-bsi-$idLaporan.xlsx';
 
-    final folder = Directory('${directory.path}/Laporan Penyerahan');
+    final directory = await getTemporaryDirectory();
+    final tempFile = File('${directory.path}/$fileName');
 
-    if (!await folder.exists()) {
-      await folder.create(recursive: true);
+    await tempFile.writeAsBytes(response.bodyBytes, flush: true);
+
+    final savedPath = await FlutterFileDialog.saveFile(
+      params: SaveFileDialogParams(
+        sourceFilePath: tempFile.path,
+        fileName: fileName,
+      ),
+    );
+
+    if (savedPath == null || savedPath.isEmpty) {
+      throw Exception('Penyimpanan Excel dibatalkan.');
     }
 
-    final file = File('${folder.path}/laporan-penyerahan-bsi-$idLaporan.xlsx');
-
-    await file.writeAsBytes(response.bodyBytes, flush: true);
-
-    return file.path;
+    return savedPath;
   }
 
   // DOWNLOAD PDF LAPORAN PENYERAHAN
@@ -1099,19 +1105,25 @@ class ApiService {
       throw Exception('File PDF yang diterima kosong.');
     }
 
-    final directory = await getApplicationDocumentsDirectory();
+    final fileName = 'laporan-penyerahan-bsi-$idLaporan.pdf';
 
-    final folder = Directory('${directory.path}/Laporan Penyerahan');
+    final directory = await getTemporaryDirectory();
+    final tempFile = File('${directory.path}/$fileName');
 
-    if (!await folder.exists()) {
-      await folder.create(recursive: true);
+    await tempFile.writeAsBytes(response.bodyBytes, flush: true);
+
+    final savedPath = await FlutterFileDialog.saveFile(
+      params: SaveFileDialogParams(
+        sourceFilePath: tempFile.path,
+        fileName: fileName,
+      ),
+    );
+
+    if (savedPath == null || savedPath.isEmpty) {
+      throw Exception('Penyimpanan PDF dibatalkan.');
     }
 
-    final file = File('${folder.path}/laporan-penyerahan-bsi-$idLaporan.pdf');
-
-    await file.writeAsBytes(response.bodyBytes, flush: true);
-
-    return file.path;
+    return savedPath;
   }
 
   // AMBIL DAFTAR LAPORAN PENYERAHAN
