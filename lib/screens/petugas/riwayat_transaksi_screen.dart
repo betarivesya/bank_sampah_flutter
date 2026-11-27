@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/setoran_model.dart';
+import '../../models/riwayat_item_model.dart';
 import '../../services/api_service.dart';
 
 class RiwayatTransaksiScreen extends StatefulWidget {
@@ -12,16 +13,23 @@ class RiwayatTransaksiScreen extends StatefulWidget {
 
 class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   static const int _pageSize = 20;
+
   static const Color darkGreen = Color(0xFF0F463D);
   static const Color primaryGreen = Color(0xFF2D765D);
-  static const Color lightGreen = Color(0xFFE6F5ED);
   static const Color background = Color(0xFFF5F8F7);
   static const Color textDark = Color(0xFF153B38);
   static const Color textGrey = Color(0xFF6B7F7B);
+  static const Color orange = Color(0xFFD88916);
 
   String _filter = 'Semua';
+  String _searchNama = '';
+
+  DateTime? _tanggalMulai;
+  DateTime? _tanggalSampai;
+
   int _currentPage = 1;
-  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+
+  final TextEditingController _searchController = TextEditingController();
 
   List<SetoranModel> _setoran = [];
   List<Map<String, dynamic>> _penarikan = [];
@@ -35,8 +43,14 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     _loadData();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   // ============================================================
-  // LOAD DATA SETORAN DAN PENARIKAN
+  // LOAD DATA
   // ============================================================
 
   Future<void> _loadData() async {
@@ -49,52 +63,39 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     });
 
     try {
+      // Ambil seluruh data setoran tanpa filter bulan dan tahun.
       Future<List<SetoranModel>> ambilSemuaSetoran() async {
-        final List<SetoranModel> semuaSetoran = [];
+        final List<SetoranModel> semua = [];
+
         int halaman = 1;
         bool masihAda = true;
 
         while (masihAda) {
           final hasil = await ApiService.getPetugasSetoranPage(
-            bulan: _selectedMonth.month,
-            tahun: _selectedMonth.year,
             page: halaman,
             perPage: 20,
           );
 
-          semuaSetoran.addAll(hasil.items);
+          semua.addAll(hasil.items);
+
           masihAda = hasil.hasMore;
           halaman++;
         }
 
-        return semuaSetoran;
+        return semua;
       }
 
+      // Ambil seluruh data penarikan.
       final hasil = await Future.wait([
         ambilSemuaSetoran(),
-        ApiService.getPenarikanPetugas(
-          bulan: _selectedMonth.month,
-          tahun: _selectedMonth.year,
-        ),
+        ApiService.getPenarikanPetugas(),
       ]);
 
       if (!mounted) return;
 
       setState(() {
-        _setoran = (hasil[0] as List<SetoranModel>)
-            .where(_isSelectedMonth)
-            .toList();
-
-        _penarikan = (hasil[1] as List<Map<String, dynamic>>).where((item) {
-          final tanggal = DateTime.tryParse(
-            item['tgl_pengajuan']?.toString() ?? '',
-          );
-
-          return tanggal == null ||
-              (tanggal.year == _selectedMonth.year &&
-                  tanggal.month == _selectedMonth.month);
-        }).toList();
-
+        _setoran = hasil[0] as List<SetoranModel>;
+        _penarikan = hasil[1] as List<Map<String, dynamic>>;
         _isLoading = false;
       });
     } catch (e) {
@@ -122,6 +123,14 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     );
 
     return 'Rp $formatted';
+  }
+
+  // ============================================================
+  // FORMAT ANGKA
+  // ============================================================
+
+  String formatAngka(num value) {
+    return value.toStringAsFixed(value % 1 == 0 ? 0 : 2).replaceAll('.', ',');
   }
 
   // ============================================================
@@ -153,113 +162,284 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     }
   }
 
+  String formatTanggalLengkap(DateTime tanggal) {
+    const bulan = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+
+    return '${tanggal.day} ${bulan[tanggal.month - 1]} ${tanggal.year}';
+  }
+
   // ============================================================
-  // KONVERSI NILAI ANGKA
+  // KONVERSI ANGKA
   // ============================================================
 
   double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
+
     return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   // ============================================================
-  // FILTER DAN GABUNGKAN RIWAYAT
+  // FILTER NAMA DAN TANGGAL
   // ============================================================
 
-  List<_RiwayatItem> _getRiwayat() {
-    final List<_RiwayatItem> data = [];
+  bool _sesuaiFilterTanggal(DateTime tanggal) {
+    final tanggalTransaksi = DateTime(tanggal.year, tanggal.month, tanggal.day);
+
+    if (_tanggalMulai != null) {
+      final mulai = DateTime(
+        _tanggalMulai!.year,
+        _tanggalMulai!.month,
+        _tanggalMulai!.day,
+      );
+
+      if (tanggalTransaksi.isBefore(mulai)) {
+        return false;
+      }
+    }
+
+    if (_tanggalSampai != null) {
+      final sampai = DateTime(
+        _tanggalSampai!.year,
+        _tanggalSampai!.month,
+        _tanggalSampai!.day,
+      );
+
+      if (tanggalTransaksi.isAfter(sampai)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  bool _sesuaiFilterNama(String nama) {
+    if (_searchNama.trim().isEmpty) return true;
+
+    return nama.toLowerCase().contains(_searchNama.trim().toLowerCase());
+  }
+
+  // ============================================================
+  // GABUNGKAN RIWAYAT TRANSAKSI
+  // ============================================================
+
+  List<RiwayatItem> _getRiwayat() {
+    final List<RiwayatItem> data = [];
 
     // ------------------------------------------------------------
-    // RIWAYAT SETORAN
+    // SETORAN
     // ------------------------------------------------------------
 
     if (_filter == 'Semua' || _filter == 'Setoran') {
       for (final item in _setoran) {
+        final tanggal = DateTime.tryParse(item.tanggal);
+
+        if (tanggal == null) continue;
+
+        if (!_sesuaiFilterTanggal(tanggal)) continue;
+        if (!_sesuaiFilterNama(item.namaNasabah)) continue;
+
         data.add(
-          _RiwayatItem(
+          RiwayatItem(
             namaNasabah: item.namaNasabah,
             jenis: 'Setoran',
-            detail: '${item.namaSampah} • ${item.totalBerat} kg',
             nominal: item.totalNilai,
-            tanggal:
-                DateTime.tryParse(item.tanggal) ??
-                DateTime.fromMillisecondsSinceEpoch(0),
+            tanggal: tanggal,
             icon: Icons.recycling_rounded,
             warna: primaryGreen,
             status: item.status,
+            setoran: item,
           ),
         );
       }
     }
 
     // ------------------------------------------------------------
-    // RIWAYAT PENARIKAN
+    // PENARIKAN
     // ------------------------------------------------------------
 
     if (_filter == 'Semua' || _filter == 'Penarikan') {
       for (final item in _penarikan) {
         final tanggalString = item['tgl_pengajuan']?.toString() ?? '';
 
+        final tanggal = DateTime.tryParse(tanggalString);
+
+        if (tanggal == null) continue;
+
+        final nama = item['nama_nasabah']?.toString() ?? '-';
+
+        if (!_sesuaiFilterTanggal(tanggal)) continue;
+        if (!_sesuaiFilterNama(nama)) continue;
+
         data.add(
-          _RiwayatItem(
-            namaNasabah: item['nama_nasabah']?.toString() ?? '-',
+          RiwayatItem(
+            namaNasabah: nama,
             jenis: 'Penarikan',
-            detail: 'Penarikan saldo',
             nominal: _toDouble(item['nominal']),
-            tanggal:
-                DateTime.tryParse(tanggalString) ??
-                DateTime.fromMillisecondsSinceEpoch(0),
+            tanggal: tanggal,
             icon: Icons.account_balance_wallet_outlined,
-            warna: Color(0xFFD88916),
+            warna: orange,
             status: item['status']?.toString(),
           ),
         );
       }
     }
 
-    // Urutkan dari transaksi terbaru.
+    // Transaksi terbaru ditampilkan paling atas.
     data.sort((a, b) => b.tanggal.compareTo(a.tanggal));
 
     return data;
   }
 
-  List<_RiwayatItem> _getVisibleRiwayat(List<_RiwayatItem> data) {
+  List<RiwayatItem> _getVisibleRiwayat(List<RiwayatItem> data) {
     final start = (_currentPage - 1) * _pageSize;
+
     if (start >= data.length) return [];
+
     final end = (start + _pageSize).clamp(0, data.length);
+
     return data.sublist(start, end);
   }
 
-  int _totalPages(List<_RiwayatItem> data) =>
-      (data.length / _pageSize).ceil().clamp(1, 999999);
+  int _totalPages(List<RiwayatItem> data) {
+    return (data.length / _pageSize).ceil().clamp(1, 999999);
+  }
+
+  // ============================================================
+  // PILIH TANGGAL
+  // ============================================================
+
+  Future<void> _pilihTanggalMulai() async {
+    final sekarang = DateTime.now();
+
+    final hasil = await showDatePicker(
+      context: context,
+      initialDate: _tanggalMulai ?? _tanggalSampai ?? sekarang,
+      firstDate: DateTime(2020),
+      lastDate: sekarang,
+      helpText: 'Pilih Tanggal Mulai',
+      cancelText: 'Batal',
+      confirmText: 'Pilih',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: darkGreen,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: textDark,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (hasil == null || !mounted) return;
+
+    setState(() {
+      _tanggalMulai = hasil;
+      _currentPage = 1;
+    });
+  }
+
+  Future<void> _pilihTanggalSampai() async {
+    final sekarang = DateTime.now();
+
+    final hasil = await showDatePicker(
+      context: context,
+      initialDate: _tanggalSampai ?? _tanggalMulai ?? sekarang,
+      firstDate: DateTime(2020),
+      lastDate: sekarang,
+      helpText: 'Pilih Tanggal Sampai',
+      cancelText: 'Batal',
+      confirmText: 'Pilih',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: darkGreen,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: textDark,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (hasil == null || !mounted) return;
+
+    setState(() {
+      _tanggalSampai = hasil;
+      _currentPage = 1;
+    });
+  }
+
+  // ============================================================
+  // RESET FILTER
+  // ============================================================
+
+  void _resetFilter() {
+    setState(() {
+      _searchNama = '';
+      _searchController.clear();
+
+      _tanggalMulai = null;
+      _tanggalSampai = null;
+
+      _filter = 'Semua';
+      _currentPage = 1;
+    });
+  }
+
+  // ============================================================
+  // BUILD UTAMA
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     final semuaRiwayat = _getRiwayat();
+    final riwayat = _getVisibleRiwayat(semuaRiwayat);
+    final totalPages = _totalPages(semuaRiwayat);
 
     return Container(
       color: background,
-      child: Column(
-        children: [
-          // ============================================================
-          // HEADER
-          // ============================================================
+      child: RefreshIndicator(
+        color: primaryGreen,
+        onRefresh: _loadData,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // ----------------------------------------------------
+            // HEADER
+            // ----------------------------------------------------
 
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-            decoration: const BoxDecoration(
-              color: darkGreen,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Judul dan jumlah transaksi
-                Row(
+            SliverToBoxAdapter(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
+                decoration: const BoxDecoration(
+                  color: darkGreen,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
                   children: [
                     const Expanded(
                       child: Column(
@@ -316,324 +496,362 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
                     ),
                   ],
                 ),
+              ),
+            ),
 
-                const SizedBox(height: 14),
+            // ----------------------------------------------------
+            // FILTER PANEL
+            // ----------------------------------------------------
+            SliverToBoxAdapter(child: _buildFilterPanel()),
 
-                // Filter bulan dan tahun
-                _buildMonthSelector(),
+            // ----------------------------------------------------
+            // FILTER JENIS TRANSAKSI
+            // ----------------------------------------------------
+            SliverToBoxAdapter(child: _buildFilterJenis()),
 
-                const SizedBox(height: 10),
+            const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
-                // Filter jenis transaksi
-                Row(
-                  children: [
-                    _filterButton('Semua'),
-                    const SizedBox(width: 8),
-                    _filterButton('Setoran'),
-                    const SizedBox(width: 8),
-                    _filterButton('Penarikan'),
-                  ],
+            // ----------------------------------------------------
+            // LOADING
+            // ----------------------------------------------------
+            if (_isLoading)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: CircularProgressIndicator(color: primaryGreen),
                 ),
-              ],
+              )
+            // ----------------------------------------------------
+            // ERROR
+            // ----------------------------------------------------
+            else if (_errorMessage != null)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.cloud_off_rounded,
+                        size: 50,
+                        color: textGrey,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Gagal mengambil data riwayat',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: textDark,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: textGrey, fontSize: 12),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _loadData,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Coba Lagi'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryGreen,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            // ----------------------------------------------------
+            // EMPTY STATE
+            // ----------------------------------------------------
+            else if (semuaRiwayat.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: _emptyState(
+                  _searchNama.isNotEmpty ||
+                          _tanggalMulai != null ||
+                          _tanggalSampai != null
+                      ? 'Tidak ada transaksi yang sesuai dengan filter.'
+                      : _filter == 'Setoran'
+                      ? 'Belum ada transaksi setoran.'
+                      : _filter == 'Penarikan'
+                      ? 'Belum ada transaksi penarikan.'
+                      : 'Belum ada transaksi.',
+                ),
+              )
+            else if (riwayat.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: _emptyState(
+                  _searchNama.isNotEmpty ||
+                          _tanggalMulai != null ||
+                          _tanggalSampai != null
+                      ? 'Tidak ada transaksi yang sesuai dengan filter.'
+                      : _filter == 'Setoran'
+                      ? 'Belum ada transaksi setoran.'
+                      : _filter == 'Penarikan'
+                      ? 'Belum ada transaksi penarikan.'
+                      : 'Belum ada transaksi.',
+                ),
+              )
+            // ----------------------------------------------------
+            // DAFTAR TRANSAKSI
+            // ----------------------------------------------------
+            else ...[
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    return _transactionCard(riwayat[index]);
+                  }, childCount: riwayat.length),
+                ),
+              ),
+
+              // --------------------------------------------------
+              // PAGINATION
+              // --------------------------------------------------
+              if (totalPages > 1)
+                SliverToBoxAdapter(child: _buildPagination(totalPages)),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // EMPTY STATE
+  // ============================================================
+
+  Widget _emptyState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: textGrey, fontSize: 13),
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // FILTER PANEL
+  // ============================================================
+
+  Widget _buildFilterPanel() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDFE6E3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Cari Transaksi',
+            style: TextStyle(
+              color: textDark,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
             ),
           ),
 
-          // ============================================================
-          // CONTENT
-          // ============================================================
-          Expanded(child: _buildContent(semuaRiwayat)),
+          const SizedBox(height: 12),
+
+          // SEARCH NAMA NASABAH
+          TextField(
+            controller: _searchController,
+            onChanged: (value) {
+              setState(() {
+                _searchNama = value;
+                _currentPage = 1;
+              });
+            },
+            decoration: InputDecoration(
+              hintText: 'Cari nama nasabah...',
+              hintStyle: const TextStyle(color: textGrey, fontSize: 12),
+              prefixIcon: const Icon(
+                Icons.search,
+                color: primaryGreen,
+                size: 20,
+              ),
+              suffixIcon: _searchNama.isNotEmpty
+                  ? IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _searchController.clear();
+                          _searchNama = '';
+                          _currentPage = 1;
+                        });
+                      },
+                      icon: const Icon(Icons.close, size: 18),
+                    )
+                  : null,
+              filled: true,
+              fillColor: const Color(0xFFF8FAF9),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFDFE6E3)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFDFE6E3)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: primaryGreen),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // LABEL TANGGAL
+          const Text(
+            'Filter Tanggal',
+            style: TextStyle(
+              color: textDark,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // TANGGAL MULAI DAN SAMPAI
+          Row(
+            children: [
+              Expanded(
+                child: _dateField(
+                  label: 'Dari Tanggal',
+                  value: _tanggalMulai,
+                  onTap: _pilihTanggalMulai,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _dateField(
+                  label: 'Sampai Tanggal',
+                  value: _tanggalSampai,
+                  onTap: _pilihTanggalSampai,
+                ),
+              ),
+            ],
+          ),
+
+          if (_tanggalMulai != null &&
+              _tanggalSampai != null &&
+              _tanggalMulai!.isAfter(_tanggalSampai!))
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'Tanggal mulai tidak boleh melebihi tanggal sampai.',
+                style: TextStyle(color: Color(0xFFB42318), fontSize: 11),
+              ),
+            ),
+
+          const SizedBox(height: 12),
+
+          // RESET
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _resetFilter,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Reset Filter', style: TextStyle(fontSize: 12)),
+              style: TextButton.styleFrom(foregroundColor: primaryGreen),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  bool _isSelectedMonth(SetoranModel item) {
-    final tanggal = DateTime.tryParse(item.tanggal);
-    return tanggal == null ||
-        (tanggal.year == _selectedMonth.year &&
-            tanggal.month == _selectedMonth.month);
-  }
-
-  Widget _buildMonthSelector() {
+  Widget _dateField({
+    required String label,
+    required DateTime? value,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
-      onTap: _pilihBulan,
+      onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.14),
+          color: const Color(0xFFF8FAF9),
+          border: Border.all(color: const Color(0xFFDFE6E3)),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(
-                '${_namaBulan(_selectedMonth.month)} ${_selectedMonth.year}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+            Text(label, style: const TextStyle(color: textGrey, fontSize: 10)),
+            const SizedBox(height: 7),
+            Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  size: 13,
+                  color: primaryGreen,
                 ),
-              ),
-            ),
-            const Icon(
-              Icons.calendar_month_outlined,
-              color: Colors.white,
-              size: 19,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pilihBulan() async {
-    int bulanDipilih = _selectedMonth.month;
-    int tahunDipilih = _selectedMonth.year;
-
-    final sekarang = DateTime.now();
-
-    final hasil = await showDialog<DateTime>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              title: const Text(
-                'Pilih Bulan dan Tahun',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: darkGreen,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<int>(
-                    value: bulanDipilih,
-                    decoration: const InputDecoration(
-                      labelText: 'Bulan',
-                      border: OutlineInputBorder(),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    value == null
+                        ? 'Pilih tanggal'
+                        : formatTanggalLengkap(value),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: value == null ? textGrey : textDark,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                     ),
-                    items: List.generate(12, (index) {
-                      return DropdownMenuItem(
-                        value: index + 1,
-                        child: Text(_namaBulan(index + 1)),
-                      );
-                    }),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() {
-                          bulanDipilih = value;
-                        });
-                      }
-                    },
                   ),
-                  const SizedBox(height: 15),
-                  DropdownButtonFormField<int>(
-                    value: tahunDipilih,
-                    decoration: const InputDecoration(
-                      labelText: 'Tahun',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: List.generate(sekarang.year - 2020 + 1, (index) {
-                      final tahun = sekarang.year - index;
-
-                      return DropdownMenuItem(
-                        value: tahun,
-                        child: Text('$tahun'),
-                      );
-                    }),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() {
-                          tahunDipilih = value;
-
-                          if (tahunDipilih == sekarang.year &&
-                              bulanDipilih > sekarang.month) {
-                            bulanDipilih = sekarang.month;
-                          }
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text('Batal', style: TextStyle(color: textGrey)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: darkGreen,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
-                    Navigator.pop(
-                      dialogContext,
-                      DateTime(tahunDipilih, bulanDipilih),
-                    );
-                  },
-                  child: const Text('Pilih'),
                 ),
               ],
-            );
-          },
-        );
-      },
-    );
-
-    if (hasil == null || !mounted) return;
-
-    if (hasil.year == _selectedMonth.year &&
-        hasil.month == _selectedMonth.month) {
-      return;
-    }
-
-    setState(() {
-      _selectedMonth = hasil;
-      _currentPage = 1;
-    });
-
-    await _loadData();
-  }
-
-  String _namaBulan(int bulan) {
-    const nama = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
-    ];
-    return nama[bulan - 1];
-  }
-
-  // ============================================================
-  // BUILD CONTENT
-  // ============================================================
-
-  Widget _buildContent(List<_RiwayatItem> semuaRiwayat) {
-    final riwayat = _getVisibleRiwayat(semuaRiwayat);
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: primaryGreen),
-      );
-    }
-
-    if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.cloud_off_rounded,
-                size: 50,
-                color: Color(0xFF71847F),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Gagal mengambil data riwayat',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: textDark,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: textGrey, fontSize: 12),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _loadData,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Coba Lagi'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryGreen,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (riwayat.isEmpty) {
-      String message;
-
-      switch (_filter) {
-        case 'Setoran':
-          message = 'Belum ada transaksi setoran.';
-          break;
-        case 'Penarikan':
-          message = 'Belum ada transaksi penarikan.';
-          break;
-        default:
-          message = 'Belum ada transaksi.';
-      }
-
-      return RefreshIndicator(
-        color: primaryGreen,
-        onRefresh: _loadData,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            SizedBox(
-              height: MediaQuery.of(context).size.height * 0.55,
-              child: Center(
-                child: Text(
-                  message,
-                  style: const TextStyle(color: textGrey, fontSize: 14),
-                ),
-              ),
             ),
           ],
         ),
-      );
-    }
-
-    return RefreshIndicator(
-      color: primaryGreen,
-      onRefresh: _loadData,
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-        itemCount: riwayat.length + (_totalPages(semuaRiwayat) > 1 ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == riwayat.length) {
-            return _buildPagination(_totalPages(semuaRiwayat));
-          }
-          return _transactionCard(riwayat[index]);
-        },
       ),
     );
   }
 
   // ============================================================
-  // FILTER BUTTON
+  // FILTER JENIS TRANSAKSI
   // ============================================================
+
+  Widget _buildFilterJenis() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+      child: Row(
+        children: [
+          _filterButton('Semua'),
+          const SizedBox(width: 8),
+          _filterButton('Setoran'),
+          const SizedBox(width: 8),
+          _filterButton('Penarikan'),
+        ],
+      ),
+    );
+  }
 
   Widget _filterButton(String title) {
     final active = _filter == title;
@@ -648,16 +866,19 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 9),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: active ? Colors.white : Colors.white.withValues(alpha: 0.12),
+            color: active ? primaryGreen : Colors.white,
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: active ? primaryGreen : const Color(0xFFDFE6E3),
+            ),
           ),
           child: Text(
             title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: active ? darkGreen : Colors.white,
+              color: active ? Colors.white : textGrey,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -667,27 +888,39 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
     );
   }
 
+  // ============================================================
+  // PAGINATION
+  // ============================================================
+
   Widget _buildPagination(int totalPages) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(top: 12, bottom: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
             onPressed: _currentPage > 1
-                ? () => setState(() => _currentPage--)
+                ? () {
+                    setState(() {
+                      _currentPage--;
+                    });
+                  }
                 : null,
-            icon: const Icon(Icons.chevron_left, color: Colors.white),
+            icon: const Icon(Icons.chevron_left, color: primaryGreen),
           ),
           Text(
             'Halaman $_currentPage dari $totalPages',
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: textDark, fontSize: 12),
           ),
           IconButton(
             onPressed: _currentPage < totalPages
-                ? () => setState(() => _currentPage++)
+                ? () {
+                    setState(() {
+                      _currentPage++;
+                    });
+                  }
                 : null,
-            icon: const Icon(Icons.chevron_right, color: Colors.white),
+            icon: const Icon(Icons.chevron_right, color: primaryGreen),
           ),
         ],
       ),
@@ -698,91 +931,450 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
   // TRANSACTION CARD
   // ============================================================
 
-  Widget _transactionCard(_RiwayatItem item) {
+  Widget _transactionCard(RiwayatItem item) {
     final isSetoran = item.jenis == 'Setoran';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(color: const Color(0xFFDFE6E3)),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: item.warna.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(item.icon, color: item.warna, size: 24),
-          ),
-
-          const SizedBox(width: 12),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(15),
+        child: InkWell(
+          onTap: isSetoran && item.setoran != null
+              ? () => _showDetailSetoran(item.setoran!)
+              : null,
+          borderRadius: BorderRadius.circular(15),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
               children: [
-                Text(
-                  item.namaNasabah,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: textDark,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: item.warna.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Icon(item.icon, color: item.warna, size: 23),
+                ),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.namaNasabah,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: textDark,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 5),
+
+                      Row(
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: item.warna,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            item.jenis,
+                            style: TextStyle(
+                              color: item.warna,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 5),
+
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            size: 11,
+                            color: textGrey,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            formatTanggal(item.tanggal.toIso8601String()),
+                            style: const TextStyle(
+                              color: textGrey,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  item.detail,
-                  style: const TextStyle(color: textGrey, fontSize: 12),
-                ),
-                const SizedBox(height: 5),
-                Row(
+
+                const SizedBox(width: 8),
+
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Icon(
-                      Icons.calendar_today_outlined,
-                      size: 12,
-                      color: textGrey,
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        formatTanggal(item.tanggal.toIso8601String()),
-                        style: const TextStyle(color: textGrey, fontSize: 11),
+                    Text(
+                      '${isSetoran ? '+' : '-'}${formatRupiah(item.nominal)}',
+                      style: TextStyle(
+                        color: isSetoran ? primaryGreen : orange,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
+
+                    if (item.status != null && item.status!.isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      _statusBadge(item.status!),
+                    ],
+
+                    if (isSetoran) ...[
+                      const SizedBox(height: 5),
+                      const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: textGrey,
+                        size: 18,
+                      ),
+                    ],
                   ],
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
 
-          const SizedBox(width: 8),
+  // ============================================================
+  // BOTTOM SHEET DETAIL SETORAN
+  // ============================================================
 
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+  void _showDetailSetoran(SetoranModel item) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.60,
+          minChildSize: 0.40,
+          maxChildSize: 0.90,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  // HANDLE
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 42,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD9E1DE),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+
+                  // HEADER
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE6F5ED),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.recycling_rounded,
+                            color: primaryGreen,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Detail Setoran',
+                                style: TextStyle(
+                                  color: textDark,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 3),
+                              Text(
+                                'Rincian jenis sampah nasabah',
+                                style: TextStyle(color: textGrey, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, color: textGrey),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const Divider(height: 1),
+
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(20),
+                      children: [
+                        // INFORMASI NASABAH
+                        _detailInfo('Nama Nasabah', item.namaNasabah),
+
+                        const SizedBox(height: 12),
+
+                        _detailInfo(
+                          'Tanggal Setoran',
+                          formatTanggal(item.tanggal),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        _detailInfo('Status', item.status),
+
+                        const SizedBox(height: 20),
+
+                        const Text(
+                          'Rincian Sampah',
+                          style: TextStyle(
+                            color: textDark,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        if (item.rincian.isNotEmpty)
+                          ...item.rincian.map(
+                            (detail) => _detailSampahCard(detail),
+                          )
+                        else
+                          _detailSampahFallback(item),
+
+                        const SizedBox(height: 16),
+
+                        // TOTAL
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE6F5ED),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Total Berat',
+                                    style: TextStyle(
+                                      color: textGrey,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${formatAngka(item.totalBerat)} gram',
+                                    style: const TextStyle(
+                                      color: textDark,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              const Divider(color: Color(0xFFD0E7D9)),
+
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Total Nominal',
+                                    style: TextStyle(
+                                      color: textDark,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    formatRupiah(item.totalNilai),
+                                    style: const TextStyle(
+                                      color: primaryGreen,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _detailInfo(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 115,
+          child: Text(
+            label,
+            style: const TextStyle(color: textGrey, fontSize: 12),
+          ),
+        ),
+        const Text(': '),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              color: textDark,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _detailSampahCard(DetailSetoranModel detail) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAF9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDFE6E3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            detail.namaSampah,
+            style: const TextStyle(
+              color: textDark,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              const Text(
+                'Berat',
+                style: TextStyle(color: textGrey, fontSize: 11),
+              ),
               Text(
-                '${isSetoran ? '+' : '-'}${formatRupiah(item.nominal)}',
-                style: TextStyle(
-                  color: isSetoran ? primaryGreen : Color(0xFFD88916),
-                  fontSize: 13,
+                '${formatAngka(detail.totalBerat)} gram',
+                style: const TextStyle(
+                  color: textDark,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Harga per kg',
+                style: TextStyle(color: textGrey, fontSize: 11),
+              ),
+              Text(
+                formatRupiah(detail.hargaPerKg),
+                style: const TextStyle(color: textDark, fontSize: 11),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Subtotal',
+                style: TextStyle(color: textGrey, fontSize: 11),
+              ),
+              Text(
+                formatRupiah(detail.totalNilai),
+                style: const TextStyle(
+                  color: primaryGreen,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              if (item.status != null && item.status!.isNotEmpty) ...[
-                const SizedBox(height: 5),
-                _statusBadge(item.status!),
-              ],
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  // Fallback apabila API tidak mengirim detail_setoran.
+  Widget _detailSampahFallback(SetoranModel item) {
+    return _detailSampahCard(
+      DetailSetoranModel(
+        idJenisSampah: item.idJenisSampah ?? 0,
+        namaSampah: item.namaSampah,
+        totalBerat: item.totalBerat,
+        hargaPerKg: item.hargaPerKg,
+        totalNilai: item.totalNilai,
       ),
     );
   }
@@ -801,8 +1393,9 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       case 'pending':
       case 'menunggu':
       case 'menunggu verfikasi':
-        label = 'Menunggu Verfikasi';
-        warna = Color(0xFFD88916);
+      case 'menunggu verifikasi':
+        label = 'Menunggu';
+        warna = orange;
         break;
 
       case 'approved':
@@ -820,19 +1413,19 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       case 'ditolak':
       case 'rejected':
         label = 'Ditolak';
-        warna = Color(0xFFB42318);
+        warna = const Color(0xFFB42318);
         break;
 
       case 'dibatalkan':
       case 'cancelled':
       case 'canceled':
         label = 'Dibatalkan';
-        warna = Color(0xFF6B7F7B);
+        warna = textGrey;
         break;
 
       default:
         label = status;
-        warna = Color(0xFF6B7F7B);
+        warna = textGrey;
     }
 
     return Container(
@@ -851,30 +1444,4 @@ class _RiwayatTransaksiScreenState extends State<RiwayatTransaksiScreen> {
       ),
     );
   }
-}
-
-// ============================================================
-// RIWAYAT ITEM
-// ============================================================
-
-class _RiwayatItem {
-  final String namaNasabah;
-  final String jenis;
-  final String detail;
-  final double nominal;
-  final DateTime tanggal;
-  final IconData icon;
-  final Color warna;
-  final String? status;
-
-  _RiwayatItem({
-    required this.namaNasabah,
-    required this.jenis,
-    required this.detail,
-    required this.nominal,
-    required this.tanggal,
-    required this.icon,
-    required this.warna,
-    this.status,
-  });
 }

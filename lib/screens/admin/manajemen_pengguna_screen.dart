@@ -813,38 +813,21 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-      child: Row(
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Manajemen Pengguna',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: textDark,
-                  ),
-                ),
-
-                SizedBox(height: 4),
-
-                Text(
-                  'Kelola data admin, petugas, dan nasabah',
-                  style: TextStyle(fontSize: 13, color: textGrey),
-                ),
-              ],
+          Text(
+            'Manajemen Pengguna',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: textDark,
             ),
           ),
-
-          // ==================================================
-          // REFRESH
-          // ==================================================
-          IconButton(
-            tooltip: 'Refresh',
-            onPressed: _loadUsers,
-            icon: const Icon(Icons.refresh, color: darkGreen),
+          SizedBox(height: 4),
+          Text(
+            'Kelola data admin, petugas, dan nasabah',
+            style: TextStyle(fontSize: 13, color: textGrey),
           ),
         ],
       ),
@@ -992,6 +975,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
               // FILTER ROLE
               Expanded(
                 child: DropdownButtonFormField<String>(
+                  isExpanded: true,
                   value: selectedRoleFilter,
                   decoration: InputDecoration(
                     labelText: 'Kategori',
@@ -1036,6 +1020,7 @@ class _ManajemenPenggunaScreenState extends State<ManajemenPenggunaScreen> {
               // FILTER STATUS
               Expanded(
                 child: DropdownButtonFormField<String>(
+                  isExpanded: true,
                   value: selectedStatusFilter,
                   decoration: InputDecoration(
                     labelText: 'Status Akun',

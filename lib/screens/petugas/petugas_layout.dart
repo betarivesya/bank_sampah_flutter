@@ -5,6 +5,7 @@ import '../../services/api_service.dart';
 import '../../models/setoran_model.dart';
 import '../auth/login_screen.dart';
 
+import 'petugas_profile_screen.dart';
 import 'notifikasi_petugas.dart';
 import 'petugas_dashboard.dart';
 import 'petugas_drawer.dart';
@@ -154,6 +155,9 @@ class _PetugasLayoutState extends State<PetugasLayout> {
       case 'penarikan':
         return PenarikanScreen(idPetugas: widget.idPetugas);
 
+      case 'profil':
+        return PetugasProfileScreen(idPetugas: widget.idPetugas);
+
       case 'dashboard':
       default:
         return PetugasDashboard(onMenuSelected: _selectMenu);
@@ -190,6 +194,9 @@ class _PetugasLayoutState extends State<PetugasLayout> {
           selectedMenu: _selectedMenu,
           onMenuSelected: _selectMenu,
           onLogout: _logout,
+          onProfileTap: () {
+            _selectMenu('profil');
+          },
         ),
 
         // ======================================================

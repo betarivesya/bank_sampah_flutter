@@ -29,12 +29,12 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   bool isLoading = true;
   bool isLoadingAktivitas = true;
 
-  int totalNasabah = 0;
   int setoranHariIni = 0;
+  int nasabahDilayaniHariIni = 0;
   int totalPending = 0;
+  int jenisSampahHariIni = 0;
 
-  double kasBankSampah = 0;
-  double totalSaldoNasabah = 0;
+  double nilaiSetoranHariIni = 0;
   double totalSampah = 0;
 
   List<dynamic> aktivitasTerbaru = [];
@@ -136,21 +136,44 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
 
       if (!mounted) return;
 
+      dynamic ambil(List<String> keys) {
+        for (final key in keys) {
+          if (data.containsKey(key) && data[key] != null) {
+            return data[key];
+          }
+        }
+        return 0;
+      }
+
+      debugPrint('DATA DASHBOARD PETUGAS: $data');
+
       setState(() {
-        totalNasabah = _toInt(data['total_nasabah']);
+        // Jumlah transaksi setoran hari ini
+        setoranHariIni = _toInt(ambil(['setoran_hari_ini']));
 
-        kasBankSampah = _toDouble(data['kas_bank_sampah']);
+        // Jumlah nasabah berbeda yang dilayani hari ini
+        nasabahDilayaniHariIni = _toInt(ambil(['nasabah_dilayani_hari_ini']));
 
-        totalSaldoNasabah = _toDouble(data['total_saldo_nasabah']);
+        // Jumlah jenis sampah berbeda yang disetor hari ini
+        jenisSampahHariIni = _toInt(ambil(['jenis_sampah_hari_ini']));
 
-        setoranHariIni = _toInt(data['setoran_hari_ini']);
+        // Total berat sampah hari ini.
+        // API Laravel sudah mengirim berat dalam gram,
+        // jadi tidak perlu dikalikan 1000 lagi.
+        totalSampah = _toDouble(ambil(['berat_sampah_hari_ini']));
 
-        totalSampah = _toDouble(data['berat_sampah_hari_ini']) * 1000;
+        // Total nilai setoran hari ini
+        nilaiSetoranHariIni = _toDouble(
+          ambil(['nilai_setoran_hari_ini', 'total_nilai_setoran']),
+        );
 
-        totalPending = _toInt(data['total_pending']);
+        // Total penarikan yang masih pending
+        totalPending = _toInt(ambil(['pending_penarikan', 'total_pending']));
 
+        // Data grafik setoran 7 hari terakhir
         dataSetoran7Hari = List<dynamic>.from(data['setoran_7_hari'] ?? []);
 
+        // Data grafik komposisi sampah
         dataKomposisiSampah = List<dynamic>.from(
           data['komposisi_sampah'] ?? [],
         );
@@ -301,50 +324,74 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   // ============================================================
 
   Widget _buildStatistics() {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.55,
-      children: [
-        _statisticCard(
-          title: 'Kas Bank Sampah',
-          value: isLoading ? '...' : formatRupiah(kasBankSampah),
-          icon: Icons.account_balance_outlined,
-        ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth >= 700;
 
-        _statisticCard(
-          title: 'Total Saldo Nasabah',
-          value: isLoading ? '...' : formatRupiah(totalSaldoNasabah),
-          icon: Icons.account_balance_wallet_outlined,
-        ),
+        return GridView.count(
+          crossAxisCount: isDesktop ? 3 : 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: isDesktop ? 3.8 : 1.4,
+          children: [
+            _statisticCard(
+              title: 'Setoran Hari Ini',
+              value: isLoading ? '...' : '$setoranHariIni',
+              subtitle: 'Jumlah transaksi setoran tercatat',
+              icon: Icons.receipt_long_rounded,
+              iconColor: const Color(0xFF10A875),
+              iconBackground: const Color(0xFFE6F6EF),
+            ),
 
-        _statisticCard(
-          title: 'Total Nasabah',
-          value: isLoading ? '...' : '$totalNasabah',
-          icon: Icons.people_outline_rounded,
-        ),
+            _statisticCard(
+              title: 'Sampah Terkumpul Hari Ini',
+              value: isLoading ? '...' : '${_formatAngka(totalSampah)} gram',
+              subtitle: 'Total berat sampah yang diterima hari ini',
+              icon: Icons.recycling_rounded,
+              iconColor: const Color(0xFFF28A26),
+              iconBackground: const Color(0xFFFFF1E4),
+            ),
 
-        _statisticCard(
-          title: 'Setoran Hari Ini',
-          value: isLoading ? '...' : '$setoranHariIni',
-          icon: Icons.inventory_2_outlined,
-        ),
+            _statisticCard(
+              title: 'Nasabah Dilayani',
+              value: isLoading ? '...' : '$nasabahDilayaniHariIni',
+              subtitle: 'Nasabah berbeda yang menyetor hari ini',
+              icon: Icons.groups_rounded,
+              iconColor: const Color(0xFF3478E5),
+              iconBackground: const Color(0xFFEAF1FF),
+            ),
 
-        _statisticCard(
-          title: 'Sampah Terkumpul Hari Ini',
-          value: isLoading ? '...' : '${_formatAngka(totalSampah)} gram',
-          icon: Icons.recycling_rounded,
-        ),
+            _statisticCard(
+              title: 'Total Nilai Setoran',
+              value: isLoading ? '...' : formatRupiah(nilaiSetoranHariIni),
+              subtitle: 'Total nilai transaksi setoran hari ini',
+              icon: Icons.payments_rounded,
+              iconColor: const Color(0xFF009F9A),
+              iconBackground: const Color(0xFFE3F6F4),
+            ),
 
-        _statisticCard(
-          title: 'Penarikan Pending',
-          value: isLoading ? '...' : '$totalPending',
-          icon: Icons.pending_actions_outlined,
-        ),
-      ],
+            _statisticCard(
+              title: 'Penarikan Pending',
+              value: isLoading ? '...' : '$totalPending',
+              subtitle: 'Pengajuan penarikan menunggu proses',
+              icon: Icons.schedule_rounded,
+              iconColor: const Color(0xFFE65B5B),
+              iconBackground: const Color(0xFFFFEEEE),
+            ),
+
+            _statisticCard(
+              title: 'Jenis Sampah Disetor',
+              value: isLoading ? '...' : '$jenisSampahHariIni',
+              subtitle: 'Jumlah jenis sampah berbeda hari ini',
+              icon: Icons.layers_rounded,
+              iconColor: const Color(0xFF8755DB),
+              iconBackground: const Color(0xFFF1EBFF),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -355,17 +402,20 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
   Widget _statisticCard({
     required String title,
     required String value,
+    required String subtitle,
     required IconData icon,
+    required Color iconColor,
+    required Color iconBackground,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(17),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 10,
             offset: const Offset(0, 3),
           ),
         ],
@@ -375,53 +425,47 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
         children: [
           Row(
             children: [
-              Container(
-                width: 35,
-                height: 35,
-                decoration: BoxDecoration(
-                  color: PetugasDashboard.primaryGreen.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  icon,
-                  color: PetugasDashboard.primaryGreen,
-                  size: 19,
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF64756F),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-
-              const Spacer(),
-
-              const Icon(
-                Icons.more_horiz_rounded,
-                color: Colors.grey,
-                size: 18,
+              const SizedBox(width: 5),
+              Container(
+                width: 27,
+                height: 27,
+                decoration: BoxDecoration(
+                  color: iconBackground,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: iconColor, size: 16),
               ),
             ],
           ),
-
           const Spacer(),
-
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              color: PetugasDashboard.textDark,
+              color: Color(0xFF243044),
               fontSize: 17,
               fontWeight: FontWeight.bold,
             ),
           ),
-
           const SizedBox(height: 3),
-
           Text(
-            title,
-            maxLines: 1,
+            subtitle,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: PetugasDashboard.textGrey,
-              fontSize: 11,
-            ),
+            style: const TextStyle(color: Color(0xFF89958F), fontSize: 9),
           ),
         ],
       ),
@@ -462,9 +506,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
           values: valuesSetoran,
           labels: labelsSetoran,
         ),
-
         const SizedBox(height: 16),
-
         _horizontalChartCard(
           title: 'Komposisi Jenis Sampah',
           subtitle: 'Berat berdasarkan jenis sampah (kg)',
@@ -711,9 +753,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                       }
                     },
                   ),
-
                   const SizedBox(height: 15),
-
                   DropdownButtonFormField<int>(
                     value: tahunDipilih,
                     decoration: const InputDecoration(
@@ -753,7 +793,6 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                     style: TextStyle(color: PetugasDashboard.textGrey),
                   ),
                 ),
-
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: PetugasDashboard.darkGreen,
@@ -822,7 +861,6 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                   ),
                 ),
               ),
-
               GestureDetector(
                 onTap: () {
                   widget.onMenuSelected('riwayat');
@@ -838,9 +876,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
               ),
             ],
           ),
-
           const SizedBox(height: 14),
-
           if (isLoadingAktivitas)
             const Center(
               child: Padding(
@@ -907,9 +943,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
               size: 21,
             ),
           ),
-
           const SizedBox(width: 11),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -922,9 +956,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 3),
-
                 Text(
                   item['detail']?.toString() ?? '-',
                   maxLines: 2,
@@ -934,9 +966,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                     fontSize: 10,
                   ),
                 ),
-
                 const SizedBox(height: 3),
-
                 Text(
                   tanggalFormat,
                   style: const TextStyle(
@@ -947,9 +977,7 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
               ],
             ),
           ),
-
           const SizedBox(width: 8),
-
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -962,7 +990,6 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
                 ),
               ),
               const SizedBox(height: 5),
-
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -1016,33 +1043,13 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ==================================================
-              // HEADER DASHBOARD
-              // ==================================================
-
               _buildDashboardHeader(),
-
               const SizedBox(height: 18),
-
-              // ==================================================
-              // STATISTIK
-              // ==================================================
               _buildStatistics(),
-
               const SizedBox(height: 22),
-
-              // ==================================================
-              // GRAFIK
-              // ==================================================
               _buildDashboardCharts(),
-
               const SizedBox(height: 22),
-
-              // ==================================================
-              // TRANSAKSI TERBARU
-              // ==================================================
               _buildLatestTransactions(),
-
               const SizedBox(height: 20),
             ],
           ),
@@ -1051,6 +1058,10 @@ class _PetugasDashboardState extends State<PetugasDashboard> {
     );
   }
 }
+
+// ============================================================
+// LINE CHART
+// ============================================================
 
 class _LineChartPainter extends CustomPainter {
   final List<double> values;

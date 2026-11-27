@@ -1,11 +1,11 @@
-import 'dart:ui';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../../app_styles.dart';
-import '../../models/setoran_model.dart';
+import '../../models/jenis_sampah_model.dart';
+import '../../models/petugas_page.dart';
 import '../../services/api_service.dart';
-import 'tambah_setoran_screen.dart';
 
 class SetoranScreen extends StatefulWidget {
   final int idPetugas;
@@ -17,74 +17,286 @@ class SetoranScreen extends StatefulWidget {
 }
 
 class _SetoranScreenState extends State<SetoranScreen> {
-  static const int _pageSize = 20;
-  List<SetoranModel> _setoran = [];
+  static const Color _hijau = Color(0xFF263B34);
+  static const Color _latar = Color(0xFFF5F8F7);
+
+  List<Map<String, dynamic>> _nasabah = [];
+  List<JenisSampah> _jenisSampah = [];
+
+  Map<String, dynamic>? _nasabahTerpilih;
+
+  final TextEditingController _nasabahSearchController =
+      TextEditingController();
+
+  Timer? _nasabahSearchTimer;
+
+  final List<_ItemSetoran> _items = [];
+
   bool _loading = true;
-  int _currentPage = 1;
-  int _totalPages = 1;
-  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _loadSetoran();
+    _loadData();
+  }
+
+  @override
+  void dispose() {
+    _nasabahSearchTimer?.cancel();
+    _nasabahSearchController.dispose();
+
+    for (final item in _items) {
+      item.dispose();
+    }
+
+    super.dispose();
   }
 
   // ============================================================
   // LOAD DATA
   // ============================================================
 
-  Future<void> _loadSetoran({int page = 1}) async {
-    _currentPage = page;
-    setState(() {
-      _loading = true;
-    });
-
+  Future<void> _loadData() async {
     try {
-      final result = await ApiService.getPetugasSetoranPage(
-        bulan: _selectedMonth.month,
-        tahun: _selectedMonth.year,
-        page: page,
-        perPage: _pageSize,
-      );
+      final hasil = await Future.wait([
+        ApiService.getPetugasNasabahPage(perPage: 20),
+        ApiService.getJenisSampah(),
+      ]);
 
       if (!mounted) return;
 
       setState(() {
-        _setoran = result.items;
-        _totalPages = result.lastPage;
+        _nasabah = (hasil[0] as PetugasPage<Map<String, dynamic>>).items;
+
+        _jenisSampah = hasil[1] as List<JenisSampah>;
+
         _loading = false;
+
+        if (_items.isEmpty) {
+          _items.add(_ItemSetoran());
+        }
       });
     } catch (e) {
       if (!mounted) return;
 
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _loading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal mengambil data setoran: $e'),
-          backgroundColor: Color(0xFFB42318),
+          content: Text('Gagal mengambil data: $e'),
+          backgroundColor: const Color(0xFFB42318),
         ),
       );
     }
   }
 
   // ============================================================
-  // FORMAT TANGGAL
+  // PENCARIAN NASABAH
   // ============================================================
 
-  String _formatTanggal(String tanggal) {
-    if (tanggal.isEmpty) return '-';
+  void _searchNasabah(String keyword) {
+    _nasabahSearchTimer?.cancel();
+
+    _nasabahSearchTimer = Timer(const Duration(milliseconds: 350), () async {
+      if (keyword.trim().isEmpty) {
+        if (mounted) {
+          setState(() => _nasabah = []);
+        }
+        return;
+      }
+
+      try {
+        final result = await ApiService.getPetugasNasabahPage(
+          keyword: keyword,
+          perPage: 20,
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          _nasabah = result.items;
+        });
+      } catch (_) {
+        if (mounted) {
+          setState(() => _nasabah = []);
+        }
+      }
+    });
+  }
+
+  String _namaNasabah(Map<String, dynamic> item) {
+    return item['nama']?.toString() ??
+        item['nama_lengkap']?.toString() ??
+        'Nasabah';
+  }
+
+  // ============================================================
+  // PERHITUNGAN
+  // ============================================================
+
+  double _berat(_ItemSetoran item) {
+    return double.tryParse(
+          item.beratController.text.trim().replaceAll(',', '.'),
+        ) ??
+        0;
+  }
+
+  double _hargaPerGram(_ItemSetoran item) {
+    return item.jenisTerpilih?.hargaPerGram ?? 0;
+  }
+
+  double _subtotal(_ItemSetoran item) {
+    return _berat(item) * _hargaPerGram(item);
+  }
+
+  double get _totalBerat {
+    return _items.fold(0, (total, item) => total + _berat(item));
+  }
+
+  double get _totalNilai {
+    return _items.fold(0, (total, item) => total + _subtotal(item));
+  }
+
+  // ============================================================
+  // ITEM SETORAN
+  // ============================================================
+
+  void _tambahItem() {
+    if (_saving) return;
+
+    setState(() {
+      _items.add(_ItemSetoran());
+    });
+  }
+
+  void _hapusItem(int index) {
+    if (_saving || _items.length <= 1) return;
+
+    final item = _items.removeAt(index);
+    item.dispose();
+
+    setState(() {});
+  }
+
+  void _pilihJenis(_ItemSetoran item, JenisSampah? jenis) {
+    if (_saving) return;
+
+    setState(() {
+      item.jenisTerpilih = jenis;
+    });
+  }
+
+  // ============================================================
+  // VALIDASI DAN SIMPAN SETORAN
+  // ============================================================
+
+  Future<void> _simpan() async {
+    if (_saving) return;
+
+    if (_nasabahTerpilih == null) {
+      _showError('Silakan pilih nasabah.');
+      return;
+    }
+
+    if (_items.isEmpty) {
+      _showError('Tambahkan minimal satu jenis sampah.');
+      return;
+    }
+
+    final idsJenis = <int>{};
+
+    for (int i = 0; i < _items.length; i++) {
+      final item = _items[i];
+
+      if (item.jenisTerpilih == null) {
+        _showError('Pilih jenis sampah pada baris ${i + 1}.');
+        return;
+      }
+
+      if (!idsJenis.add(item.jenisTerpilih!.idJenisSampah)) {
+        _showError(
+          'Jenis sampah tidak boleh dipilih lebih dari sekali. '
+          'Periksa baris ${i + 1}.',
+        );
+        return;
+      }
+
+      if (_berat(item) <= 0) {
+        _showError('Berat sampah pada baris ${i + 1} minimal 1 gram.');
+        return;
+      }
+    }
+
+    setState(() => _saving = true);
 
     try {
-      final date = DateTime.parse(tanggal);
+      final itemsRequest = _items.map((item) {
+        return <String, dynamic>{
+          'id_jenis_sampah': item.jenisTerpilih!.idJenisSampah,
+          'berat_gram': _berat(item),
+        };
+      }).toList();
 
-      return tanggalIndonesia(date);
-    } catch (_) {
-      return tanggal;
+      final idNasabah = int.parse(
+        _nasabahTerpilih!['id_pengguna_nasabah']?.toString() ??
+            _nasabahTerpilih!['id_nasabah'].toString(),
+      );
+
+      await ApiService.tambahSetoran(
+        idNasabah: idNasabah,
+        idPetugas: widget.idPetugas,
+        items: itemsRequest,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Setoran berhasil disimpan.'),
+          backgroundColor: _hijau,
+        ),
+      );
+
+      // Reset formulir agar petugas bisa langsung
+      // mencatat setoran berikutnya.
+      _resetForm();
+    } catch (e) {
+      if (!mounted) return;
+
+      _showError(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
+  }
+
+  void _resetForm() {
+    _nasabahSearchTimer?.cancel();
+
+    _nasabahSearchController.clear();
+    _nasabahTerpilih = null;
+
+    for (final item in _items) {
+      item.dispose();
+    }
+
+    _items.clear();
+    _items.add(_ItemSetoran());
+
+    setState(() {
+      _nasabah = [];
+    });
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFFB42318),
+      ),
+    );
   }
 
   // ============================================================
@@ -94,62 +306,60 @@ class _SetoranScreenState extends State<SetoranScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEDF1EF),
-      body: RefreshIndicator(
-        onRefresh: () => _loadSetoran(page: 1),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 12),
+      backgroundColor: _latar,
+      body: SafeArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: _hijau))
+            : ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 20),
 
-            _buildMonthSelector(),
-            const SizedBox(height: 20),
+                  _buildNasabahSection(),
+                  const SizedBox(height: 18),
 
-            if (_loading)
-              const Padding(
-                padding: EdgeInsetsGeometry.symmetric(vertical: 50),
-                child: Center(
-                  child: CircularProgressIndicator(color: Color(0xFF075B4F)),
-                ),
-              )
-            else if (_setoran.isEmpty)
-              _buildEmptyContent()
-            else ...[
-              ..._setoran.map(
-                (item) => _SetoranCard(
-                  setoran: item,
-                  tanggal: _formatTanggal(item.tanggal),
-                ),
+                  _buildItemsSection(),
+                  const SizedBox(height: 18),
+
+                  _buildTotalCard(),
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: _saving ? null : _simpan,
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.save_outlined),
+                      label: Text(
+                        _saving ? 'Menyimpan...' : 'Simpan Setoran',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _hijau,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: _hijau.withValues(alpha: 0.6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                ],
               ),
-              if (_totalPages > 1) _buildPagination(),
-              const SizedBox(height: 80),
-            ],
-          ],
-        ),
-      ),
-
-      // ============================================================
-      // TAMBAH SETORAN
-      // ============================================================
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF0F463D),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Setoran Baru'),
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TambahSetoranScreen(idPetugas: widget.idPetugas),
-            ),
-          );
-
-          if (result == true) {
-            _loadSetoran(page: 1);
-          }
-        },
       ),
     );
   }
@@ -160,879 +370,532 @@ class _SetoranScreenState extends State<SetoranScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 12),
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Setor Sampah',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF253735),
-                  ),
-                ),
-                const SizedBox(height: 5),
-                const Text(
-                  'Kelola dan catat setoran sampah nasabah',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
-              color: const Color(0xFFE8F5F1),
-              borderRadius: BorderRadius.circular(20),
+              color: const Color(0xFFE8F0EC),
+              borderRadius: BorderRadius.circular(13),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.receipt_long_rounded,
-                  color: Color(0xFF075B4F),
-                  size: 14,
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  '${_setoran.length} Setoran',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF075B4F),
-                  ),
-                ),
-              ],
-            ),
+            child: const Icon(Icons.recycling_rounded, color: _hijau, size: 25),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMonthSelector() {
-    return InkWell(
-      onTap: _pilihBulanSetoran,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE4EAE7)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${_namaBulan(_selectedMonth.month)} '
-              '${_selectedMonth.year}',
-              style: const TextStyle(
-                color: Color(0xFF075B4F),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(
-              Icons.calendar_month_outlined,
-              size: 18,
-              color: Color(0xFF075B4F),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pilihBulanSetoran() async {
-    int bulanDipilh = _selectedMonth.month;
-    int tahunDipilih = _selectedMonth.year;
-
-    final sekarang = DateTime.now();
-
-    final hasil = await showDialog<DateTime>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadiusGeometry.circular(18),
-              ),
-              title: const Text(
-                'Pilih Bulan dan Tahun',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF075B4F),
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<int>(
-                    value: bulanDipilh,
-                    decoration: const InputDecoration(
-                      labelText: 'Bulan',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: List.generate(12, (index) {
-                      return DropdownMenuItem(
-                        value: index + 1,
-                        child: Text(_namaBulan(index + 1)),
-                      );
-                    }),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() {
-                          bulanDipilh = value;
-
-                          if (tahunDipilih == sekarang.year &&
-                              bulanDipilh == sekarang.month) {
-                            bulanDipilh = sekarang.month;
-                          }
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 15),
-                  DropdownButtonFormField<int>(
-                    value: tahunDipilih,
-                    decoration: const InputDecoration(
-                      labelText: 'Tahun',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: List.generate(sekarang.year - 2020 + 1, (index) {
-                      final tahun = sekarang.year - index;
-
-                      return DropdownMenuItem(
-                        value: tahun,
-                        child: Text('$tahun'),
-                      );
-                    }),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() {
-                          tahunDipilih = value;
-
-                          if (tahunDipilih == sekarang.year &&
-                              bulanDipilh == sekarang.month) {
-                            bulanDipilh = sekarang.month;
-                          }
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text(
-                    'Batal',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF075B4F),
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
-                    Navigator.pop(
-                      dialogContext,
-                      DateTime(tahunDipilih, bulanDipilh),
-                    );
-                  },
-                  child: const Text('Pilih'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (hasil == null || !mounted) return;
-
-    if (hasil.year == _selectedMonth.year &&
-        hasil.month == _selectedMonth.month) {
-      return;
-    }
-
-    setState(() {
-      _selectedMonth = hasil;
-      _currentPage = 1;
-    });
-
-    await _loadSetoran(page: 1);
-  }
-
-  String _namaBulan(int bulan) {
-    const nama = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
-    ];
-    return nama[bulan - 1];
-  }
-
-  Widget _buildPagination() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 4, bottom: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            onPressed: _currentPage > 1
-                ? () => _loadSetoran(page: _currentPage - 1)
-                : null,
-            icon: const Icon(Icons.chevron_left),
-          ),
-          Text('Halaman $_currentPage dari $_totalPages'),
-          IconButton(
-            onPressed: _currentPage < _totalPages
-                ? () => _loadSetoran(page: _currentPage + 1)
-                : null,
-            icon: const Icon(Icons.chevron_right),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================
-  // EMPTY
-  // ============================================================
-
-  Widget _buildEmptyContent() {
-    return const Padding(
-      padding: EdgeInsetsGeometry.symmetric(vertical: 45),
-      child: Column(
-        children: [
-          Icon(Icons.inbox_outlined, size: 70, color: Colors.grey),
-          SizedBox(height: 16),
-          Text(
-            'Belum ada data setoran',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Belum ada riwayat setoran pada bulan ini.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF71847F)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================
-// CARD SETORAN
-// ============================================================
-
-class _SetoranCard extends StatelessWidget {
-  final SetoranModel setoran;
-  final String tanggal;
-
-  const _SetoranCard({required this.setoran, required this.tanggal});
-
-  void _bukaRincian(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return _RincianSetoranSheet(setoran: setoran, tanggal: tanggal);
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFDFE6E3)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: () => _bukaRincian(context),
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+          const SizedBox(width: 12),
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8F5F1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.person, color: Color(0xFF075B4F)),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            setoran.namaNasabah,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Color(0xFF172033),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today_outlined,
-                                size: 12,
-                                color: Colors.grey,
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                tanggal,
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    _StatusBadge(status: setoran.status),
-                  ],
+                Text(
+                  'Tambah Setoran',
+                  style: TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.bold,
+                    color: _hijau,
+                  ),
                 ),
-                const SizedBox(height: 15),
-                const Divider(height: 1, color: Color(0xFFEAEFEC)),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.receipt_long_outlined,
-                      size: 17,
-                      color: Color(0xFF075B4F),
-                    ),
-                    const SizedBox(width: 7),
-                    const Expanded(
-                      child: Text(
-                        'Lihat rincian setoran',
-                        style: TextStyle(
-                          color: Color(0xFF075B4F),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.chevron_right,
-                      color: Color(0xFF075B4F),
-                      size: 20,
-                    ),
-                  ],
+                SizedBox(height: 4),
+                Text(
+                  'Catat transaksi setoran sampah nasabah',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF71847F)),
                 ),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
-}
 
-// ============================================================
-// BOTTOM SHEET RINCIAN SETORAN
-// ============================================================
+  // ============================================================
+  // NASABAH
+  // ============================================================
 
-class _RincianSetoranSheet extends StatelessWidget {
-  final SetoranModel setoran;
-  final String tanggal;
+  Widget _buildNasabahSection() {
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionTitle(number: '1', title: 'Pilih Nasabah'),
 
-  const _RincianSetoranSheet({required this.setoran, required this.tanggal});
+          const SizedBox(height: 14),
 
-  String _formatBerat(double berat) {
-    final angka = berat.toStringAsFixed(0);
-    return angka.replaceAllMapped(
-      RegExp(r'\B(?=(\d{3})+(?!\d))'),
-      (match) => '.',
-    );
-  }
+          TextField(
+            controller: _nasabahSearchController,
+            enabled: !_saving,
+            onChanged: (value) {
+              setState(() {
+                _nasabahTerpilih = null;
+              });
 
-  @override
-  Widget build(BuildContext context) {
-    final rincian = setoran.rincian;
+              _searchNasabah(value);
+            },
+            decoration:
+                _inputDecoration(
+                  'Cari nama, nomor HP, atau email nasabah',
+                  Icons.search,
+                ).copyWith(
+                  suffixIcon: _nasabahSearchController.text.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _nasabahSearchTimer?.cancel();
+                            _nasabahSearchController.clear();
 
-    // Hitung dari rincian agar total sesuai dengan daftar item.
-    final totalBerat = rincian.fold<double>(
-      0,
-      (total, item) => total + item.totalBerat,
-    );
+                            setState(() {
+                              _nasabah = [];
+                              _nasabahTerpilih = null;
+                            });
+                          },
+                        ),
+                ),
+          ),
 
-    final totalNilai = rincian.fold<double>(
-      0,
-      (total, item) => total + item.totalNilai,
-    );
+          if (_nasabahTerpilih != null) ...[
+            const SizedBox(height: 12),
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-      ),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF6F8F7),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // HANDLE DAN HEADER
-            Padding(
-              padding: const EdgeInsetsGeometry.fromLTRB(20, 12, 20, 16),
-              child: Column(
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F0EC),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
                 children: [
-                  Container(
-                    width: 42,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(10),
+                  const Icon(Icons.check_circle, color: _hijau),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'Nasabah dipilih: '
+                      '${_namaNasabah(_nasabahTerpilih!)}',
+                      style: const TextStyle(
+                        color: _hijau,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8F5F1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.receipt_long_outlined,
-                          color: Color(0xFF075B4F),
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Rincian Setoran',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF172033),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
-                        color: Colors.grey,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.person_outlined,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 7),
-                      Expanded(
-                        child: Text(
-                          setoran.namaNasabah,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 7),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today_outlined,
-                        size: 15,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 7),
-                      Text(
-                        tanggal,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const Spacer(),
-                      _StatusBadge(status: setoran.status),
-                    ],
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1),
+          ] else if (_nasabahSearchController.text.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
 
-            // ISI RINCIAN
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Daftar Jenis Sampah',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF172033),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+            if (_nasabah.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'Nasabah tidak ditemukan.',
+                  style: TextStyle(color: Color(0xFF71847F), fontSize: 13),
+                ),
+              )
+            else
+              ..._nasabah.map(
+                (item) => ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const CircleAvatar(
+                    backgroundColor: Color(0xFFE8F0EC),
+                    child: Icon(Icons.person_outline, color: _hijau),
+                  ),
+                  title: Text(
+                    _namaNasabah(item),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    item['no_hp']?.toString() ??
+                        item['no_telp']?.toString() ??
+                        item['email']?.toString() ??
+                        '-',
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _nasabahTerpilih = item;
+                      _nasabah = [];
 
-                    if (rincian.isEmpty)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          'Rincian jenis sampah belum tersedia.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      )
-                    else
-                      ...rincian.map(
-                        (item) => Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(15),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFE4EAE7)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE8F5F1),
-                                      borderRadius: BorderRadius.circular(9),
-                                    ),
-                                    child: const Icon(
-                                      Icons.recycling,
-                                      size: 19,
-                                      color: Color(0xFF075B4F),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      item.namaSampah,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  Text(
-                                    '${_formatBerat(item.totalBerat)} gram',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF075B4F),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 13),
-                              const Divider(height: 1),
-                              const SizedBox(height: 10),
-                              _RincianBaris(
-                                label: 'Harga per kg',
-                                value: rupiah(item.hargaPerKg),
-                              ),
-                              const SizedBox(height: 8),
-                              _RincianBaris(
-                                label: 'Subtotal',
-                                value: rupiah(item.totalNilai),
-                                bold: true,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      _nasabahSearchController.text = _namaNasabah(item);
+                    });
 
-                    const SizedBox(height: 5),
-
-                    // RINGKASAN TOTAL
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8F5F1),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Ringkasan Setoran',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: Color(0xFF075B4F),
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          _RincianBaris(
-                            label: 'Total Berat',
-                            value: rincian.isNotEmpty
-                                ? '${_formatBerat(totalBerat)} gram'
-                                : '${_formatBerat(setoran.totalBerat)} gram',
-                          ),
-                          const SizedBox(height: 12),
-                          const Divider(height: 1, color: Color(0xFFD0E5DC)),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'Total Nilai',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF172033),
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                rupiah(
-                                  rincian.isNotEmpty
-                                      ? totalNilai
-                                      : setoran.totalNilai,
-                                ),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF075B4F),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    FocusScope.of(context).unfocus();
+                  },
                 ),
               ),
-            ),
           ],
-        ),
+        ],
       ),
     );
   }
-}
 
-// ============================================================
-// BARIS RINCIAN
-// ============================================================
+  // ============================================================
+  // DAFTAR JENIS SAMPAH
+  // ============================================================
 
-class _RincianBaris extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool bold;
-
-  const _RincianBaris({
-    required this.label,
-    required this.value,
-    this.bold = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade700,
-              fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: bold ? FontWeight.bold : FontWeight.w600,
-            color: const Color(0xFF172033),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ============================================================
-// STATUS
-// ============================================================
-
-class _StatusBadge extends StatelessWidget {
-  final String status;
-
-  const _StatusBadge({required this.status});
-
-  String get _statusTampilan {
-    switch (status.trim().toLowerCase()) {
-      case 'approved':
-      case 'selesai':
-        return 'Selesai';
-
-      case 'pending':
-        return 'Menunggu';
-
-      case 'rejected':
-        return 'Ditolak';
-
-      case 'cancelled':
-      case 'canceled':
-        return 'Dibatalkan';
-
-      default:
-        return status.isEmpty ? '-' : status;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final statusNormal = status.trim().toLowerCase();
-
-    Color warnaLatar;
-    Color warnaTeks;
-
-    switch (statusNormal) {
-      case 'approved':
-      case 'selesai':
-        warnaLatar = const Color(0xFFE8F5F1);
-        warnaTeks = const Color(0xFF075B4F);
-        break;
-
-      case 'pending':
-        warnaLatar = const Color(0xFFFFF4DB);
-        warnaTeks = const Color(0xFF9A6700);
-        break;
-
-      case 'rejected':
-      case 'cancelled':
-      case 'canceled':
-        warnaLatar = const Color(0xFFFDECEC);
-        warnaTeks = const Color(0xFFC62828);
-        break;
-
-      default:
-        warnaLatar = const Color(0xFFF0F0F0);
-        warnaTeks = Colors.grey.shade700;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: warnaLatar,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        _statusTampilan,
-        style: TextStyle(
-          color: warnaTeks,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
-// INFO ITEM
-// ============================================================
-
-class _InfoItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-
-  const _InfoItem({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: const Color(0xFF2C8069)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildItemsSection() {
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(
-                label,
-                style: const TextStyle(fontSize: 11, color: Color(0xFF71847F)),
+              const Expanded(
+                child: _SectionTitle(number: '2', title: 'Detail Sampah'),
               ),
-              const SizedBox(height: 3),
               Text(
-                value,
+                '${_items.length} item',
                 style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+                  color: _hijau,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
+          ),
+
+          const SizedBox(height: 6),
+
+          const Text(
+            'Pilih jenis sampah dan masukkan berat setiap item.',
+            style: TextStyle(color: Color(0xFF71847F), fontSize: 12),
+          ),
+
+          const SizedBox(height: 14),
+
+          ...List.generate(_items.length, (index) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildItemCard(index),
+            );
+          }),
+
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _saving ? null : _tambahItem,
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text('Tambah Jenis Sampah'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _hijau,
+                side: const BorderSide(color: _hijau),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemCard(int index) {
+    final item = _items[index];
+
+    // Mencegah jenis sampah yang sama dipilih
+    // pada lebih dari satu baris.
+    final jenisTersedia = _jenisSampah.where((jenis) {
+      return jenis.idJenisSampah == item.jenisTerpilih?.idJenisSampah ||
+          !_items.any(
+            (lain) =>
+                !identical(lain, item) &&
+                lain.jenisTerpilih?.idJenisSampah == jenis.idJenisSampah,
+          );
+    }).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F8F7),
+        border: Border.all(color: const Color(0xFFDFE6E3)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE8F0EC),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '${index + 1}',
+                  style: const TextStyle(
+                    color: _hijau,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 10),
+
+              const Expanded(
+                child: Text(
+                  'Jenis Sampah',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+
+              IconButton(
+                tooltip: 'Hapus item',
+                onPressed: _saving || _items.length <= 1
+                    ? null
+                    : () => _hapusItem(index),
+                icon: const Icon(Icons.delete_outline),
+                color: const Color(0xFFB42318),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          DropdownButtonFormField<JenisSampah>(
+            value: item.jenisTerpilih,
+            isExpanded: true,
+            decoration: _inputDecoration('Pilih jenis sampah', Icons.recycling),
+            items: jenisTersedia.map((jenis) {
+              return DropdownMenuItem<JenisSampah>(
+                value: jenis,
+                child: Text(jenis.namaSampah, overflow: TextOverflow.ellipsis),
+              );
+            }).toList(),
+            onChanged: _saving ? null : (value) => _pilihJenis(item, value),
+          ),
+
+          const SizedBox(height: 14),
+
+          TextField(
+            controller: item.beratController,
+            enabled: !_saving,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (_) => setState(() {}),
+            decoration: _inputDecoration(
+              'Masukkan berat',
+              Icons.scale_outlined,
+            ).copyWith(hintText: 'Contoh: 1000', suffixText: 'gram'),
+          ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Harga per gram',
+                style: TextStyle(color: Colors.black54, fontSize: 12),
+              ),
+              Text(
+                '${rupiah(_hargaPerGram(item), desimal: true)} / gram',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Subtotal',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              Text(
+                rupiah(_subtotal(item)),
+                style: const TextStyle(
+                  color: _hijau,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // RINGKASAN TOTAL
+  // ============================================================
+
+  Widget _buildTotalCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F0EC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFD8E6DE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.receipt_long, color: _hijau),
+              SizedBox(width: 8),
+              Text(
+                'Ringkasan Setoran',
+                style: TextStyle(
+                  color: _hijau,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          _summaryRow('Jumlah jenis sampah', '${_items.length} item'),
+
+          const SizedBox(height: 10),
+
+          _summaryRow('Total berat', '${_totalBerat.toStringAsFixed(0)} gram'),
+
+          const Divider(height: 24),
+
+          const Text('Total Nilai Setoran', style: TextStyle(color: _hijau)),
+
+          const SizedBox(height: 5),
+
+          Text(
+            rupiah(_totalNilai),
+            style: const TextStyle(
+              color: _hijau,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(color: Color(0xFF71847F))),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  // ============================================================
+  // INPUT DECORATION
+  // ============================================================
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: _hijau),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFDFE6E3)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFDFE6E3)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _hijau, width: 1.5),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// MODEL ITEM SETORAN
+// ============================================================
+
+class _ItemSetoran {
+  JenisSampah? jenisTerpilih;
+
+  final TextEditingController beratController = TextEditingController();
+
+  void dispose() {
+    beratController.dispose();
+  }
+}
+
+// ============================================================
+// WIDGET KARTU
+// ============================================================
+
+class _SectionCard extends StatelessWidget {
+  final Widget child;
+
+  const _SectionCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+// ============================================================
+// JUDUL BAGIAN
+// ============================================================
+
+class _SectionTitle extends StatelessWidget {
+  final String number;
+  final String title;
+
+  const _SectionTitle({required this.number, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: Color(0xFF263B34),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            number,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+
+        const SizedBox(width: 10),
+
+        Flexible(
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
       ],
