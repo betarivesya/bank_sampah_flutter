@@ -74,7 +74,7 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
     try {
       await ApiService.tambahJenisSampah(
         namaSampah: nama,
-        hargaPerKg: harga,
+        hargaPerGram: harga,
         status: true,
       );
 
@@ -137,7 +137,7 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
                 await ApiService.updateJenisSampah(
                   id: item.idJenisSampah,
                   namaSampah: nama,
-                  hargaPerKg: item.hargaPerKg.round(),
+                  hargaPerGram: item.hargaPerGram.round(),
                   status: item.status,
                 );
 
@@ -206,7 +206,7 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
   // ATUR HARGA SAMPAH
   Future<void> _showAturHargaDialog(JenisSampah item) async {
     final controller = TextEditingController(
-      text: item.idHarga != null ? item.hargaPerKg.toStringAsFixed(0) : '',
+      text: item.idHarga != null ? item.hargaPerGram.toStringAsFixed(0) : '',
     );
 
     final adaHarga = item.idHarga != null;
@@ -560,7 +560,7 @@ class SampahItemCard extends StatelessWidget {
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             adaHarga
-                ? 'Rp ${item.hargaPerKg.toStringAsFixed(0)} / kg'
+                ? 'Rp ${item.hargaPerGram.toStringAsFixed(0)} / kg'
                 : 'Harga: Belum diatur',
             style: TextStyle(
               color: adaHarga ? Color(0xFF166534) : Color(0xFFD88916),

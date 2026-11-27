@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter_file_dialog/flutter_file_dialog.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:flutter/foundation.dart';
@@ -10,28 +12,22 @@ import 'package:path_provider/path_provider.dart';
 import '../models/jenis_sampah_model.dart';
 import '../models/setoran_model.dart';
 import '../models/laporan_penyerahan_induk_model.dart';
-
-class PetugasPage<T> {
-  final List<T> items;
-  final int currentPage;
-  final int lastPage;
-  final int total;
-
-  const PetugasPage({
-    required this.items,
-    required this.currentPage,
-    required this.lastPage,
-    required this.total,
-  });
-
-  bool get hasMore => currentPage < lastPage;
-}
+import '../models/petugas_page.dart';
 
 class ApiService {
   static const String baseUrl = 'http://127.0.0.1:8000/api';
 
   static String? _authToken;
   static String? _sessionCookie;
+  static String? _currentUserRole;
+
+  static Map<String, dynamic>? _currentUser;
+
+  static String? get currentUserRole => _currentUserRole;
+
+  static String get currentUserEmail {
+    return _currentUser?['email']?.toString() ?? '';
+  }
 
   // ==========================================================
   // HEADER DAN SESSION
@@ -115,6 +111,7 @@ class ApiService {
 
         _authToken = token?.toString();
 
+        // Simpan cookie session jika tersedia.
         final setCookie = response.headers['set-cookie'];
 
         if (setCookie != null && setCookie.isNotEmpty) {
@@ -126,11 +123,20 @@ class ApiService {
           _sessionCookie = cookies.join('; ');
         }
 
+        // Ambil data user dari response.
+        final user =
+            data['user'] ?? (nestedData is Map ? nestedData['user'] : null);
+
+        // Simpan seluruh data user.
+        _currentUser = user is Map ? Map<String, dynamic>.from(user) : null;
+
+        // Simpan role user.
+        _currentUserRole = _currentUser?['role']?.toString().toLowerCase();
+
         return {
           'success': true,
           'message': data['message'],
-          'user':
-              data['user'] ?? (nestedData is Map ? nestedData['user'] : null),
+          'user': _currentUser,
           'token': _authToken,
         };
       }
@@ -140,6 +146,7 @@ class ApiService {
       return {'success': false, 'message': data['message'] ?? 'Login gagal'};
     } catch (e) {
       clearSession();
+
       print('LOGIN ERROR: $e');
 
       return {'success': false, 'message': 'Tidak dapat terhubung ke server'};
@@ -169,12 +176,31 @@ class ApiService {
       final data = _decodeMap(response.body);
 
       if (response.statusCode == 200 && data['success'] == true) {
-        _authToken = data['token']?.toString();
+        final nestedData = data['data'];
+
+        final token =
+            data['token'] ??
+            data['access_token'] ??
+            (nestedData is Map
+                ? nestedData['token'] ?? nestedData['access_token']
+                : null);
+
+        _authToken = token?.toString();
+
+        // Ambil data user dari response.
+        final user =
+            data['user'] ?? (nestedData is Map ? nestedData['user'] : null);
+
+        // Simpan seluruh data user.
+        _currentUser = user is Map ? Map<String, dynamic>.from(user) : null;
+
+        // Simpan role user.
+        _currentUserRole = _currentUser?['role']?.toString().toLowerCase();
 
         return {
           'success': true,
           'message': data['message'],
-          'user': data['user'],
+          'user': _currentUser,
           'token': _authToken,
         };
       }
@@ -300,6 +326,93 @@ class ApiService {
   }
 
   // ==========================================================
+  // PENGATURAN AKUN SUPERADMIN
+  // ==========================================================
+
+  static Future<Map<String, dynamic>> updateSuperadminEmail({
+    required String email,
+    required String currentPassword,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/superadmin/account/email'),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          if (_authToken != null) 'Authorization': 'Bearer $_authToken',
+        },
+        body: jsonEncode({
+          'email': email.trim(),
+          'current_password': currentPassword,
+        }),
+      );
+
+      final data = _decodeMap(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        // Perbarui email di data user lokal.
+        if (_currentUser != null) {
+          _currentUser!['email'] = data['user']?['email'] ?? email.trim();
+        }
+
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Email berhasil diperbarui.',
+          'user': data['user'],
+        };
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal memperbarui email.',
+      };
+    } catch (e) {
+      print('UPDATE SUPERADMIN EMAIL ERROR: $e');
+
+      return {'success': false, 'message': 'Tidak dapat terhubung ke server.'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateSuperadminPassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/superadmin/account/password'),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          if (_authToken != null) 'Authorization': 'Bearer $_authToken',
+        },
+        body: jsonEncode({
+          'current_password': currentPassword,
+          'password': newPassword,
+          'password_confirmation': newPassword,
+        }),
+      );
+
+      final data = _decodeMap(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Password berhasil diperbarui.',
+        };
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal memperbarui password.',
+      };
+    } catch (e) {
+      print('UPDATE SUPERADMIN PASSWORD ERROR: $e');
+
+      return {'success': false, 'message': 'Tidak dapat terhubung ke server.'};
+    }
+  }
+
+  // ==========================================================
   // JENIS SAMPAH
   // ==========================================================
 
@@ -332,7 +445,7 @@ class ApiService {
 
   static Future<bool> tambahJenisSampah({
     required String namaSampah,
-    required int hargaPerKg,
+    required int hargaPerGram,
     required bool status,
   }) async {
     final response = await http.post(
@@ -340,7 +453,7 @@ class ApiService {
       headers: _headers(json: true),
       body: jsonEncode({
         'nama_sampah': namaSampah,
-        'harga_per_kg': hargaPerKg,
+        'harga_per_gram': hargaPerGram,
         'status': status,
       }),
     );
@@ -358,7 +471,7 @@ class ApiService {
   static Future<bool> updateJenisSampah({
     required int id,
     required String namaSampah,
-    required int hargaPerKg,
+    required int hargaPerGram,
     required bool status,
   }) async {
     final response = await http.put(
@@ -366,7 +479,7 @@ class ApiService {
       headers: _headers(json: true),
       body: jsonEncode({
         'nama_sampah': namaSampah,
-        'harga_per_kg': hargaPerKg,
+        'harga_per_gram': hargaPerGram,
         'status': status,
       }),
     );
@@ -527,6 +640,8 @@ class ApiService {
 
   static String _formatRole(String role) {
     switch (role.toLowerCase()) {
+      case 'superadmin':
+        return 'Superadmin';
       case 'admin':
         return 'Admin';
       case 'petugas':
@@ -544,18 +659,16 @@ class ApiService {
     required String email,
     required String password,
     required String role,
-    required bool status,
   }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/pengguna'),
       headers: _headers(json: true),
       body: jsonEncode({
-        'name': nama,
-        'no_telepon': telepon,
-        'email': email,
+        'name': nama.trim(),
+        'no_telepon': telepon.trim(),
+        'email': email.trim(),
         'password': password,
         'role': role.toLowerCase(),
-        'status': status,
       }),
     );
 
@@ -569,6 +682,7 @@ class ApiService {
   static Future<bool> updatePengguna({
     required int id,
     required String nama,
+    required String telepon,
     required String role,
     required bool status,
   }) async {
@@ -576,7 +690,8 @@ class ApiService {
       Uri.parse('$baseUrl/pengguna/$id'),
       headers: _headers(json: true),
       body: jsonEncode({
-        'name': nama,
+        'name': nama.trim(),
+        'no_telepon': telepon.trim(),
         'role': role.toLowerCase(),
         'status': status,
       }),
@@ -783,6 +898,126 @@ class ApiService {
     }
 
     throw Exception(_errorMessage(data, 'Gagal menyimpan setoran'));
+  }
+
+  // ==========================================================
+  // RIWAYAT TRANSAKSI ADMIN DAN SUPERADMIN
+  // ==========================================================
+
+  static Future<Map<String, dynamic>> getAdminRiwayatTransaksi({
+    String? tanggalMulai,
+    String? tanggalAkhir,
+    String? namaNasabah,
+    String? namaPetugas,
+    String? jenisTransaksi,
+    int page = 1,
+    int perPage = 10,
+  }) async {
+    final uri = Uri.parse('$baseUrl/admin/transaksi/history').replace(
+      queryParameters: {
+        if (tanggalMulai != null && tanggalMulai.isNotEmpty)
+          'tanggal_mulai': tanggalMulai,
+        if (tanggalAkhir != null && tanggalAkhir.isNotEmpty)
+          'tanggal_akhir': tanggalAkhir,
+        if (namaNasabah != null && namaNasabah.trim().isNotEmpty)
+          'nama_nasabah': namaNasabah.trim(),
+        if (namaPetugas != null && namaPetugas.trim().isNotEmpty)
+          'nama_petugas': namaPetugas.trim(),
+        if (jenisTransaksi != null &&
+            jenisTransaksi.isNotEmpty &&
+            jenisTransaksi != 'Semua')
+          'jenis_transaksi': jenisTransaksi,
+        'page': '$page',
+        'per_page': '$perPage',
+      },
+    );
+
+    final response = await http.get(
+      uri,
+      headers: {
+        ..._headers(),
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+    );
+
+    final data = _decodeMap(response.body);
+
+    debugPrint('RIWAYAT ADMIN URL: $uri');
+    debugPrint('RIWAYAT ADMIN STATUS: ${response.statusCode}');
+
+    if (response.statusCode == 200) {
+      return data;
+    }
+
+    throw Exception(_errorMessage(data, 'Gagal mengambil riwayat transaksi.'));
+  }
+
+  // ==========================================================
+  // DOWNLOAD EXCEL REKAP SETORAN ADMIN
+  // ==========================================================
+
+  static Future<String> downloadExcelRekapSetoran({
+    String? tanggalMulai,
+    String? tanggalAkhir,
+  }) async {
+    final uri = Uri.parse('$baseUrl/admin/transaksi/history/export').replace(
+      queryParameters: {
+        if (tanggalMulai != null && tanggalMulai.isNotEmpty)
+          'tanggal_mulai': tanggalMulai,
+        if (tanggalAkhir != null && tanggalAkhir.isNotEmpty)
+          'tanggal_akhir': tanggalAkhir,
+      },
+    );
+
+    final response = await http.get(
+      uri,
+      headers: {
+        ..._headers(),
+        'Accept':
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      String pesan = 'Gagal mengunduh laporan setoran.';
+
+      try {
+        final data = _decodeMap(utf8.decode(response.bodyBytes));
+        pesan = _errorMessage(data, pesan);
+      } catch (_) {
+        pesan = 'Gagal mengunduh Excel. HTTP ${response.statusCode}';
+      }
+
+      throw Exception(pesan);
+    }
+
+    if (response.bodyBytes.isEmpty) {
+      throw Exception('File Excel yang diterima kosong.');
+    }
+
+    final fileName =
+        'Rekap_Setoran_SIRAYA_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+
+    // Simpan sementara di folder aplikasi
+    final directory = await getTemporaryDirectory();
+    final tempFile = File('${directory.path}/$fileName');
+
+    await tempFile.writeAsBytes(response.bodyBytes, flush: true);
+
+    // Buka pemilih lokasi penyimpanan Android
+    final savedPath = await FlutterFileDialog.saveFile(
+      params: SaveFileDialogParams(
+        sourceFilePath: tempFile.path,
+        fileName: fileName,
+      ),
+    );
+
+    if (savedPath == null || savedPath.isEmpty) {
+      throw Exception('Penyimpanan file dibatalkan.');
+    }
+
+    return savedPath;
   }
 
   // ==========================================================

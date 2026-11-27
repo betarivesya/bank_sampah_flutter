@@ -250,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final role = user['role']?.toString().toLowerCase();
 
-    if (role == 'admin') {
+    if (role == 'admin' || role == 'superadmin') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const AdminLayout()),

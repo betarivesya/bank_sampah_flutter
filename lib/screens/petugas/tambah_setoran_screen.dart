@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app_styles.dart';
 import '../../models/jenis_sampah_model.dart';
 import '../../services/api_service.dart';
+import '../../models/petugas_page.dart';
 
 class TambahSetoranScreen extends StatefulWidget {
   final int idPetugas;

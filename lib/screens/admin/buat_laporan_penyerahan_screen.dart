@@ -63,14 +63,6 @@ class _BuatLaporanPenyerahanScreenState
     }
   }
 
-  String _formatTanggalApi(DateTime tanggal) {
-    final tahun = tanggal.year.toString().padLeft(4, '0');
-    final bulan = tanggal.month.toString().padLeft(2, '0');
-    final hari = tanggal.day.toString().padLeft(2, '0');
-
-    return '$tahun-$bulan-$hari';
-  }
-
   double _angka(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? 0;

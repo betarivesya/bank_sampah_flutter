@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/api_service.dart';
 import '../../models/setoran_model.dart';
+import '../../models/petugas_page.dart';
 
 class NotifikasiPetugas extends StatefulWidget {
   const NotifikasiPetugas({super.key});
