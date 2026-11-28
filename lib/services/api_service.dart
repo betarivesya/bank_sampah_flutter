@@ -15,7 +15,7 @@ import '../models/laporan_penyerahan_induk_model.dart';
 import '../models/petugas_page.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
+  static const String baseUrl = 'http://192.168.18.179:8000/api';
 
   static String? _authToken;
   static String? _sessionCookie;
@@ -445,7 +445,7 @@ class ApiService {
 
   static Future<bool> tambahJenisSampah({
     required String namaSampah,
-    required int hargaPerGram,
+    required double hargaPerGram,
     required bool status,
   }) async {
     final response = await http.post(
@@ -471,7 +471,7 @@ class ApiService {
   static Future<bool> updateJenisSampah({
     required int id,
     required String namaSampah,
-    required int hargaPerGram,
+    required double hargaPerGram,
     required bool status,
   }) async {
     final response = await http.put(
@@ -551,7 +551,7 @@ class ApiService {
 
   static Future<bool> tambahHargaSampah(
     int idJenisSampah,
-    int hargaPerKg,
+    double hargaPerKg,
   ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/harga-sampah'),
@@ -572,7 +572,7 @@ class ApiService {
     );
   }
 
-  static Future<bool> updateHargaSampah(int idHarga, int hargaPerKg) async {
+  static Future<bool> updateHargaSampah(int idHarga, double hargaPerKg) async {
     final response = await http.put(
       Uri.parse('$baseUrl/harga-sampah/$idHarga'),
       headers: _headers(json: true),
@@ -788,6 +788,166 @@ class ApiService {
     }
 
     throw Exception(data['message'] ?? 'Gagal mengambil dashboard petugas');
+  }
+
+  // ==========================================================
+  // GET PROFIL PETUGAS
+  // ==========================================================
+
+  static Future<Map<String, dynamic>> getProfilPetugas() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/petugas/profil'),
+        headers: {
+          'Accept': 'application/json',
+          if (_authToken != null) 'Authorization': 'Bearer $_authToken',
+        },
+      );
+
+      final data = _decodeMap(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data['data'],
+          'message': data['message'],
+        };
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal mengambil profil.',
+      };
+    } catch (e) {
+      print('GET PROFIL PETUGAS ERROR: $e');
+
+      return {'success': false, 'message': 'Tidak dapat terhubung ke server.'};
+    }
+  }
+
+  // ==========================================================
+  // UPDATE PROFIL PETUGAS
+  // ==========================================================
+
+  static Future<Map<String, dynamic>> updateProfilPetugas({
+    required String namaLengkap,
+    required String noTelepon,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/petugas/profil'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          if (_authToken != null) 'Authorization': 'Bearer $_authToken',
+        },
+        body: jsonEncode({
+          'nama_lengkap': namaLengkap,
+          'no_telepon': noTelepon,
+        }),
+      );
+
+      final data = _decodeMap(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data['data'],
+          'message': data['message'],
+        };
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal memperbarui profil.',
+      };
+    } catch (e) {
+      print('UPDATE PROFIL PETUGAS ERROR: $e');
+
+      return {'success': false, 'message': 'Tidak dapat terhubung ke server.'};
+    }
+  }
+
+  // ==========================================================
+  // UPDATE EMAIL PETUGAS
+  // ==========================================================
+
+  static Future<Map<String, dynamic>> updatePetugasEmail({
+    required String email,
+    required String currentPassword,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/petugas/email'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          if (_authToken != null) 'Authorization': 'Bearer $_authToken',
+        },
+        body: jsonEncode({'email': email, 'current_password': currentPassword}),
+      );
+
+      final data = _decodeMap(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'],
+          'data': data['data'],
+          'user': data['user'],
+        };
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal memperbarui email.',
+      };
+    } catch (e) {
+      print('UPDATE EMAIL PETUGAS ERROR: $e');
+
+      return {'success': false, 'message': 'Tidak dapat terhubung ke server.'};
+    }
+  }
+
+  // ==========================================================
+  // UPDATE PASSWORD PETUGAS
+  // ==========================================================
+
+  static Future<Map<String, dynamic>> updatePetugasPassword({
+    required String currentPassword,
+    required String newPassword,
+    required String newPasswordConfirmation,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/petugas/password'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          if (_authToken != null) 'Authorization': 'Bearer $_authToken',
+        },
+        body: jsonEncode({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+          'new_password_confirmation': newPasswordConfirmation,
+        }),
+      );
+
+      final data = _decodeMap(response.body);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['message']};
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal memperbarui password.',
+      };
+    } catch (e) {
+      print('UPDATE PASSWORD PETUGAS ERROR: $e');
+
+      return {'success': false, 'message': 'Tidak dapat terhubung ke server.'};
+    }
   }
 
   // ==========================================================
@@ -1060,19 +1220,25 @@ class ApiService {
       throw Exception('File Excel yang diterima kosong.');
     }
 
-    final directory = await getApplicationDocumentsDirectory();
+    final fileName = 'laporan-penyerahan-bsi-$idLaporan.xlsx';
 
-    final folder = Directory('${directory.path}/Laporan Penyerahan');
+    final directory = await getTemporaryDirectory();
+    final tempFile = File('${directory.path}/$fileName');
 
-    if (!await folder.exists()) {
-      await folder.create(recursive: true);
+    await tempFile.writeAsBytes(response.bodyBytes, flush: true);
+
+    final savedPath = await FlutterFileDialog.saveFile(
+      params: SaveFileDialogParams(
+        sourceFilePath: tempFile.path,
+        fileName: fileName,
+      ),
+    );
+
+    if (savedPath == null || savedPath.isEmpty) {
+      throw Exception('Penyimpanan Excel dibatalkan.');
     }
 
-    final file = File('${folder.path}/laporan-penyerahan-bsi-$idLaporan.xlsx');
-
-    await file.writeAsBytes(response.bodyBytes, flush: true);
-
-    return file.path;
+    return savedPath;
   }
 
   // DOWNLOAD PDF LAPORAN PENYERAHAN
@@ -1099,19 +1265,25 @@ class ApiService {
       throw Exception('File PDF yang diterima kosong.');
     }
 
-    final directory = await getApplicationDocumentsDirectory();
+    final fileName = 'laporan-penyerahan-bsi-$idLaporan.pdf';
 
-    final folder = Directory('${directory.path}/Laporan Penyerahan');
+    final directory = await getTemporaryDirectory();
+    final tempFile = File('${directory.path}/$fileName');
 
-    if (!await folder.exists()) {
-      await folder.create(recursive: true);
+    await tempFile.writeAsBytes(response.bodyBytes, flush: true);
+
+    final savedPath = await FlutterFileDialog.saveFile(
+      params: SaveFileDialogParams(
+        sourceFilePath: tempFile.path,
+        fileName: fileName,
+      ),
+    );
+
+    if (savedPath == null || savedPath.isEmpty) {
+      throw Exception('Penyimpanan PDF dibatalkan.');
     }
 
-    final file = File('${folder.path}/laporan-penyerahan-bsi-$idLaporan.pdf');
-
-    await file.writeAsBytes(response.bodyBytes, flush: true);
-
-    return file.path;
+    return savedPath;
   }
 
   // AMBIL DAFTAR LAPORAN PENYERAHAN

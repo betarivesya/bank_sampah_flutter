@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:open_filex/open_filex.dart';
-
 import '../../models/laporan_penyerahan_induk_model.dart';
 import '../../services/api_service.dart';
 import 'edit_laporan_penyerahan_screen.dart';
@@ -179,6 +177,7 @@ class _DetailLaporanPenyerahanScreenState
   }
 
   // EXPORT EXCEL
+
   Future<void> _exportExcel() async {
     if (_laporan == null || _processing) return;
 
@@ -191,12 +190,23 @@ class _DetailLaporanPenyerahanScreenState
 
       if (!mounted) return;
 
-      await OpenFilex.open(path);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Excel berhasil disimpan di:\n$path'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Gagal export Excel: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Gagal export Excel: ${e.toString().replaceFirst('Exception: ', '')}',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _processing = false);
@@ -217,13 +227,20 @@ class _DetailLaporanPenyerahanScreenState
 
       if (!mounted) return;
 
-      await OpenFilex.open(path);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('PDF berhasil disimpan di:\n$path'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal mencetak laporan: $e'),
+          content: Text(
+            'Gagal menyimpan PDF: ${e.toString().replaceFirst('Exception', ', ')}',
+          ),
           backgroundColor: Colors.red,
         ),
       );

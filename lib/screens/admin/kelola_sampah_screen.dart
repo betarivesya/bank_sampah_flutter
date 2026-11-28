@@ -16,6 +16,15 @@ class KelolaSampahScreen extends StatefulWidget {
 class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
   final TextEditingController _searchController = TextEditingController();
 
+  final _hargaInputFormatter = FilteringTextInputFormatter.allow(
+    RegExp(r'[0-9.,]'),
+  );
+
+  double? _parseHarga(String value) {
+    final normalized = value.trim().replaceAll(',', '.');
+    return double.tryParse(normalized);
+  }
+
   String _selectedStatus = 'Semua Status';
 
   List<JenisSampah> _dataSampah = [];
@@ -64,20 +73,15 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
   // ==========================================================
 
   String _formatRupiah(double value) {
-    final intValue = value.toInt();
+    String hasil = value.toStringAsFixed(2);
 
-    final text = intValue.toString();
-    final buffer = StringBuffer();
+    // Hilangkan angka nol yang tidak diperlukan di belakang desimal.
+    hasil = hasil.replaceFirst(RegExp(r'\.?0+$'), '');
 
-    for (int i = 0; i < text.length; i++) {
-      if (i > 0 && (text.length - i) % 3 == 0) {
-        buffer.write('.');
-      }
+    // Gunakan koma sebagai pemisah desimal.
+    hasil = hasil.replaceAll('.', '.');
 
-      buffer.write(text[i]);
-    }
-
-    return 'Rp${buffer.toString()}';
+    return 'Rp$hasil';
   }
 
   // ==========================================================
@@ -113,7 +117,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
     );
 
     final hargaController = TextEditingController(
-      text: isEdit ? data.hargaPerGram.toInt().toString() : '',
+      text: isEdit ? data.hargaPerGram.toString() : '',
     );
 
     String selectedStatus = isEdit && data.status ? 'Aktif' : 'Nonaktif';
@@ -158,7 +162,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                       controller: jenisController,
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                          RegExp(r'[a-zA-Z0-9 ]'),
+                          RegExp(r'[a-zA-ZÀ-ÿ\s()]'),
                         ),
                       ],
                       decoration: InputDecoration(
@@ -184,10 +188,12 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
 
                     TextField(
                       controller: hargaController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      inputFormatters: [_hargaInputFormatter],
                       decoration: InputDecoration(
-                        hintText: 'Contoh: 4000',
+                        hintText: 'Contoh: 0.5',
                         prefixText: 'Rp ',
                         prefixIcon: const Icon(Icons.payments_outlined),
                         border: OutlineInputBorder(
@@ -264,7 +270,7 @@ class _KelolaSampahScreenState extends State<KelolaSampahScreen> {
                       return;
                     }
 
-                    final harga = int.tryParse(hargaText);
+                    final harga = _parseHarga(hargaText);
 
                     if (harga == null || harga <= 0) {
                       ScaffoldMessenger.of(context).showSnackBar(

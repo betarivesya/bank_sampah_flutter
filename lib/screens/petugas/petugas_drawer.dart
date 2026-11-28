@@ -7,12 +7,14 @@ class PetugasDrawer extends StatelessWidget {
   final String selectedMenu;
   final Function(String) onMenuSelected;
   final VoidCallback onLogout;
+  final VoidCallback onProfileTap;
 
   const PetugasDrawer({
     super.key,
     required this.selectedMenu,
     required this.onMenuSelected,
     required this.onLogout,
+    required this.onProfileTap,
   });
 
   @override
@@ -22,10 +24,7 @@ class PetugasDrawer extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            // ==================================================
             // HEADER DRAWER
-            // ==================================================
-
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
               child: Row(
@@ -51,9 +50,7 @@ class PetugasDrawer extends StatelessWidget {
                       fit: BoxFit.contain,
                     ),
                   ),
-
                   const SizedBox(width: 13),
-
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,9 +86,7 @@ class PetugasDrawer extends StatelessWidget {
 
             Container(height: 1, color: Colors.white24),
 
-            // ==================================================
             // DAFTAR MENU
-            // ==================================================
             Expanded(
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -151,14 +146,12 @@ class PetugasDrawer extends StatelessWidget {
               ),
             ),
 
-            // ==================================================
             // PROFILE PETUGAS DAN LOGOUT
-            // ==================================================
             Container(
               margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               padding: const EdgeInsets.all(13),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.09),
+                color: Colors.white.withOpacity(0.09),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -205,6 +198,30 @@ class PetugasDrawer extends StatelessWidget {
                     ),
                   ),
 
+                  // TOMBOL PROFIL
+                  InkWell(
+                    borderRadius: BorderRadius.circular(11),
+                    onTap: () {
+                      Navigator.pop(context);
+                      onMenuSelected('profil');
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.09),
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: const Icon(
+                        Icons.person_outline_rounded,
+                        color: Colors.white,
+                        size: 21,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  // TOMBOL LOGOUT
                   InkWell(
                     borderRadius: BorderRadius.circular(11),
                     onTap: () {
@@ -233,10 +250,7 @@ class PetugasDrawer extends StatelessWidget {
     );
   }
 
-  // ==========================================================
   // ITEM MENU
-  // ==========================================================
-
   Widget _drawerMenu({
     required BuildContext context,
     required IconData icon,
@@ -265,9 +279,7 @@ class PetugasDrawer extends StatelessWidget {
                   color: active ? Colors.white : Colors.white70,
                   size: 21,
                 ),
-
                 const SizedBox(width: 13),
-
                 Expanded(
                   child: Text(
                     title,

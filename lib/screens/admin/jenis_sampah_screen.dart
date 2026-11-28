@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:bank_sampah_flutter/services/api_service.dart';
 import 'package:bank_sampah_flutter/models/jenis_sampah_model.dart';
+import 'package:flutter/services.dart';
 
 class JenisSampahScreen extends StatefulWidget {
   const JenisSampahScreen({Key? key}) : super(key: key);
@@ -12,6 +13,14 @@ class JenisSampahScreen extends StatefulWidget {
 class _JenisSampahScreenState extends State<JenisSampahScreen> {
   final TextEditingController _tambahController = TextEditingController();
   final TextEditingController _hargaTambahController = TextEditingController();
+
+  final _hargaInputFormatter = FilteringTextInputFormatter.allow(
+    RegExp(r'[0-9.,]'),
+  );
+
+  double? _parseHarga(String value) {
+    return double.tryParse(value.trim().replaceAll(',', '.'));
+  }
 
   late Future<List<JenisSampah>> _jenisSampahFuture;
   bool _sedangMenyimpan = false;
@@ -57,7 +66,7 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
   // TAMBAH JENIS SAMPAH
   Future<void> _tambahJenisSampah() async {
     final nama = _tambahController.text.trim();
-    final harga = int.tryParse(_hargaTambahController.text.trim());
+    final harga = _parseHarga(_hargaTambahController.text);
 
     if (nama.isEmpty) {
       _tampilkanPesan('Nama jenis sampah wajib diisi.', error: true);
@@ -107,6 +116,9 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
         content: TextField(
           controller: controller,
           autofocus: true,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZÀ-ÿ\s()]')),
+          ],
           decoration: AppStyles.inputDecoration(
             'Nama Jenis Sampah',
             icon: Icons.edit,
@@ -137,7 +149,7 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
                 await ApiService.updateJenisSampah(
                   id: item.idJenisSampah,
                   namaSampah: nama,
-                  hargaPerGram: item.hargaPerGram.round(),
+                  hargaPerGram: item.hargaPerGram,
                   status: item.status,
                 );
 
@@ -206,7 +218,7 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
   // ATUR HARGA SAMPAH
   Future<void> _showAturHargaDialog(JenisSampah item) async {
     final controller = TextEditingController(
-      text: item.idHarga != null ? item.hargaPerGram.toStringAsFixed(0) : '',
+      text: item.idHarga != null ? item.hargaPerGram.toString() : '',
     );
 
     final adaHarga = item.idHarga != null;
@@ -234,7 +246,10 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
             TextField(
               controller: controller,
               autofocus: true,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [_hargaInputFormatter],
               decoration: AppStyles.inputDecoration(
                 'Harga per Kg (Rp)',
                 icon: Icons.payments,
@@ -273,7 +288,7 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              final harga = int.tryParse(controller.text.trim());
+              final harga = _parseHarga(controller.text);
 
               if (harga == null || harga <= 0) {
                 _tampilkanPesan(
@@ -349,6 +364,11 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
                 children: [
                   TextField(
                     controller: _tambahController,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[a-zA-ZÀ-ÿ\s()]'),
+                      ),
+                    ],
                     textCapitalization: TextCapitalization.words,
                     decoration: AppStyles.inputDecoration(
                       'Nama Jenis Sampah',
@@ -358,7 +378,10 @@ class _JenisSampahScreenState extends State<JenisSampahScreen> {
                   const SizedBox(height: 10),
                   TextField(
                     controller: _hargaTambahController,
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [_hargaInputFormatter],
                     decoration: AppStyles.inputDecoration(
                       'Harga per Kg (Rp)',
                       icon: Icons.payments_outlined,
