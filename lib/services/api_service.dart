@@ -15,7 +15,7 @@ import '../models/laporan_penyerahan_induk_model.dart';
 import '../models/petugas_page.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.18.179:8000/api';
+  static const String baseUrl = 'http://10.113.26.158:8000/api';
 
   static String? _authToken;
   static String? _sessionCookie;
@@ -516,7 +516,7 @@ class ApiService {
   // ==========================================================
 
   static Future<List<dynamic>> getHargaSampah() async {
-    final url = Uri.parse('$baseUrl/harga-sampah');
+    final url = Uri.parse('$baseUrl/nasabah/harga-sampah');
 
     try {
       debugPrint('===== DEBUG HARGA SAMPAH =====');

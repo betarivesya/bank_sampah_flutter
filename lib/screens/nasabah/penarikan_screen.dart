@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../app_styles.dart';
 import '../../services/api_service.dart';
 
+import 'package:flutter/services.dart';
+
 class PenarikanScreen extends StatefulWidget {
   final int idNasabah;
 
@@ -24,6 +26,19 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
   bool sedangMengedit = false;
 
   List<Map<String, dynamic>> pengajuan = [];
+
+  static const int minimalPenarikan = 10000;
+  static const int kelipatanPenarikan = 500;
+
+  bool nominalValid(int nominal) {
+    return nominal >= minimalPenarikan && nominal % kelipatanPenarikan == 0;
+  }
+
+  int? ambilNominal(String teks) {
+    // Hanya mengambil angka
+    final angka = teks.replaceAll(RegExp(r'[^0-9]'), '');
+    return int.tryParse(angka);
+  }
 
   @override
   void initState() {
@@ -206,16 +221,15 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
   Future<void> prosesPenarikan() async {
     if (sedangMengirim) return;
 
-    final teksNominal = nominalController.text
-        .replaceAll('.', '')
-        .replaceAll(',', '')
-        .replaceAll(RegExp(r'\s+'), '');
+    final nominal = ambilNominal(nominalController.text);
 
-    final nominal = int.tryParse(teksNominal);
-
-    if (nominal == null || nominal < 1000) {
+    if (nominal == null || !nominalValid(nominal)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Minimal penarikan adalah Rp1.000.')),
+        const SnackBar(
+          content: Text(
+            'Minimal penarikan Rp10.000 dan harus kelipatan Rp500.',
+          ),
+        ),
       );
       return;
     }
@@ -461,6 +475,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
               TextField(
                 controller: controller,
                 keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: InputDecoration(
                   prefixText: 'Rp ',
                   hintText: 'Masukkan nominal',
@@ -471,7 +486,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
               ),
               const SizedBox(height: 14),
               const Text(
-                'Minimal penarikan Rp1.000.',
+                'Minimal penarikan Rp10.000 dan berlaku kelipatan Rp500.',
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
             ],
@@ -479,17 +494,14 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                final teks = controller.text
-                    .replaceAll('.', '')
-                    .replaceAll(',', '')
-                    .replaceAll(RegExp(r'\s+'), '');
+                final nominal = ambilNominal(controller.text);
 
-                final nominal = int.tryParse(teks);
-
-                if (nominal == null || nominal < 1000) {
+                if (nominal == null || !nominalValid(nominal)) {
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
                     const SnackBar(
-                      content: Text('Minimal penarikan adalah Rp1.000.'),
+                      content: Text(
+                        'Minimal penarikan Rp10.000 dan harus kelipatan Rp500.',
+                      ),
                     ),
                   );
                   return;
@@ -652,6 +664,9 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                         TextField(
                           controller: nominalController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
                           decoration: InputDecoration(
                             hintText: 'Masukkan nominal penarikan',
                             prefixText: 'Rp ',
@@ -664,7 +679,7 @@ class _PenarikanScreenState extends State<PenarikanScreen> {
                         ),
                         const SizedBox(height: 6),
                         const Text(
-                          'Minimal penarikan Rp1.000.',
+                          'Minimal penarikan Rp10.000 (kelipatan Rp500)',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,

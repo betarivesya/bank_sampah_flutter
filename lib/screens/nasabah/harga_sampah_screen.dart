@@ -45,9 +45,8 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
                   ? (jenis['nama_sampah'] ?? 'Jenis sampah').toString()
                   : (harga['nama_sampah'] ?? 'Jenis sampah').toString(),
               'harga':
-                  (double.tryParse((harga['harga_per_kg'] ?? 0).toString()) ??
-                      0.0) /
-                  1000,
+                  double.tryParse((harga['harga_per_gram'] ?? 0).toString()) ??
+                  0.0,
               'status': harga['status'],
             };
           })
@@ -150,11 +149,6 @@ class _HargaSampahScreenState extends State<HargaSampahScreen> {
                           ),
                         ],
                       ),
-                    ),
-                    IconButton(
-                      onPressed: isLoading ? null : _loadHargaSampah,
-                      tooltip: 'Muat ulang',
-                      icon: const Icon(Icons.refresh, color: hijau),
                     ),
                   ],
                 ),

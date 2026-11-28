@@ -138,7 +138,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
           activeControlsWidgetColor: AppColors.primary,
           initAspectRatio: CropAspectRatioPreset.square,
           lockAspectRatio: true,
-          hideBottomControls: false,
+          hideBottomControls: true,
         ),
         IOSUiSettings(
           title: 'Atur Foto Profil',
@@ -939,15 +939,21 @@ class _ProfilScreenState extends State<ProfilScreen> {
   // =========================================================
 
   Widget _badgeProfil(String teks) {
+    final status = teks.trim().toLowerCase() == 'active' ? 'Aktif' : teks;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFFF0F8F5),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        teks,
-        style: const TextStyle(fontSize: 8, color: Color(0xFF16715E)),
+        status,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF16715E),
+        ),
       ),
     );
   }
@@ -1052,9 +1058,27 @@ class _EditProfilDialogState extends State<_EditProfilDialog> {
       return;
     }
 
+    if (!RegExp(r"^[a-zA-ZÀ-ÿ]+(?:\s[a-zA-ZÀ-ÿ]+)*$").hasMatch(nama.trim())) {
+      widget.tampilkanPesan('Nama lengkap hanya boleh berisi huruf dan spasi.');
+      return;
+    }
+
+    if (!RegExp(r'^[0-9]{1,13}$').hasMatch(telepon)) {
+      widget.tampilkanPesan(
+        'Nomor HP hanya boleh berisi angka dan maksimal 13 digit.',
+      );
+      return;
+    }
+
     // Validasi format email sebelum mengirim data ke API.
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      widget.tampilkanPesan('Format email tidak valid.');
+    final emailNormal = email.toLowerCase();
+
+    // Hanya menerima alamat Email dengan karakter yang diizinkan.
+    if (!RegExp(r'^[a-z0-9]+(?:\.[a-z0-9]+)*@gmail\.com$')
+        .hasMatch(emailNormal)) {
+      widget.tampilkanPesan(
+        'Email harus menggunakan format Gmail, contoh: nama@gmail.com.',
+      );
       return;
     }
 
@@ -1064,7 +1088,7 @@ class _EditProfilDialogState extends State<_EditProfilDialog> {
       await ApiService.updateProfilNasabah(
         idNasabah: widget.idNasabah,
         namaLengkap: nama,
-        email: email,
+        email: emailNormal,
         noTelepon: telepon,
       );
 
@@ -1086,6 +1110,7 @@ class _EditProfilDialogState extends State<_EditProfilDialog> {
     String label,
     TextEditingController controller, {
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1098,6 +1123,7 @@ class _EditProfilDialogState extends State<_EditProfilDialog> {
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           enabled: !menyimpan,
           decoration: InputDecoration(
             isDense: true,
@@ -1139,18 +1165,32 @@ class _EditProfilDialogState extends State<_EditProfilDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _fieldEdit('Nama Lengkap', namaController),
+            _fieldEdit(
+              'Nama Lengkap',
+              namaController,
+              keyboardType: TextInputType.name,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZÀ-ÿ\s]')),
+              ],
+            ),
             const SizedBox(height: 12),
             _fieldEdit(
               'Email',
               emailController,
               keyboardType: TextInputType.emailAddress,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@.]')),
+              ],
             ),
             const SizedBox(height: 12),
             _fieldEdit(
               'Nomor HP',
               teleponController,
               keyboardType: TextInputType.phone,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(13),
+              ],
             ),
           ],
         ),

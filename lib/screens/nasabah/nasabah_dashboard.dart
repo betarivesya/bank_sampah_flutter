@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -371,6 +370,10 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
               child: const Text('Batal'),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFB42318),
+                foregroundColor: Colors.white,
+              ),
               onPressed: () {
                 Navigator.pop(context);
 
@@ -1178,22 +1181,8 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
   // =========================================================
 
   Widget _buildLatestWithdrawal() {
-    final penarikan = _penarikanSaya.isEmpty ? null : _penarikanSaya.first;
-
-    // Mengambil nominal dari field yang tersedia di respons API.
-    final nominal =
-        double.tryParse(
-          (penarikan?['nominal'] ??
-                  penarikan?['jumlah'] ??
-                  penarikan?['jumlah_penarikan'] ??
-                  0)
-              .toString(),
-        ) ??
-        0.0;
-
-    final status = (penarikan?['status'] ?? 'Menunggu').toString();
-
-    final tanggal = (penarikan?['tgl_pengajuan'] ?? '').toString();
+    // Menampilkan maksimal 3 riwayat penarikan terbaru.
+    final penarikanTerbaru = _penarikanSaya.take(3).toList();
 
     return Container(
       width: double.infinity,
@@ -1216,7 +1205,6 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
               ),
               TextButton(
                 onPressed: () {
-                  // Membuka menu riwayat penarikan.
                   setState(() {
                     _selectedIndex = 2;
                   });
@@ -1229,76 +1217,99 @@ class _NasabahDashboardState extends State<NasabahDashboard> {
             ],
           ),
           const SizedBox(height: 8),
-          if (penarikan == null)
+
+          if (penarikanTerbaru.isEmpty)
             _buildEmptyContent(
               icon: Icons.receipt_long_outlined,
               message: 'Belum ada pengajuan penarikan.',
             )
           else
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF4F8F7),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F8F5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.account_balance_wallet_outlined,
-                      color: Color(0xFF2D765D),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Pengajuan Penarikan',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _formatTanggalDashboard(tanggal),
-                          style: TextStyle(
-                            color: Color(0xFF6B7280),
-                            fontSize: 10,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          status,
-                          style: const TextStyle(
-                            color: Color(0xFF2D765D),
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _formatRupiah(nominal),
-                    style: const TextStyle(
-                      color: Color(0xFF2D765D),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
+            Column(
+              children: [
+                for (int i = 0; i < penarikanTerbaru.length; i++) ...[
+                  _buildWithdrawalItem(penarikanTerbaru[i]),
+                  if (i < penarikanTerbaru.length - 1)
+                    const Divider(height: 20),
                 ],
-              ),
+              ],
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWithdrawalItem(Map<String, dynamic> penarikan) {
+    final nominal =
+        double.tryParse(
+          (penarikan['nominal'] ??
+                  penarikan['jumlah'] ??
+                  penarikan['jumlah_penarikan'] ??
+                  0)
+              .toString(),
+        ) ??
+        0.0;
+
+    final status = (penarikan['status'] ?? 'Menunggu').toString();
+    final tanggal = (penarikan['tgl_pengajuan'] ?? '').toString();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F8F7),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F8F5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_outlined,
+              color: Color(0xFF2D765D),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Pengajuan Penarikan',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _formatTanggalDashboard(tanggal),
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 10,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  status,
+                  style: const TextStyle(
+                    color: Color(0xFF2D765D),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _formatRupiah(nominal),
+            style: const TextStyle(
+              color: Color(0xFF2D765D),
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
